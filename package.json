@@ -1,10 +1,9 @@
 {
   "name": "budget-management",
   "version": "1.0.0",
-  
   "scripts": {
     "start": "parcel src/index.html",
-  "build": "parcel build src/index.html",
+    "build": "parcel build src/index.html",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,10 +13,10 @@
   "dependencies": {
     "lucide-react": "^0.509.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "recharts": "^2.15.3"
   },
   "devDependencies": {
     "parcel": "^2.15.0"
   }
-
 }
