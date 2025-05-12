@@ -14,7 +14,7 @@ const DARK_MODE_KEY = 'budget-app-dark-mode';
 
 const initialBudgetData = [
   { id: 1, category: "S&P", amount: 0, percentage: 0 },
-  { id: 2, category: "נאסדאק", amount: 0, percentage: 0 },
+  { id: 2, category: 'נאסדק', amount: 0, percentage: 0 },
   { id: 3, category: "ביטקוין", amount: 0, percentage: 0 },
   { id: 4, category: "מניות", amount: 0, percentage: 0 },
 ];
