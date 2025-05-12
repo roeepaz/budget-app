@@ -268,7 +268,8 @@ export default function BudgetApp() {
                     outerRadius={80}
                     label
                   >
-                    {budgetData.filter(item => item.amount > 0).map((entry, index) => (
+                    {sortedBudgetData
+                      .filter(item => item.amount > 0).map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={getCategoryColorHex(index)} />
                     ))}
                   </Pie>
