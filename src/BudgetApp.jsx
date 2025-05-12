@@ -260,7 +260,7 @@ export default function BudgetApp() {
               <ResponsiveContainer>
                 <RePieChart>
                   <Pie
-                    data={budgetData.filter(item => item.amount > 0)}
+                    data={sortedBudgetData.filter(item => item.amount > 0)}
                     dataKey="amount"
                     nameKey="category"
                     cx="50%"
