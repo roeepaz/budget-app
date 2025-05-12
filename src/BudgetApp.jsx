@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, PieChart, Plus, Minus, RefreshCw } from 'lucide-react';
 
+const LOCAL_STORAGE_KEY = 'budget-app-data';
+const FUNDS_KEY = 'budget-app-funds';
+const DARK_MODE_KEY = 'budget-app-dark-mode';
+
 const initialBudgetData = [
   { id: 1, category: "S&P", amount: 2116, percentage: 4.1 },
   { id: 2, category: "נאסדאק", amount: 21000, percentage: 40.8 },
@@ -10,98 +14,112 @@ const initialBudgetData = [
 ];
 
 export default function BudgetApp() {
-  const [budgetData, setBudgetData] = useState(initialBudgetData);
+  const [budgetData, setBudgetData] = useState(() => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : initialBudgetData;
+  });
+
+  const [availableFunds, setAvailableFunds] = useState(() => {
+    const saved = localStorage.getItem(FUNDS_KEY);
+    return saved ? JSON.parse(saved) : 2000;
+  });
+
   const [totalAmount, setTotalAmount] = useState(0);
   const [activeCategory, setActiveCategory] = useState(null);
   const [amountToAdd, setAmountToAdd] = useState(0);
-  const [availableFunds, setAvailableFunds] = useState(2000);
   const [direction, setDirection] = useState('add');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [fundsChange, setFundsChange] = useState(0);
   const [newCategoryName, setNewCategoryName] = useState('');
+  
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+      const saved = localStorage.getItem(DARK_MODE_KEY);
+      return saved ? JSON.parse(saved) : false;
+    });
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(budgetData));
+  }, [budgetData]);
 
-const handleUpdateFunds = () => {
-  if (!fundsChange) return;
-  setAvailableFunds(prev => prev + fundsChange);
-  setFundsChange(0);
-};
+  useEffect(() => {
+    localStorage.setItem(FUNDS_KEY, JSON.stringify(availableFunds));
+  }, [availableFunds]);
 
+  useEffect(() => {
+    const newTotal = budgetData.reduce((sum, item) => sum + item.amount, 0);
+    setTotalAmount(newTotal);
+  }, [budgetData]);
+  
+  useEffect(() => {
+    localStorage.setItem(DARK_MODE_KEY, JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
 
- useEffect(() => {
-  const newTotal = budgetData.reduce((sum, item) => sum + item.amount, 0);
-  setTotalAmount(newTotal);
-}, [budgetData]);
-const handleAddCategory = () => {
-  if (!newCategoryName.trim()) return;
-  const newId = budgetData.length ? Math.max(...budgetData.map(c => c.id)) + 1 : 1;
-  const newCategory = {
-    id: newId,
-    category: newCategoryName.trim(),
-    amount: 0,
-    percentage: 0,
+  const handleUpdateFunds = () => {
+    if (!fundsChange) return;
+    setAvailableFunds(prev => prev + fundsChange);
+    setFundsChange(0);
   };
-  setBudgetData([...budgetData, newCategory]);
-  setNewCategoryName('');
-};
 
-// פונקציה למחיקת קטגוריה
-const handleRemoveCategory = (id) => {
-  const category = budgetData.find(item => item.id === id);
-  if (!category) return;
-  const updatedFunds = availableFunds + category.amount;
-  const filtered = budgetData.filter(item => item.id !== id);
-  const newTotal = filtered.reduce((sum, item) => sum + item.amount, 0);
-  const updatedWithPercentages = filtered.map(item => ({
-    ...item,
-    percentage: parseFloat(((item.amount / newTotal) * 100).toFixed(1))
-  }));
+  const handleAddCategory = () => {
+    if (!newCategoryName.trim()) return;
+    const newId = budgetData.length ? Math.max(...budgetData.map(c => c.id)) + 1 : 1;
+    const newCategory = {
+      id: newId,
+      category: newCategoryName.trim(),
+      amount: 0,
+      percentage: 0,
+    };
+    setBudgetData([...budgetData, newCategory]);
+    setNewCategoryName('');
+  };
 
-  setAvailableFunds(updatedFunds);
-  setBudgetData(updatedWithPercentages);
-  if (activeCategory === id) setActiveCategory(null);
-};
+  const handleRemoveCategory = (id) => {
+    const category = budgetData.find(item => item.id === id);
+    if (!category) return;
+    const updatedFunds = availableFunds + category.amount;
+    const filtered = budgetData.filter(item => item.id !== id);
+    const newTotal = filtered.reduce((sum, item) => sum + item.amount, 0);
+    const updatedWithPercentages = filtered.map(item => ({
+      ...item,
+      percentage: parseFloat(((item.amount / newTotal) * 100).toFixed(1))
+    }));
+    setAvailableFunds(updatedFunds);
+    setBudgetData(updatedWithPercentages);
+    if (activeCategory === id) setActiveCategory(null);
+  };
 
-const handleUpdateAmount = () => {
-  if (!activeCategory || amountToAdd <= 0) return;
+  const handleUpdateAmount = () => {
+    if (!activeCategory || amountToAdd <= 0) return;
 
-  const amountChange = direction === 'add' ? amountToAdd : -amountToAdd;
+    const amountChange = direction === 'add' ? amountToAdd : -amountToAdd;
 
-  // בדיקות תקפות
-  if (direction === 'add' && amountToAdd > availableFunds) {
-    alert('Not enough available funds!');
-    return;
-  }
-
-  const categoryData = budgetData.find(item => item.id === activeCategory);
-  if (direction === 'subtract' && amountToAdd > categoryData.amount) {
-    alert('Cannot subtract more than the category contains!');
-    return;
-  }
-
-  // עדכון התקציב
-  const updatedData = budgetData.map(item => {
-    if (item.id === activeCategory) {
-      return { ...item, amount: item.amount + amountChange };
+    if (direction === 'add' && amountToAdd > availableFunds) {
+      alert('Not enough available funds!');
+      return;
     }
-    return item;
-  });
 
-  // חישוב סכום כולל חדש
-  const newTotal = updatedData.reduce((sum, item) => sum + item.amount, 0);
+    const categoryData = budgetData.find(item => item.id === activeCategory);
+    if (direction === 'subtract' && amountToAdd > categoryData.amount) {
+      alert('Cannot subtract more than the category contains!');
+      return;
+    }
 
-  // עדכון אחוזים
-  const updatedWithPercentages = updatedData.map(item => ({
-    ...item,
-    percentage: parseFloat(((item.amount / newTotal) * 100).toFixed(1))
-  }));
+    const updatedData = budgetData.map(item => {
+      if (item.id === activeCategory) {
+        return { ...item, amount: item.amount + amountChange };
+      }
+      return item;
+    });
 
-  // שמירת השינויים
-  setBudgetData(updatedWithPercentages);
-  setTotalAmount(newTotal);
-  setAvailableFunds(prev => direction === 'add' ? prev - amountToAdd : prev + amountToAdd);
-  setAmountToAdd(0);
-};
+    const newTotal = updatedData.reduce((sum, item) => sum + item.amount, 0);
+    const updatedWithPercentages = updatedData.map(item => ({
+      ...item,
+      percentage: parseFloat(((item.amount / newTotal) * 100).toFixed(1))
+    }));
 
+    setBudgetData(updatedWithPercentages);
+    setTotalAmount(newTotal);
+    setAvailableFunds(prev => direction === 'add' ? prev - amountToAdd : prev + amountToAdd);
+    setAmountToAdd(0);
+  };
 
   const getCategoryColor = (index) => {
     const colors = [
