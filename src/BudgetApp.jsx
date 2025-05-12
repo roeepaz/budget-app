@@ -128,6 +128,20 @@ export default function BudgetApp() {
     ];
     return colors[index % colors.length];
   };
+  const getCategoryColorHex = (index) => {
+  const hexColors = [
+    '#3B82F6', // blue-500
+    '#10B981', // green-500
+    '#F59E0B', // yellow-500
+    '#8B5CF6', // purple-500
+    '#EC4899', // pink-500
+    '#EF4444', // red-500
+    '#6366F1', // indigo-500
+    '#14B8A6', // teal-500
+    '#F97316'  // orange-500
+  ];
+  return hexColors[index % hexColors.length];
+};
 
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
@@ -231,6 +245,28 @@ export default function BudgetApp() {
                 </div>
               ))}
             </div>
+            
+            <div className="w-full lg:w-1/3 h-72">
+              <ResponsiveContainer>
+                <RePieChart>
+                  <Pie
+                    data={budgetData.filter(item => item.amount > 0)}
+                    dataKey="amount"
+                    nameKey="category"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label
+                  >
+                    {budgetData.filter(item => item.amount > 0).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={getCategoryColorHex(index)} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </RePieChart>
+              </ResponsiveContainer>
+            </div>
+
           </div>
         </div>
 
