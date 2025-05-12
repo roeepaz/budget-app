@@ -6,11 +6,10 @@ const FUNDS_KEY = 'budget-app-funds';
 const DARK_MODE_KEY = 'budget-app-dark-mode';
 
 const initialBudgetData = [
-  { id: 1, category: "S&P", amount: 2116, percentage: 4.1 },
-  { id: 2, category: "נאסדאק", amount: 21000, percentage: 40.8 },
-  { id: 3, category: "ביטקוין", amount: 4262, percentage: 8.3 },
-  { id: 4, category: "מזומן", amount: 14255, percentage: 27.7 },
-  { id: 5, category: "קניות בחנויות", amount: 9887, percentage: 19.2 },
+  { id: 1, category: "S&P", amount: 0, percentage: 0 },
+  { id: 2, category: "נאסדאק", amount: 0, percentage: 0 },
+  { id: 3, category: "ביטקוין", amount: 0, percentage: 0 },
+  { id: 4, category: "מניות", amount: 0, percentage: 0 },
 ];
 
 export default function BudgetApp() {
@@ -21,7 +20,7 @@ export default function BudgetApp() {
 
   const [availableFunds, setAvailableFunds] = useState(() => {
     const saved = localStorage.getItem(FUNDS_KEY);
-    return saved ? JSON.parse(saved) : 2000;
+    return saved ? JSON.parse(saved) : 0;
   });
 
   const [totalAmount, setTotalAmount] = useState(0);
