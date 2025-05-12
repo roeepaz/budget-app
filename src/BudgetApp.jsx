@@ -16,7 +16,9 @@ const initialBudgetData = [
   { id: 1, category: "S&P", amount: 0, percentage: 0 },
   { id: 2, category: 'נאסדק', amount: 0, percentage: 0 },
   { id: 3, category: "ביטקוין", amount: 0, percentage: 0 },
+  { id: 4, category: "קרן כספית", amount: 0, percentage: 0 },
   { id: 4, category: "מניות", amount: 0, percentage: 0 },
+
 ];
 
 export default function BudgetApp() {
@@ -36,7 +38,8 @@ export default function BudgetApp() {
   const [direction, setDirection] = useState('add');
   const [fundsChange, setFundsChange] = useState(0);
   const [newCategoryName, setNewCategoryName] = useState('');
-  
+  const sortedBudgetData = [...budgetData].sort((a, b) => b.percentage - a.percentage);
+
   const [isDarkMode, setIsDarkMode] = useState(() => {
       const saved = localStorage.getItem(DARK_MODE_KEY);
       return saved ? JSON.parse(saved) : false;
@@ -66,7 +69,7 @@ export default function BudgetApp() {
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
-    const newId = budgetData.length ? Math.max(...budgetData.map(c => c.id)) + 1 : 1;
+    const newId = budgetData.length ? Math.max(...sortedBudgetData.map(c => c.id)) + 1 : 1;
     const newCategory = {
       id: newId,
       category: newCategoryName.trim(),
@@ -108,7 +111,7 @@ export default function BudgetApp() {
       return;
     }
 
-    const updatedData = budgetData.map(item => {
+    const updatedData = sortedBudgetData.map(item => {
       if (item.id === activeCategory) {
         return { ...item, amount: item.amount + amountChange };
       }
@@ -194,7 +197,7 @@ export default function BudgetApp() {
                   </tr>
                 </thead>
                 <tbody>
-                  {budgetData.map((item, index) => (
+                  {sortedBudgetData.map((item, index) => (
                     <tr
                       key={item.id}
                       className={`border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} ${activeCategory === item.id ? (isDarkMode ? 'bg-gray-700' : 'bg-green-50') : ''}`}
@@ -235,7 +238,7 @@ export default function BudgetApp() {
           <div className={`rounded-lg shadow-md p-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <h2 className="text-lg font-semibold mb-4">התפלגות הכספים</h2>
             <div className="h-6 w-full rounded-full overflow-hidden flex">
-              {budgetData.map((item, index) => (
+              {sortedBudgetData.map((item, index) => (
                 <div
                   key={item.id}
                   style={{ width: `${item.percentage}%` }}
@@ -245,7 +248,7 @@ export default function BudgetApp() {
               ))}
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
-              {budgetData.map((item, index) => (
+              {sortedBudgetData.map((item, index) => (
                 <div key={item.id} className="flex items-center text-sm">
                   <span className={`w-3 h-3 rounded-full mr-1 ${getCategoryColor(index)}`}></span>
                   <span>{item.category}: {item.percentage}%</span>
@@ -323,7 +326,7 @@ export default function BudgetApp() {
 <div className="mb-4">
   <label className="block text-sm mb-2">בחר קטגוריה</label>
   <div className="flex flex-wrap gap-2">
-    {budgetData.map((item) => (
+    {sortedBudgetData.map((item) => (
       <div key={item.id} className="relative">
         <button
           onClick={() => setActiveCategory(item.id)}
