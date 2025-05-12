@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, PieChart, Plus, Minus, RefreshCw } from 'lucide-react';
+import {
+  PieChart as RePieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 
 const LOCAL_STORAGE_KEY = 'budget-app-data';
 const FUNDS_KEY = 'budget-app-funds';
