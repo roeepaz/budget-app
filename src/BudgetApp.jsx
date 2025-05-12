@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, PieChart, Plus, Minus, RefreshCw } from 'lucide-react';
+import { PieChart as RePieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 
 const LOCAL_STORAGE_KEY = 'budget-app-data';
 const FUNDS_KEY = 'budget-app-funds';
@@ -139,7 +139,7 @@ export default function BudgetApp() {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <DollarSign size={24} />
-            <h1 className="text-xl font-bold">ניהול תקציב</h1>
+            <h1 className="text-xl font-bold">ניהול כספים</h1>
           </div>
           <button
             onClick={toggleDarkMode}
@@ -156,7 +156,7 @@ export default function BudgetApp() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold flex items-center">
                 <PieChart size={20} className="mr-2" />
-                סקירת תקציב
+               סקירת ההשקעה
               </h2>
               <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                 סה"כ: {totalAmount.toLocaleString()} ₪
@@ -231,6 +231,29 @@ export default function BudgetApp() {
                 </div>
               ))}
             </div>
+             <h2 className="text-lg font-semibold mb-2">התפלגות תקציב בעוגה</h2>
+              <div className="w-full h-64">
+                <ResponsiveContainer>
+                  <RePieChart>
+                    <Pie
+                      data={budgetData}
+                      dataKey="amount"
+                      nameKey="category"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      fill="#8884d8"
+                      label
+                    >
+                      {budgetData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={getCategoryColor(index)} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </RePieChart>
+                </ResponsiveContainer>
+              </div>
+
           </div>
         </div>
 
@@ -242,71 +265,71 @@ export default function BudgetApp() {
               <div className="text-xl font-bold">{availableFunds.toLocaleString()} ₪</div>
             </div>
             <div className="mb-4">
-  <label className="block text-sm mb-2">הוסף/הסר כספים זמינים</label>
-  <div className="flex gap-2">
-    <input
-      type="number"
-      value={fundsChange || ''}
-      onChange={(e) => setFundsChange(parseInt(e.target.value) || 0)}
-      className={`w-full p-2 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
-    />
-    <button
-      onClick={handleUpdateFunds}
-      className={`px-4 py-2 rounded ${isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-500 text-white'}`}
-    >
-      עדכן
-    </button>
-  </div>
-</div>
+              <label className="block text-sm mb-2">הוסף/הסר כספים זמינים</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={fundsChange || ''}
+                  onChange={(e) => setFundsChange(parseInt(e.target.value) || 0)}
+                  className={`w-full p-2 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                />
+                <button
+                  onClick={handleUpdateFunds}
+                  className={`px-4 py-2 rounded ${isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-500 text-white'}`}
+                >
+                  עדכן
+                </button>
+              </div>
+            </div>
 
-<div className="mb-6">
-  <label className="block text-sm mb-2">הוסף קטגוריה חדשה</label>
-  <div className="flex gap-2">
-    <input
-      type="text"
-      value={newCategoryName}
-      onChange={(e) => setNewCategoryName(e.target.value)}
-      placeholder="שם הקטגוריה"
-      className={`w-full p-2 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
-    />
-    <button
-      onClick={handleAddCategory}
-      className={`px-4 py-2 rounded ${isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-500 text-white'}`}
-    >
-      הוסף
-    </button>
-  </div>
-</div>
-<div className="mb-4">
-  <label className="block text-sm mb-2">בחר קטגוריה</label>
-  <div className="flex flex-wrap gap-2">
-    {budgetData.map((item) => (
-      <div key={item.id} className="relative">
-        <button
-          onClick={() => setActiveCategory(item.id)}
-          className={`px-3 py-1 pr-7 text-sm rounded-full relative ${
-            activeCategory === item.id
-              ? (isDarkMode ? 'bg-green-700 text-white' : 'bg-green-600 text-white')
-              : (isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')
-          }`}
-        >
-          {item.category}
-        </button>
-        <span
-          onClick={(e) => {
-            e.stopPropagation();
-            handleRemoveCategory(item.id);
-          }}
-          className={`absolute right-1 top-1/2 -translate-y-1/2 px-1 text-xs rounded cursor-pointer ${
-            isDarkMode ? 'bg-red-800 text-white' : 'bg-red-500 text-white'
-          }`}
-        >
-          ✕
-        </span>
-      </div>
-    ))}
-  </div>
-</div>
+            <div className="mb-6">
+              <label className="block text-sm mb-2">הוסף קטגוריה חדשה</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="שם הקטגוריה"
+                  className={`w-full p-2 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
+                />
+                <button
+                  onClick={handleAddCategory}
+                  className={`px-4 py-2 rounded ${isDarkMode ? 'bg-blue-700 text-white' : 'bg-blue-500 text-white'}`}
+                >
+                  הוסף
+                </button>
+              </div>
+            </div>
+          <div className="mb-4">
+            <label className="block text-sm mb-2">בחר קטגוריה</label>
+            <div className="flex flex-wrap gap-2">
+              {budgetData.map((item) => (
+                <div key={item.id} className="relative">
+                  <button
+                    onClick={() => setActiveCategory(item.id)}
+                    className={`px-3 py-1 pr-7 text-sm rounded-full relative ${
+                      activeCategory === item.id
+                        ? (isDarkMode ? 'bg-green-700 text-white' : 'bg-green-600 text-white')
+                        : (isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700')
+                    }`}
+                  >
+                    {item.category}
+                  </button>
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveCategory(item.id);
+                    }}
+                    className={`absolute right-1 top-1/2 -translate-y-1/2 px-1 text-xs rounded cursor-pointer ${
+                      isDarkMode ? 'bg-red-800 text-white' : 'bg-red-500 text-white'
+                    }`}
+                  >
+                    ✕
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
             {activeCategory && (
               <div className={`p-3 rounded-lg mb-4 ${isDarkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
                 <div className="text-sm mb-1">קטגוריה נבחרת</div>
@@ -379,7 +402,7 @@ export default function BudgetApp() {
       </main>
 
       <footer className={`p-4 ${isDarkMode ? 'bg-gray-800' : 'bg-green-700'} text-white text-center`}>
-        <p className="text-sm">ניהול תקציב אישי © 2025</p>
+        <p className="text-sm">ניהול תקציב אישי © 2025 יצירת אומנות מאת רועי פז</p>
       </footer>
     </div>
   );
