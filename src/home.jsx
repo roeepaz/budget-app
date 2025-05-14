@@ -5,22 +5,42 @@ import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } f
 // Main App Component
 export default function ExpenseTracker() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [categories, setCategories] = useState([
-    { id: 1, name: 'Food', color: '#FF6384', icon: '🍔' },
-    { id: 2, name: 'Housing', color: '#36A2EB', icon: '🏠' },
-    { id: 3, name: 'Transportation', color: '#FFCE56', icon: '🚗' },
-    { id: 4, name: 'Utilities', color: '#4BC0C0', icon: '💡' },
-    { id: 5, name: 'Entertainment', color: '#9966FF', icon: '🎬' }
-  ]);
-  
-  const [expenses, setExpenses] = useState([
-    { id: 1, amount: 120, description: 'Groceries', categoryId: 1, date: '2025-05-10' },
-    { id: 2, amount: 950, description: 'Rent', categoryId: 2, date: '2025-05-01' },
-    { id: 3, amount: 45, description: 'Gas', categoryId: 3, date: '2025-05-08' },
-    { id: 4, amount: 80, description: 'Electricity', categoryId: 4, date: '2025-05-05' },
-    { id: 5, amount: 30, description: 'Movie tickets', categoryId: 5, date: '2025-05-09' }
-  ]);
-  
+const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth()); // מאי = 4
+
+  const [categories, setCategories] = useState(() => {
+  const saved = localStorage.getItem('user_categories');
+    return saved
+      ? JSON.parse(saved)
+      : [
+           { id: 1, name: 'אוכל', color: '#FF6384', icon: '🍔' },
+            { id: 2, name: 'דיור', color: '#36A2EB', icon: '🏠' },
+            { id: 3, name: 'תחבורה', color: '#FFCE56', icon: '🚗' },
+            { id: 4, name: 'שירותים', color: '#4BC0C0', icon: '💡' },
+            { id: 5, name: 'בידור', color: '#9966FF', icon: '🎬' },
+            { id: 6, name: 'בריאות', color: '#FF6B6B', icon: '💊' },
+            { id: 7, name: 'ביגוד', color: '#4B5563', icon: '👕' },
+        ];
+  });
+
+  const [expenses, setExpenses] = useState(() => {
+    const saved = localStorage.getItem('user_expenses');
+    return saved
+      ? JSON.parse(saved)
+      : [
+          { id: 1, amount: 120, description: 'Groceries', categoryId: 1, date: '2025-05-10' },
+          { id: 2, amount: 950, description: 'Rent', categoryId: 2, date: '2025-05-01' },
+          { id: 3, amount: 45, description: 'Gas', categoryId: 3, date: '2025-05-08' },
+          { id: 4, amount: 80, description: 'Electricity', categoryId: 4, date: '2025-05-05' },
+          { id: 6, amount: 30, description: 'Movie tickets', categoryId: 5, date: '2025-05-09' }
+        ];
+  });
+
+const filteredExpenses = expenses.filter(exp => {
+  return new Date(exp.date).getMonth() === selectedMonth;
+});
+
+
+
   const [newExpense, setNewExpense] = useState({
     amount: '',
     description: '',
@@ -33,6 +53,15 @@ export default function ExpenseTracker() {
     color: '#' + Math.floor(Math.random()*16777215).toString(16),
     icon: '📊'
   });
+
+    useEffect(() => {
+    localStorage.setItem('user_expenses', JSON.stringify(expenses));
+  }, [expenses]);
+
+  useEffect(() => {
+    localStorage.setItem('user_categories', JSON.stringify(categories));
+  }, [categories]);
+
   
   // Handlers
   const handleAddExpense = () => {
@@ -78,30 +107,29 @@ export default function ExpenseTracker() {
   };
   
   // Calculate summary data
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  
-  const expensesByCategory = categories.map(category => {
-    const categoryExpenses = expenses.filter(expense => expense.categoryId === category.id);
-    const totalAmount = categoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-    const percentage = totalExpenses ? (totalAmount / totalExpenses * 100).toFixed(1) : 0;
-    
-    return {
-      name: category.name,
-      value: totalAmount,
-      color: category.color,
-      icon: category.icon,
-      percentage
-    };
-  });
-  
-  // Monthly data (simplified for demo)
-  const monthlyData = [
-    { month: 'Jan', amount: 1200 },
-    { month: 'Feb', amount: 1350 },
-    { month: 'Mar', amount: 1100 },
-    { month: 'Apr', amount: 1450 },
-    { month: 'May', amount: totalExpenses }
-  ];
+ const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+
+const expensesByCategory = categories.map(category => {
+  const categoryExpenses = filteredExpenses.filter(exp => exp.categoryId === category.id);
+  const totalAmount = categoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const percentage = totalExpenses ? (totalAmount / totalExpenses * 100).toFixed(1) : 0;
+
+  return {
+    name: category.name,
+    value: totalAmount,
+    color: category.color,
+    icon: category.icon,
+    percentage
+  };
+});
+const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const monthlyData = monthNames.map((month, index) => {
+  const total = expenses
+    .filter(exp => new Date(exp.date).getMonth() === index)
+    .reduce((sum, exp) => sum + exp.amount, 0);
+  return { month, amount: total };
+});
+
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -112,6 +140,7 @@ export default function ExpenseTracker() {
             <Home className="mr-2" /> Home Expense Tracker
           </h1>
           <div className="text-sm bg-blue-700 px-3 py-1 rounded-lg">
+            <h2 className="text-xl font-semibold mb-4">Expense Summary for {monthNames[selectedMonth]}</h2>
             Total: ₪{totalExpenses.toFixed(2)}
           </div>
         </div>
@@ -195,7 +224,15 @@ export default function ExpenseTracker() {
                 <h2 className="text-xl font-semibold mb-4">Monthly Trend</h2>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyData}>
+                   <BarChart data={monthlyData} onClick={(data) => {
+                      if (data?.activeLabel) {
+                        const monthIndex = monthNames.indexOf(data.activeLabel);
+                        if (monthIndex !== -1) {
+                          setSelectedMonth(monthIndex);
+                        }
+                      }
+                    }}>
+
                       <XAxis dataKey="month" />
                       <YAxis />
                       <Tooltip formatter={(value) => `₪${value}`} />
@@ -407,16 +444,18 @@ export default function ExpenseTracker() {
                       value={newCategory.icon}
                       onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
                     >
-                      <option value="🍔">🍔 Food</option>
-                      <option value="🏠">🏠 Housing</option>
-                      <option value="🚗">🚗 Transportation</option>
-                      <option value="💡">💡 Utilities</option>
-                      <option value="🎬">🎬 Entertainment</option>
-                      <option value="💊">💊 Healthcare</option>
-                      <option value="👕">👕 Clothing</option>
-                      <option value="📚">📚 Education</option>
-                      <option value="💰">💰 Savings</option>
-                      <option value="📊">📊 Other</option>
+                     <option value="🍔">🍔 אוכל</option>
+                    <option value="🏠">🏠 דיור</option>
+                    <option value="🚗">🚗 תחבורה</option>
+                    <option value="💡">💡 שירותים (חשמל, מים וכו')</option>
+                    <option value="🎬">🎬 בידור</option>
+                    <option value="💊">💊 בריאות</option>
+                    <option value="👕">👕 ביגוד</option>
+                    <option value="📚">📚 חינוך</option>
+                    <option value="💰">💰 חיסכון</option>
+                    <option value="🧒">🧒 ילדים</option>
+                    <option value="📊">📊 אחר</option>
+
                     </select>
                   </div>
                   
