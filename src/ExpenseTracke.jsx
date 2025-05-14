@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 // Main App Component
 export default function ExpenseTracker() {
@@ -68,7 +69,7 @@ const filteredExpenses = expenses.filter(exp => {
     if (!newExpense.amount || !newExpense.categoryId) return;
     
     const expense = {
-      id: expenses.length + 1,
+      id: uuidv4(),
       amount: parseFloat(newExpense.amount),
       description: newExpense.description,
       categoryId: parseInt(newExpense.categoryId),
