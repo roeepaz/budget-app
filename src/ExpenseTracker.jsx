@@ -46,37 +46,42 @@ const filteredExpenses = expenses.filter(exp => {
 
 const userId = user?.uid;
 const [loading, setLoading] = useState(true);
+const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
 
 useEffect(() => {
   if (!userId) return;
 
   const loadUserData = async () => {
     const docRef = doc(db, 'users', userId);
-    const snapshot = await getDoc(docRef);
-    if (snapshot.exists()) {
-      const data = snapshot.data();
-      setExpenses(data.expenses || []);
-      setCategories(data.categories || defaultCategories);
+    try {
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        setExpenses(data.expenses || []);
+        setCategories(data.categories || defaultCategories);
+      }
+    } catch (error) {
+      console.error("⚠️ שגיאה בטעינת הנתונים:", error);
     }
+    setHasLoaded(true);
     setLoading(false);
   };
 
   loadUserData();
 }, [userId]);
 
-
 useEffect(() => {
-  if (!userId) return;
-  
+  if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
+
   const timeout = setTimeout(() => {
     setDoc(doc(db, 'users', userId), {
       expenses,
       categories
     });
-  }, 800); // שמור רק אחרי 800ms של שקט
-  
+  }, 800); // שמירה אחרי 800ms של שקט
+
   return () => clearTimeout(timeout);
-}, [expenses, categories, userId]);
+}, [expenses, categories, userId, hasLoaded]);
 
   
 if (loading) {

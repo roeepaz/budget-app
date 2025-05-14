@@ -31,7 +31,7 @@ export default function BudgetApp({ user }) {
   const [direction, setDirection] = useState('add');
   const [fundsChange, setFundsChange] = useState(0);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [budgetData, setBudgetData] = useState(initialBudgetData);
+  const [budgetData, setBudgetData] = useState([]);
   const [availableFunds, setAvailableFunds] = useState(0);
   const sortedBudgetData = [...budgetData].sort((a, b) => b.percentage - a.percentage);  
   const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -61,7 +61,7 @@ export default function BudgetApp({ user }) {
   }, [userId]);
   
   useEffect(() => {
-    if (!userId) return;
+  if (!userId || loading) return;
     
     const timeout = setTimeout(() => {
       setDoc(doc(db, 'budgets', userId), {
