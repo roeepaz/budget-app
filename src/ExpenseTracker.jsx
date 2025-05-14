@@ -2,39 +2,28 @@ import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-
+import { db } from './firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 // Main App Component
-export default function ExpenseTracker() {
+
+export default function ExpenseTracker({ user }) {
+  const defaultCategories = [
+    { id: 1, name: 'אוכל', color: '#FF6384', icon: '🍔' },
+    { id: 2, name: 'דיור', color: '#36A2EB', icon: '🏠' },
+    { id: 3, name: 'תחבורה', color: '#FFCE56', icon: '🚗' },
+    { id: 4, name: 'שירותים', color: '#4BC0C0', icon: '💡' },
+    { id: 5, name: 'בידור', color: '#9966FF', icon: '🎬' },
+    { id: 6, name: 'בריאות', color: '#FF6B6B', icon: '💊' },
+    { id: 7, name: 'ביגוד', color: '#4B5563', icon: '👕' }
+  ];
+
   const [activeTab, setActiveTab] = useState('dashboard');
-const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth()); // מאי = 4
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth()); // מאי = 4
 
-  const [categories, setCategories] = useState(() => {
-  const saved = localStorage.getItem('user_categories');
-    return saved
-      ? JSON.parse(saved)
-      : [
-           { id: 1, name: 'אוכל', color: '#FF6384', icon: '🍔' },
-            { id: 2, name: 'דיור', color: '#36A2EB', icon: '🏠' },
-            { id: 3, name: 'תחבורה', color: '#FFCE56', icon: '🚗' },
-            { id: 4, name: 'שירותים', color: '#4BC0C0', icon: '💡' },
-            { id: 5, name: 'בידור', color: '#9966FF', icon: '🎬' },
-            { id: 6, name: 'בריאות', color: '#FF6B6B', icon: '💊' },
-            { id: 7, name: 'ביגוד', color: '#4B5563', icon: '👕' },
-        ];
-  });
+  const [categories, setCategories] = useState(defaultCategories);
 
-  const [expenses, setExpenses] = useState(() => {
-    const saved = localStorage.getItem('user_expenses');
-    return saved
-      ? JSON.parse(saved)
-      : [
-          { id: 1, amount: 120, description: 'Groceries', categoryId: 1, date: '2025-05-10' },
-          { id: 2, amount: 950, description: 'Rent', categoryId: 2, date: '2025-05-01' },
-          { id: 3, amount: 45, description: 'Gas', categoryId: 3, date: '2025-05-08' },
-          { id: 4, amount: 80, description: 'Electricity', categoryId: 4, date: '2025-05-05' },
-          { id: 6, amount: 30, description: 'Movie tickets', categoryId: 5, date: '2025-05-09' }
-        ];
-  });
+  const [expenses, setExpenses] = useState([]);
+
 
 const filteredExpenses = expenses.filter(exp => {
   return new Date(exp.date).getMonth() === selectedMonth;
@@ -55,22 +44,54 @@ const filteredExpenses = expenses.filter(exp => {
     icon: '📊'
   });
 
-    useEffect(() => {
-    localStorage.setItem('user_expenses', JSON.stringify(expenses));
-  }, [expenses]);
+const userId = user?.uid;
+const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    localStorage.setItem('user_categories', JSON.stringify(categories));
-  }, [categories]);
+useEffect(() => {
+  if (!userId) return;
+
+  const loadUserData = async () => {
+    const docRef = doc(db, 'users', userId);
+    const snapshot = await getDoc(docRef);
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      setExpenses(data.expenses || []);
+      setCategories(data.categories || defaultCategories);
+    }
+    setLoading(false);
+  };
+
+  loadUserData();
+}, [userId]);
+
+
+useEffect(() => {
+  if (!userId) return;
+  
+  const timeout = setTimeout(() => {
+    setDoc(doc(db, 'users', userId), {
+      expenses,
+      categories
+    });
+  }, 800); // שמור רק אחרי 800ms של שקט
+  
+  return () => clearTimeout(timeout);
+}, [expenses, categories, userId]);
 
   
-  // Handlers
-  const handleAddExpense = () => {
-    if (!newExpense.amount || !newExpense.categoryId) return;
-    
-    const expense = {
-      id: uuidv4(),
-      amount: parseFloat(newExpense.amount),
+if (loading) {
+  return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
+}
+  if (!user) {
+  return <div>Loading or not authenticated...</div>;
+}
+// Handlers
+const handleAddExpense = () => {
+  if (!newExpense.amount || !newExpense.categoryId) return;
+  
+  const expense = {
+    id: uuidv4(),
+    amount: parseFloat(newExpense.amount),
       description: newExpense.description,
       categoryId: parseInt(newExpense.categoryId),
       date: newExpense.date
@@ -89,7 +110,7 @@ const filteredExpenses = expenses.filter(exp => {
     if (!newCategory.name) return;
     
     const category = {
-      id: categories.length + 1,
+      id: uuidv4(),
       name: newCategory.name,
       color: newCategory.color,
       icon: newCategory.icon

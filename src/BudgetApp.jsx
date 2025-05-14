@@ -7,9 +7,10 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import { db } from './firebaseConfig';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
-const LOCAL_STORAGE_KEY = 'budget-app-data';
-const FUNDS_KEY = 'budget-app-funds';
 const DARK_MODE_KEY = 'budget-app-dark-mode';
 
 const initialBudgetData = [
@@ -17,41 +18,62 @@ const initialBudgetData = [
   { id: 2, category: 'נאסדק', amount: 0, percentage: 0 },
   { id: 3, category: "ביטקוין", amount: 0, percentage: 0 },
   { id: 4, category: "קרן כספית", amount: 0, percentage: 0 },
-  { id: 4, category: "מניות", amount: 0, percentage: 0 },
+  { id: 5, category: "מניות", amount: 0, percentage: 0 },
 
 ];
 
-export default function BudgetApp() {
-  const [budgetData, setBudgetData] = useState(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : initialBudgetData;
-  });
-
-  const [availableFunds, setAvailableFunds] = useState(() => {
-    const saved = localStorage.getItem(FUNDS_KEY);
-    return saved ? JSON.parse(saved) : 0;
-  });
-
+export default function BudgetApp({ user }) {
+  
+  const [loading, setLoading] = useState(true);
   const [totalAmount, setTotalAmount] = useState(0);
   const [activeCategory, setActiveCategory] = useState(null);
   const [amountToAdd, setAmountToAdd] = useState(0);
   const [direction, setDirection] = useState('add');
   const [fundsChange, setFundsChange] = useState(0);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const sortedBudgetData = [...budgetData].sort((a, b) => b.percentage - a.percentage);
-
+  const [budgetData, setBudgetData] = useState(initialBudgetData);
+  const [availableFunds, setAvailableFunds] = useState(0);
+  const sortedBudgetData = [...budgetData].sort((a, b) => b.percentage - a.percentage);  
   const [isDarkMode, setIsDarkMode] = useState(() => {
-      const saved = localStorage.getItem(DARK_MODE_KEY);
-      return saved ? JSON.parse(saved) : false;
-    });
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(budgetData));
-  }, [budgetData]);
+    const saved = localStorage.getItem(DARK_MODE_KEY);
+    return saved ? JSON.parse(saved) : false;
+  });
 
+  const userId = user.uid;
+  
   useEffect(() => {
-    localStorage.setItem(FUNDS_KEY, JSON.stringify(availableFunds));
-  }, [availableFunds]);
+    const loadData = async () => {
+      const ref = doc(db, 'budgets', userId);
+      try {
+        const snapshot = await getDoc(ref);
+        if (snapshot.exists()) {
+        const data = snapshot.data();
+        setBudgetData(data.budgetData || initialBudgetData);
+        setAvailableFunds(data.availableFunds || 0);
+        }        
+      } catch (error) {
+          console.error("Error loading data", error);
+      }
+      setLoading(false);
+    };
 
+    loadData();
+  }, [userId]);
+  
+  useEffect(() => {
+    if (!userId) return;
+    
+    const timeout = setTimeout(() => {
+      setDoc(doc(db, 'budgets', userId), {
+        budgetData,
+        availableFunds
+      });
+    }, 800); // שמירה רק אחרי 800ms של שקט
+    
+    return () => clearTimeout(timeout);
+  }, [budgetData, availableFunds, userId]);
+  
+  
   useEffect(() => {
     const newTotal = budgetData.reduce((sum, item) => sum + item.amount, 0);
     setTotalAmount(newTotal);
@@ -69,9 +91,8 @@ export default function BudgetApp() {
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
-    const newId = budgetData.length ? Math.max(...sortedBudgetData.map(c => c.id)) + 1 : 1;
     const newCategory = {
-      id: newId,
+      id:  uuidv4(),
       category: newCategoryName.trim(),
       amount: 0,
       percentage: 0,
@@ -111,7 +132,7 @@ export default function BudgetApp() {
       return;
     }
 
-    const updatedData = sortedBudgetData.map(item => {
+    const updatedData = budgetData.map(item => {
       if (item.id === activeCategory) {
         return { ...item, amount: item.amount + amountChange };
       }
@@ -156,7 +177,9 @@ export default function BudgetApp() {
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
   };
-
+  if (!user || loading) {
+    return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
+  }
   return (
     <div className={`min-h-screen flex flex-col ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100'}`}>
       <header className={`p-4 ${isDarkMode ? 'bg-gray-800' : 'bg-green-700'} text-white shadow-md`}>
