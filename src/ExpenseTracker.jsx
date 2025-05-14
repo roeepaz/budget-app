@@ -95,7 +95,7 @@ const handleAddExpense = () => {
   if (!newExpense.amount || !newExpense.categoryId) return;
   
   const expense = {
-    id: uuidv4(),
+    id: Math.floor(Math.random() * 1000000),
     amount: parseFloat(newExpense.amount),
       description: newExpense.description,
       categoryId: parseInt(newExpense.categoryId),
@@ -115,7 +115,7 @@ const handleAddExpense = () => {
     if (!newCategory.name) return;
     
     const category = {
-      id: uuidv4(),
+      id: Math.floor(Math.random() * 1000000),
       name: newCategory.name,
       color: newCategory.color,
       icon: newCategory.icon

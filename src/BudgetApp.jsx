@@ -92,7 +92,7 @@ export default function BudgetApp({ user }) {
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
     const newCategory = {
-      id:  uuidv4(),
+      id: Math.floor(Math.random() * 1000000),
       category: newCategoryName.trim(),
       amount: 0,
       percentage: 0,
