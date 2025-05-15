@@ -19,10 +19,10 @@ export default function ExpenseTracker({ user }) {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth()); // מאי = 4
-
   const [categories, setCategories] = useState(defaultCategories);
-
   const [expenses, setExpenses] = useState([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+
 
 
 const filteredExpenses = expenses.filter(exp => {
@@ -436,42 +436,48 @@ const monthlyData = monthNames.map((month, index) => {
             </div>
           )}
           
-          {/* Categories Tab */}
-          {activeTab === 'categories' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Add Category Form */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">Add New Category</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
-                    <input 
-                      type="text" 
-                      className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                      value={newCategory.name}
-                      onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                      placeholder="e.g. Groceries, Rent, etc."
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                    <input 
-                      type="color" 
-                      className="w-full p-1 h-10 border rounded focus:ring-blue-500 focus:border-blue-500"
-                      value={newCategory.color}
-                      onChange={(e) => setNewCategory({...newCategory, color: e.target.value})}
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Icon (Emoji)</label>
-                    <select 
-                      className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                      value={newCategory.icon}
-                      onChange={(e) => setNewCategory({...newCategory, icon: e.target.value})}
-                    >
-                     <option value="🍔">🍔 אוכל</option>
+         {/* Categories Tab */}
+        {activeTab === 'categories' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Add / Edit Category Form */}
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4">
+                {selectedCategoryId ? 'Edit Category' : 'Add New Category'}
+              </h2>
+
+              <div className="space-y-4">
+                {/* Category Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                    value={newCategory.name}
+                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                    placeholder="e.g. Groceries, Rent, etc."
+                  />
+                </div>
+
+                {/* Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                  <input
+                    type="color"
+                    className="w-full p-1 h-10 border rounded focus:ring-blue-500 focus:border-blue-500"
+                    value={newCategory.color}
+                    onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
+                  />
+                </div>
+
+                {/* Icon */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Icon (Emoji)</label>
+                  <select
+                    className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                    value={newCategory.icon}
+                    onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
+                  >
+                    <option value="🍔">🍔 אוכל</option>
                     <option value="🏠">🏠 דיור</option>
                     <option value="🚗">🚗 תחבורה</option>
                     <option value="💡">💡 שירותים (חשמל, מים וכו')</option>
@@ -482,19 +488,72 @@ const monthlyData = monthNames.map((month, index) => {
                     <option value="💰">💰 חיסכון</option>
                     <option value="🧒">🧒 ילדים</option>
                     <option value="📊">📊 אחר</option>
-
-                    </select>
-                  </div>
-                  
-                  <button 
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 flex items-center justify-center"
-                    onClick={handleAddCategory}
-                  >
-                    <Plus className="mr-2 w-4 h-4" /> Add Category
-                  </button>
+                  </select>
                 </div>
+
+                {/* Edit Dropdown */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Optional: edit Existing Category (adds new if none selected)</label>
+                  <select
+                    className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                    value={selectedCategoryId}
+                    onChange={(e) => {
+                      const selectedId = parseInt(e.target.value);
+                      setSelectedCategoryId(selectedId);
+                      const selected = categories.find((cat) => cat.id === selectedId);
+                      if (selected) {
+                        setNewCategory({
+                          name: selected.name,
+                          color: selected.color,
+                          icon: selected.icon,
+                        });
+                      } else {
+                        setNewCategory({ name: '', color: '#000000', icon: '' });
+                      }
+                    }}
+                  >
+                    <option value="">בחר קטגוריה לעריכה</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.icon} {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Add/Update Button */}
+                <button
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 flex items-center justify-center"
+                  onClick={() => {
+                    if (selectedCategoryId) {
+                        const selectedId = parseInt(selectedCategoryId);
+                      // הסר את הקטגוריה שנבחרה
+                      const filteredCategories = categories.filter((cat) => cat.id !== selectedId);
+
+                      // צור קטגוריה חדשה עם אותו ID או חדש – תלוי בצורך
+                      const updatedCategory = { ...newCategory, id: selectedId };
+                      // setNewCategory({ ...newCategory, id: selectedId })
+                      // עדכן את הרשימה
+                      setCategories([...filteredCategories, updatedCategory]);
+
+                      // איפוס
+                      setSelectedCategoryId('');
+                    }
+                     else {
+                      // Add new category
+                      handleAddCategory();
+                    }
+
+                    // Clear form
+                    setNewCategory({ name: '', color: '#000000', icon: '' });
+                  }}
+                >
+                  <Plus className="mr-2 w-4 h-4" />
+                  {selectedCategoryId ? 'Update Category' : 'Add Category'}
+                </button>
               </div>
-              
+            </div>
+                   
               {/* Categories List */}
               <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
                 <h2 className="text-xl font-semibold mb-4">All Categories</h2>
