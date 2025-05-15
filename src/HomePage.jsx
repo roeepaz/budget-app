@@ -48,6 +48,12 @@ export default function HomePage({ user }) {
             >
               מעקב הוצאות 📊
             </button>
+           <button
+              onClick={() => navigate('/budgetPlanner')}
+              className="text-lg px-6 py-3 rounded-lg bg-yellow-500 text-gray-900 shadow-md hover:bg-yellow-600 transition duration-300"
+            >
+              ניהול תקציב 💸
+            </button>
           </div>
         </div>
 

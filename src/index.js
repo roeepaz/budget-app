@@ -6,6 +6,7 @@ import ExpenseTracker from './ExpenseTracker'; // ודא שהשם נכון!
 import HomePage from './HomePage';
 import Login from './Login';
 import { auth } from './firebase'; // זה הקובץ שבו שמרת את firebaseConfig
+import BudgetPlanner from './BudgetPlanner'
 import { onAuthStateChanged } from 'firebase/auth';
 
 const container = document.getElementById('root');
@@ -33,6 +34,8 @@ function App() {
         <Route path="/" element={<HomePage user={user} />} />
         <Route path="/budget" element={<BudgetApp user={user} />} />
         <Route path="/expense" element={<ExpenseTracker user={user} />} />
+        <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
+
       </Routes>
     </BrowserRouter>
   );
