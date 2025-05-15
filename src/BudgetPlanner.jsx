@@ -453,7 +453,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                 <div>
                   <div className="font-medium mb-1">טיפ לחיסכון</div>
                   <div className="text-sm text-gray-700">
-                    שקול להקצות 10% פחות לקטגוריית התקשורת בחודש הבא בהתבסס על דפוסי ההוצאות שלך.
+                    שקול להקצות 10% לחיסכון בכל חודש
                   </div>
                 </div>
               </div>
