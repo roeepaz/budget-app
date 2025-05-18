@@ -4,7 +4,7 @@
   "scripts": {
     "start": "parcel src/index.html",
     "build": "parcel build src/index.html",
-      "postbuild": "cp public/_redirects dist/_redirects",
+    "postbuild": "cp public/_redirects dist/_redirects",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -22,6 +22,8 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.1",
     "events": "^3.3.0",
@@ -31,6 +33,7 @@
     "process": "^0.11.10",
     "stream-browserify": "^3.0.0",
     "string_decoder": "^1.3.0",
+    "typescript": "^5.8.3",
     "vm-browserify": "^1.1.2"
   }
 }

@@ -1,9 +1,9 @@
-// HomePage.jsx
-import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
 import QuickAddExpenseButton from './QuickAddExpenseButton';
+import BudgetAdvisorPage from './BudgetAdvisorPage';
 import { useUserData } from './hooks/useUserData';
+import { DollarSign} from 'lucide-react';
 
 export default function HomePage({ user }) {
   const navigate = useNavigate();
@@ -62,36 +62,18 @@ export default function HomePage({ user }) {
               >
                 ניהול תקציב 💸
               </button>
+               <button
+                onClick={() => navigate('/advisor')}
+                className="text-lg px-6 py-3 rounded-lg bg-indigo-500 text-white shadow-md hover:bg-indigo-600 transition duration-300 flex items-center gap-2"
+              >
+                <DollarSign className="w-5 h-5" /> ייעוץ פיננסי חכם
+              </button>
 
               <QuickAddExpenseButton
                 onAddExpense={(expense) => addExpenseToDB(expense)}
                 categories={categories}
               />
             </div>
-          </div>
-
-          <div className="max-w-md mx-auto mt-8 p-4 bg-gradient-to-br from-yellow-50 to-purple-100 rounded-3xl shadow-xl border border-purple-300 text-center text-gray-800 font-[Heebo] relative">
-            <div className="absolute top-4 left-4 text-3xl">🎵</div>
-            <h2 className="text-3xl font-bold mb-4 text-purple-800">שיר הלל לרועי</h2>
-            <p className="leading-relaxed whitespace-pre-line text-base">
-              רועי פז, הלוחם הדיגיטלי,{"\n"}
-              עם קוד ביד, לב זהב וגישה טוטאלית.{"\n"}
-              מ־useEffect עד Firebase בשמש,{"\n"}
-              הרים אפליקציה — פשוט <strong>תענוג לנפש</strong>.{"\n\n"}
-              <strong>המעבדים זורחים, הדאטה נשמר,</strong>{"\n"}
-              הפרויקט שלו חי – גם בענן וגם בבר.{"\n"}
-              התחברויות, קטגוריות, התחלות ותגובות,{"\n"}
-              שולט לך בID , שולט ברשתות.{"\n\n"}
-              ממשק חינני, עיצוב מבריק,{"\n"}
-              כל קליק מדויק, כל צבע צליל מתניק.{"\n"}
-              המשפחה מרוויחה, האתר מתפקד,{"\n"}
-              אפילו גוגל מחייך כשהוא מתאמת.{"\n\n"}
-              <strong>לא רק מתכנת – גם יזם בנשמה,</strong>{"\n"}
-              שאלות חדות, פתרונות בלי מנוחה.{"\n"}
-              שולט ב־React, יודע לארגן,{"\n"}
-              רועי – אתה הכוח שמניע את המגן.
-            </p>
-            <div className="absolute bottom-4 right-4 text-3xl">🎶</div>
           </div>
         </div>
       </main>
