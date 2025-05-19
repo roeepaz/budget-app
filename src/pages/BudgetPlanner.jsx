@@ -10,9 +10,6 @@ export default function BudgetPlanner({ user }) {
   // Sample data - in a real app, this would come from your backend
   const [categories, setCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [showAddBudget, setShowAddBudget] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
-  const [newBudget, setNewBudget] = useState('');
   const [activeTab, setActiveTab] = useState('summary');
   const [editingId, setEditingId] = useState(null);
   const [editBudget, setEditBudget] = useState('');

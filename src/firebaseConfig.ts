@@ -1,7 +1,7 @@
 // firebaseConfig.ts
-import { initializeApp } from "firebase/app";
+import { initializeApp, FirebaseApp }         from 'firebase/app';
+import { getFirestore, Firestore }            from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
 import dotenv from 'dotenv';
 dotenv.config();
 const firebaseConfig = {
@@ -14,7 +14,10 @@ const firebaseConfig = {
   measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+// initialize
+const app: FirebaseApp = initializeApp(firebaseConfig);
+
+// export typed Firestore instance
+export const db: Firestore = getFirestore(app);
 export const auth = getAuth(app);
 export const provider = new GoogleAuthProvider();
-export const db = getFirestore(app);

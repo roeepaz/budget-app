@@ -36,7 +36,7 @@ function App() {
         <Route path="/budget" element={<BudgetApp user={user} />} />
         <Route path="/expense" element={<ExpenseTracker user={user} />} />
         <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
-        <Route path="/advisor" element={<BudgetAdvisorPage/>} />
+        <Route path="/advisor" element={<BudgetAdvisorPage user={user}/>} />
 
       </Routes>
     </BrowserRouter>

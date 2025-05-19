@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import { Timestamp } from 'firebase/firestore';
+
+import React, { useState, useEffect } from 'react';
 import { useBudgetModel, BudgetInputs, Debt, SavingsGoal } from '../hooks/useBudgetModel';
 import { DollarSign, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
+import { db } from '../firebaseConfig.js';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export default function BudgetAdvisorPage() {
+// 1. Define props
+interface BudgetAdvisorPageProps {
+  user: { uid: string } | null;
+}
+// 2. Extract form-only fields from BudgetInputs
+type FormState = Omit<BudgetInputs, 'debts' | 'savingsGoals'>;
+
+export default function BudgetAdvisorPage({ user }: BudgetAdvisorPageProps) {
   const [inputs, setInputs] = useState<BudgetInputs | null>(null);
   const [darkMode, setDarkMode] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<FormState>({
     income: 10000,
     needs: 4000,
     wants: 2000,
@@ -15,29 +26,104 @@ export default function BudgetAdvisorPage() {
     currentSavings: 500,
     currency: '₪'
   });
+const today = new Date().toISOString().split('T')[0];
 
   const [debts, setDebts] = useState<Debt[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const userId = user?.uid;
+const [loading, setLoading] = useState(true);
+const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
 
-  const [newGoal, setNewGoal] = useState({
-    name: '',
-    targetAmount: 0,
-    currentAmount: 0,
-    targetDate: '',
-    priority: 3,
-  });
+const [newGoal, setNewGoal] = useState({
+  name: '',
+  targetAmount: 0,
+  currentAmount: 0,
+  targetDate: '',
+  priority: 3,
+});
 
-  const [newDebt, setNewDebt] = useState({
-    name: '',
-    principal: 0,
-    annualRate: 0,
-    termMonths: 12,
-    minPayment: 0,
-  });
+const [newDebt, setNewDebt] = useState({
+  name: '',
+  principal: 0,
+  annualRate: 0,
+  termMonths: 12,
+  minPayment: 0,
+});
 
-  // Only calculate result if inputs are set
-  const result =  useBudgetModel(inputs) 
+const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
+// Only calculate result if inputs are set
+const result =  useBudgetModel(inputs) 
 
+
+useEffect(() => {
+  if (!userId) return;
+
+  const loadUserData = async () => {
+    try {
+      const docRef = doc(db, 'financial_data', userId);
+      const snapshot = await getDoc(docRef);
+      if (snapshot.exists()) {
+        const data = snapshot.data() as {
+          form: FormState;
+          debts: Debt[];
+          goals: Array<{
+            id: string;
+            name: string;
+            targetAmount: number;
+            currentAmount: number;
+            priority: number;
+            targetDate: unknown;
+          }>;
+        };
+
+        // נרמול תאריכים
+        const loadedGoals: SavingsGoal[] = data.goals.map(g => ({
+          id: g.id,
+          name: g.name,
+          targetAmount: g.targetAmount,
+          currentAmount: g.currentAmount,
+          priority: g.priority,
+          // אם זה Timestamp של Firestore → toDate(), אחרת נניח מחרוזת ISO
+          targetDate:
+            g.targetDate instanceof Timestamp
+              ? g.targetDate.toDate()
+              : new Date(g.targetDate as string),
+        }));
+
+        setForm(data.form);
+        setDebts(data.debts);
+        setGoals(loadedGoals);
+      }
+    } catch (error) {
+      console.error('⚠️ שגיאה בטעינת הנתונים:', error);
+    } finally {
+      setHasLoaded(true);
+      setLoading(false);
+    }
+  };
+
+  loadUserData();
+}, [userId]);
+  
+  useEffect(() => {
+    if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
+  
+    const timeout = setTimeout(() => {
+      setDoc(doc(db, 'financial_data', userId), {
+        form,
+        debts,
+        goals
+      });
+    }, 800); // שמירה אחרי 800ms של שקט
+  
+    return () => clearTimeout(timeout);
+  }, [form, debts,goals, userId, hasLoaded]);
+if (loading) {
+  return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
+}
+  if (!user) {
+  return <div>Loading or not authenticated...</div>;
+}
   const handleSubmit = () => {
     setInputs({
       ...form,
@@ -45,10 +131,41 @@ export default function BudgetAdvisorPage() {
       savingsGoals: goals,
     });
   };
+// which goal (if any) is being edited
+
+// when user clicks “ערוך”, populate the form
+const startEditGoal = (g: SavingsGoal) => {
+  setEditingGoalId(g.id);
+  setNewGoal({
+    name:         g.name,
+    targetAmount: g.targetAmount,
+currentAmount: g.currentAmount ?? 0,
+    // convert Date → yyyy-MM-dd string for <input type="date">
+    targetDate:   g.targetDate.toISOString().split('T')[0],
+    priority:     g.priority,
+  });
+};
 
   const addGoal = () => {
-    if (!newGoal.name || !newGoal.targetAmount || !newGoal.targetDate) return;
-    
+  if (!newGoal.name || !newGoal.targetAmount || !newGoal.targetDate) return;
+
+  if (editingGoalId) {
+    // update existing
+    setGoals(goals.map(g =>
+      g.id === editingGoalId
+        ? {
+            ...g,
+            name:         newGoal.name,
+            targetAmount: newGoal.targetAmount,
+            currentAmount: newGoal.currentAmount,
+            targetDate:   new Date(newGoal.targetDate),
+            priority:     newGoal.priority,
+          }
+        : g
+    ));
+    setEditingGoalId(null);
+  } else {
+    // add new
     setGoals([
       ...goals,
       {
@@ -60,8 +177,11 @@ export default function BudgetAdvisorPage() {
         priority: newGoal.priority,
       },
     ]);
-    setNewGoal({ name: '', targetAmount: 0, currentAmount: 0, targetDate: '', priority: 3 });
-  };
+  }
+
+  // reset form
+  setNewGoal({ name: '', targetAmount: 0, currentAmount: 0, targetDate: '', priority: 3 });
+};
 
   const addDebt = () => {
     if (!newDebt.name || newDebt.principal <= 0 || newDebt.minPayment <= 0) return;
@@ -277,7 +397,7 @@ export default function BudgetAdvisorPage() {
               />
             </div>
             <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>תאריך יעד</label>
+              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>תאריך יעד, מחושב עם הפקדה בתחילת כל חודש</label>
               <input
                 type="date"
                 className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
@@ -286,6 +406,7 @@ export default function BudgetAdvisorPage() {
                     : 'bg-white border-gray-300 text-gray-900'
                 }`}
                 value={newGoal.targetDate || ''}
+                min={today}
                 onChange={(e) => setNewGoal({ ...newGoal, targetDate: e.target.value })}
               />
             </div>
@@ -317,35 +438,46 @@ export default function BudgetAdvisorPage() {
             onClick={addGoal}
             disabled={!newGoal.name || !newGoal.targetAmount || !newGoal.targetDate}
           >
-            ➕ הוסף מטרה
+             {editingGoalId ? 'שמור שינויים' : 'הוסף מטרה'}
           </button>
 
           {/* Display existing goals */}
+         {/* Display existing goals */}
           {goals.length > 0 && (
             <div className="mt-4">
               <h3 className={`font-medium mb-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>מטרות קיימות:</h3>
               <div className="space-y-2">
                 {goals.map((goal) => (
-                  <div key={goal.id} className={`flex justify-between items-center p-2 rounded border ${
-                    darkMode 
-                      ? 'bg-gray-800 border-gray-600' 
-                      : 'bg-white border-gray-300'
-                  }`}>
+                  <div key={goal.id}
+                      className={`flex justify-between items-center p-2 rounded border ${
+                        darkMode
+                          ? 'bg-gray-800 border-gray-600'
+                          : 'bg-white border-gray-300'
+                      }`}>
                     <span className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                      🎯 {goal.name} - {formatCurrency(goal.currentAmount || 0)} / {formatCurrency(goal.targetAmount)} 
+                      🎯 {goal.name} – {formatCurrency(goal.currentAmount || 0)} / {formatCurrency(goal.targetAmount)}
                       (עד {goal.targetDate.toLocaleDateString('he-IL')})
                     </span>
-                    <button
-                      className={`text-xs hover:underline ${darkMode ? 'text-red-400' : 'text-red-500'}`}
-                      onClick={() => removeGoal(goal.id)}
-                    >
-                      הסר
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        className={`text-xs hover:underline ${darkMode ? 'text-blue-400' : 'text-blue-500'}`}
+                        onClick={() => startEditGoal(goal)}
+                      >
+                        ערוך
+                      </button>
+                      <button
+                        className={`text-xs hover:underline ${darkMode ? 'text-red-400' : 'text-red-500'}`}
+                        onClick={() => removeGoal(goal.id)}
+                      >
+                        הסר
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
+
         </div>
 
         {/* Debts Section */}
