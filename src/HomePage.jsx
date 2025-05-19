@@ -34,8 +34,8 @@ export default function HomePage({ user }) {
         </button>
       </div>
 
-      <main className="flex-grow p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center justify-center h-full">
+      <main className="flex-grow flex items-center justify-center p-6">
+      <div className="flex flex-col items-center justify-center text-center space-y-6">
           <div className="flex flex-col items-center justify-center text-center space-y-6">
             <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight leading-snug">
               ניהול כלכלי חכם<br />
@@ -56,6 +56,10 @@ export default function HomePage({ user }) {
               >
                 מעקב הוצאות 📊
               </button>
+              <QuickAddExpenseButton
+                onAddExpense={(expense) => addExpenseToDB(expense)}
+                categories={categories}
+              />
               <button
                 onClick={() => navigate('/budgetPlanner')}
                 className="text-lg px-6 py-3 rounded-lg bg-yellow-500 text-gray-900 shadow-md hover:bg-yellow-600 transition duration-300"
@@ -69,10 +73,6 @@ export default function HomePage({ user }) {
                 <DollarSign className="w-5 h-5" /> ייעוץ פיננסי חכם
               </button>
 
-              <QuickAddExpenseButton
-                onAddExpense={(expense) => addExpenseToDB(expense)}
-                categories={categories}
-              />
             </div>
           </div>
         </div>

@@ -176,51 +176,66 @@ export default function BudgetAdvisorPage() {
         </div>
       </div>
 
-      {/* Savings Goals Section */}
+          {/* Savings Goals Section */}
       <div className="bg-blue-50 p-4 rounded shadow mb-6">
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
           <Target className="w-5 h-5" />
           🎯 מטרות חסכון
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm items-end">
-          <input
-            type="text"
-            placeholder="שם מטרה"
-            className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
-            value={newGoal.name}
-            onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
-          />
-          <input
-            type="number"
-            placeholder="סכום יעד"
-            className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
-            value={newGoal.targetAmount}
-            onChange={(e) => setNewGoal({ ...newGoal, targetAmount: Number(e.target.value) })}
-          />
-          <input
-            type="number"
-            placeholder="סכום נוכחי"
-            className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
-            value={newGoal.currentAmount}
-            onChange={(e) => setNewGoal({ ...newGoal, currentAmount: Number(e.target.value) })}
-          />
-          <input
-            type="date"
-            className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
-            value={newGoal.targetDate}
-            onChange={(e) => setNewGoal({ ...newGoal, targetDate: e.target.value })}
-          />
-          <select
-            className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
-            value={newGoal.priority}
-            onChange={(e) => setNewGoal({ ...newGoal, priority: Number(e.target.value) })}
-          >
-            <option value={1}>עדיפות נמוכה</option>
-            <option value={2}>עדיפות בינונית</option>
-            <option value={3}>עדיפות בינונית-גבוהה</option>
-            <option value={4}>עדיפות גבוהה</option>
-            <option value={5}>עדיפות דחופה</option>
-          </select>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm items-end">
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600 mb-1">שם מטרה (למשל: חופשה)</label>
+            <input
+              type="text"
+              placeholder="שם מטרה"
+              className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              value={newGoal.name || ''}
+              onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600 mb-1">סכום יעד</label>
+            <input
+              type="number"
+              placeholder="סכום יעד"
+              className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              value={newGoal.targetAmount ?? ''}
+              onChange={(e) => setNewGoal({ ...newGoal, targetAmount: Number(e.target.value) })}
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600 mb-1">סכום נוכחי (כמה כבר חסכת למטרה)</label>
+            <input
+              type="number"
+              placeholder="סכום נוכחי"
+              className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              value={newGoal.currentAmount ?? ''}
+              onChange={(e) => setNewGoal({ ...newGoal, currentAmount: Number(e.target.value) })}
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600 mb-1">תאריך יעד</label>
+            <input
+              type="date"
+              className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              value={newGoal.targetDate || ''}
+              onChange={(e) => setNewGoal({ ...newGoal, targetDate: e.target.value })}
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-xs text-gray-600 mb-1">עדיפות (כמה המטרה דחופה לך)</label>
+            <select
+              className="p-2 border rounded focus:ring-2 focus:ring-blue-500"
+              value={newGoal.priority ?? ''}
+              onChange={(e) => setNewGoal({ ...newGoal, priority: Number(e.target.value) })}
+            >
+              <option value={1}>עדיפות נמוכה</option>
+              <option value={2}>עדיפות בינונית</option>
+              <option value={3}>עדיפות בינונית-גבוהה</option>
+              <option value={4}>עדיפות גבוהה</option>
+              <option value={5}>עדיפות דחופה</option>
+            </select>
+          </div>
         </div>
         <button
           className="mt-3 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 text-sm transition-colors"
@@ -254,49 +269,65 @@ export default function BudgetAdvisorPage() {
         )}
       </div>
 
-      {/* Debts Section */}
+            {/* Debts Section */}
       <div className="bg-red-50 p-4 rounded shadow mb-6">
         <h2 className="text-lg font-semibold mb-3 text-red-700 flex items-center gap-2">
           <DollarSign className="w-5 h-5" />
           💳 הלוואות קיימות
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm items-end">
-          <input
-            type="text"
-            placeholder="שם הלוואה"
-            className="p-2 border rounded focus:ring-2 focus:ring-red-500"
-            value={newDebt.name}
-            onChange={(e) => setNewDebt({ ...newDebt, name: e.target.value })}
-          />
-          <input
-            type="number"
-            placeholder="סכום קרן"
-            className="p-2 border rounded focus:ring-2 focus:ring-red-500"
-            value={newDebt.principal}
-            onChange={(e) => setNewDebt({ ...newDebt, principal: Number(e.target.value) })}
-          />
-          <input
-            type="number"
-            placeholder="ריבית שנתית %"
-            className="p-2 border rounded focus:ring-2 focus:ring-red-500"
-            value={newDebt.annualRate * 100}
-            onChange={(e) => setNewDebt({ ...newDebt, annualRate: Number(e.target.value) / 100 })}
-          />
-          <input
-            type="number"
-            placeholder="חודשי פרעון"
-            className="p-2 border rounded focus:ring-2 focus:ring-red-500"
-            value={newDebt.termMonths}
-            onChange={(e) => setNewDebt({ ...newDebt, termMonths: Number(e.target.value) })}
-          />
-          <input
-            type="number"
-            placeholder="תשלום מינימלי"
-            className="p-2 border rounded focus:ring-2 focus:ring-red-500"
-            value={newDebt.minPayment}
-            onChange={(e) => setNewDebt({ ...newDebt, minPayment: Number(e.target.value) })}
-          />
-        </div>
+  <div className="flex flex-col">
+    <label className="text-xs text-gray-600 mb-1">שם ההלוואה (למשל: משכנתא, רכב)</label>
+    <input
+      type="text"
+      placeholder="שם ההלוואה"
+      className="p-2 border rounded focus:ring-2 focus:ring-red-500"
+      value={newDebt.name || ''}
+      onChange={(e) => setNewDebt({ ...newDebt, name: e.target.value })}
+    />
+  </div>
+  <div className="flex flex-col">
+    <label className="text-xs text-gray-600 mb-1">סכום קרן (היתרה הנוכחית להחזר)</label>
+    <input
+      type="number"
+      placeholder="סכום קרן"
+      className="p-2 border rounded focus:ring-2 focus:ring-red-500"
+      value={newDebt.principal ?? ''}
+      onChange={(e) => setNewDebt({ ...newDebt, principal: Number(e.target.value) })}
+    />
+  </div>
+  <div className="flex flex-col">
+    <label className="text-xs text-gray-600 mb-1">ריבית שנתית באחוזים</label>
+    <input
+      type="number"
+      placeholder="ריבית %"
+      className="p-2 border rounded focus:ring-2 focus:ring-red-500"
+      value={newDebt.annualRate !== undefined ? newDebt.annualRate * 100 : ''}
+      onChange={(e) => setNewDebt({ ...newDebt, annualRate: Number(e.target.value) / 100 })}
+    />
+  </div>
+  <div className="flex flex-col">
+    <label className="text-xs text-gray-600 mb-1">מספר חודשי תשלום שנותרו</label>
+    <input
+      type="number"
+      placeholder="חודשים"
+      className="p-2 border rounded focus:ring-2 focus:ring-red-500"
+      value={newDebt.termMonths ?? ''}
+      onChange={(e) => setNewDebt({ ...newDebt, termMonths: Number(e.target.value) })}
+    />
+  </div>
+  <div className="flex flex-col">
+    <label className="text-xs text-gray-600 mb-1">תשלום חודשי מינימלי</label>
+    <input
+      type="number"
+      placeholder="תשלום מינימלי"
+      className="p-2 border rounded focus:ring-2 focus:ring-red-500"
+      value={newDebt.minPayment ?? ''}
+      onChange={(e) => setNewDebt({ ...newDebt, minPayment: Number(e.target.value) })}
+    />
+  </div>
+</div>
+
         <button
           className="mt-3 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 text-sm transition-colors"
           onClick={addDebt}
@@ -304,7 +335,6 @@ export default function BudgetAdvisorPage() {
         >
           ➕ הוסף הלוואה
         </button>
-
         {/* Display existing debts */}
         {debts.length > 0 && (
           <div className="mt-4">
