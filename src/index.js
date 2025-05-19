@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import BudgetApp from './BudgetApp';
-import ExpenseTracker from './ExpenseTracker'; // ודא שהשם נכון!
-import HomePage from './HomePage';
+import BudgetApp from './pages/BudgetApp';
+import ExpenseTracker from './pages/ExpenseTracker';
+import HomePage from './pages/HomePage';
 import Login from './Login';
-import { auth } from './firebase'; // זה הקובץ שבו שמרת את firebaseConfig
-import BudgetPlanner from './BudgetPlanner'
-import BudgetAdvisorPage from './BudgetAdvisorPage'
+import { auth } from './firebase'; 
+import BudgetPlanner from './pages/BudgetPlanner'
+import BudgetAdvisorPage from './pages/BudgetAdvisorPage'
 import { onAuthStateChanged } from 'firebase/auth';
 
 const container = document.getElementById('root');

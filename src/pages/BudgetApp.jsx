@@ -7,7 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { db } from './firebaseConfig';
+import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 

@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
-import QuickAddExpenseButton from './QuickAddExpenseButton';
+import QuickAddExpenseButton from '../components/QuickAddExpenseButton';
 import BudgetAdvisorPage from './BudgetAdvisorPage';
-import { useUserData } from './hooks/useUserData';
+import { useUserData } from '../hooks/useUserData';
 import { DollarSign} from 'lucide-react';
 
 export default function HomePage({ user }) {

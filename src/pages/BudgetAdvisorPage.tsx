@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useBudgetModel, BudgetInputs, Debt, SavingsGoal } from './hooks/useBudgetModel';
+import { useBudgetModel, BudgetInputs, Debt, SavingsGoal } from '../hooks/useBudgetModel';
 import { DollarSign, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target } from 'lucide-react';
 
 export default function BudgetAdvisorPage() {
