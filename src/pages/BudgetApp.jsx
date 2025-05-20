@@ -255,9 +255,11 @@ export default function BudgetApp({ user }) {
                 <PieChart size={20} className="mr-2" />
                 סקירת הכסף שלי 
               </h2>
-              <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                סה"כ: {currencySymbol}{displayedTotalAmount}
-              </div>
+             <div className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+              סה"כ: {currencySymbol}{currencyMode === 'USD' 
+                ? (totalAmount * exchangeRate).toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits: 1})
+                : totalAmount.toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits: 1})}
+            </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-right">
@@ -299,7 +301,10 @@ export default function BudgetApp({ user }) {
                 <tfoot className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
                   <tr className={`border-t-2 ${isDarkMode ? 'border-gray-600' : 'border-gray-300'}`}>
                     <td className="py-3">סה"כ</td>
-                    <td className="py-3">{currencySymbol}{displayedTotalAmount}</td>
+                    <td className="py-3">{currencySymbol}{currencyMode === 'USD' 
+                        ? (totalAmount * exchangeRate).toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits: 1})
+                        : totalAmount.toLocaleString(undefined, {maximumFractionDigits: 1, minimumFractionDigits: 1})}
+                    </td>
                     <td className="py-3">100%</td>
                     <td></td>
                   </tr>
