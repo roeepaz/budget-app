@@ -214,13 +214,13 @@ if (loading) {
             className={`px-4 py-3 font-medium text-sm flex items-center ${activeTab === 'expenses' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
             onClick={() => setActiveTab('expenses')}
           >
-            <Plus className="mr-2 w-4 h-4" /> Add Expenses
+            <Plus className="mr-2 w-4 h-4" /> הוסף הוצאה
           </button>
           <button 
             className={`px-4 py-3 font-medium text-sm flex items-center ${activeTab === 'categories' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
             onClick={() => setActiveTab('categories')}
           >
-            <PieChartIcon className="mr-2 w-4 h-4" /> Categories
+            <PieChartIcon className="mr-2 w-4 h-4" /> קטגוריות
           </button>
         </div>
       </nav>
@@ -311,7 +311,7 @@ if (loading) {
             </div>
               {/* Monthly Trend */}
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">Monthly Trend</h2>
+                <h2 className="text-xl font-semibold mb-4">טרנד חודשי</h2>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                    <BarChart data={monthlyData} onClick={(data) => {
