@@ -11,7 +11,9 @@ import BudgetAdvisorPage from './pages/BudgetAdvisorPage'
 import { onAuthStateChanged } from 'firebase/auth';
 
 const container = document.getElementById('root');
+if (!container) throw new Error('Could not find root element');
 const root = createRoot(container);
+
 
 function App() {
   const [user, setUser] = useState(null);

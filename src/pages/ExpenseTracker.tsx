@@ -4,86 +4,135 @@ import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } f
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 // Main App Component
+type CategoryTag = 'need'|'want'|'debt'|'emergency'|'goal';
 
-export default function ExpenseTracker({ user }) {
-  const defaultCategories = [
-    { id: 1, name: 'אוכל', color: '#FF6384', icon: '🍔' },
-    { id: 2, name: 'דיור', color: '#36A2EB', icon: '🏠' },
-    { id: 3, name: 'תחבורה', color: '#FFCE56', icon: '🚗' },
-    { id: 4, name: 'שירותים', color: '#4BC0C0', icon: '💡' },
-    { id: 5, name: 'בידור', color: '#9966FF', icon: '🎬' },
-    { id: 6, name: 'בריאות', color: '#FF6B6B', icon: '💊' },
-    { id: 7, name: 'ביגוד', color: '#4B5563', icon: '👕' }
-  ];
+interface Category {
+  id: number;
+  name: string;
+  color: string;
+  icon: string;
+  tag: CategoryTag;    // <-- כאן
+}
+export interface Expense {
+  id: number;
+  amount: number;
+  description: string;
+  categoryId: number;
+  date: string; // ISO yyyy-MM-dd
+}
 
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth()); // מאי = 4
+interface ExpenseTrackerProps {
+  user: { uid: string } | null;
+}
+
+export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
+  // Default categories
+  const defaultCategories: Category[] = [];
+
+  // State
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'categories'>('dashboard');
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const selectedYear = 2025;
 
-  const [categories, setCategories] = useState(defaultCategories);
-  const [expenses, setExpenses] = useState([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [categories, setCategories] = useState<Category[]>(defaultCategories);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
+  const filteredExpenses = expenses.filter(exp => new Date(exp.date).getMonth() === selectedMonth);
 
-
-const filteredExpenses = expenses.filter(exp => {
-  return new Date(exp.date).getMonth() === selectedMonth;
-});
-
-
-
-  const [newExpense, setNewExpense] = useState({
-    amount: '',
+  const [newExpense, setNewExpense] = useState<Partial<Expense>>({
+    amount: undefined,
     description: '',
-    categoryId: '',
+    categoryId: undefined,
     date: new Date().toISOString().split('T')[0]
   });
-  
-  const [newCategory, setNewCategory] = useState({
+
+  const [newCategory, setNewCategory] = useState<Omit<Category, 'id'>>({
     name: '',
-    color: '#' + Math.floor(Math.random()*16777215).toString(16),
-    icon: '📊'
+    color: '#' + Math.floor(Math.random() * 16777215).toString(16),
+    icon: '📊',
+    tag: 'need'
   });
 
-const userId = user?.uid;
-const [loading, setLoading] = useState(true);
-const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
+  const userId = user?.uid;
+  const [loading, setLoading] = useState<boolean>(true);
+  const [hasLoaded, setHasLoaded] = useState<boolean>(false);
 
-useEffect(() => {
-  if (!userId) return;
-
-  const loadUserData = async () => {
-    const docRef = doc(db, 'users', userId);
-    try {
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        setExpenses(data.expenses || []);
-        setCategories(data.categories || defaultCategories);
+  // Load user data
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        const docRef = doc(db, 'users', userId);
+        const snapshot = await getDoc(docRef);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          setExpenses(data.expenses || []);
+          setCategories(data.categories || defaultCategories);
+        }
+      } catch (error) {
+        console.error('⚠️ Error loading data:', error);
+      } finally {
+        setHasLoaded(true);
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-    }
-    setHasLoaded(true);
-    setLoading(false);
+    })();
+  }, [userId]);
+
+  // Save on changes
+  useEffect(() => {
+    if (!userId || !hasLoaded) return;
+    const handle = setTimeout(async () => {
+      try {
+        await setDoc(doc(db, 'users', userId), { categories, expenses });
+      } catch (error) {
+        console.error('⚠️ Error saving data:', error);
+      }
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [categories, expenses, userId, hasLoaded]);
+
+  if (loading) return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
+  if (!user) return <div>Loading or not authenticated...</div>;
+
+  // Handlers
+  const handleAddExpense = () => {
+    if (!newExpense.amount || !newExpense.categoryId) return;
+    const exp: Expense = {
+      id: Date.now(),
+      amount: newExpense.amount,
+      description: newExpense.description || '',
+      categoryId: newExpense.categoryId,
+      date: newExpense.date || new Date().toISOString().split('T')[0]
+    };
+    setExpenses(prev => [...prev, exp]);
+    setNewExpense({ amount: undefined, description: '', categoryId: undefined, date: new Date().toISOString().split('T')[0] });
   };
 
-  loadUserData();
-}, [userId]);
+  const handleAddCategory = () => {
+    if (!newCategory.name) return;
+    const cat: Category = {
+      id: Date.now(),
+      ...newCategory
+    };
+    setCategories(prev => [...prev, cat]);
+    setNewCategory({ name: '', color: '#' + Math.floor(Math.random() * 16777215).toString(16), icon: '📊', tag: 'need' });
+  };
 
-useEffect(() => {
-  if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
+  const handleDeleteExpense = (id: number) => {
+    setExpenses(prev => prev.filter(e => e.id !== id));
+  };
 
-  const timeout = setTimeout(() => {
-    setDoc(doc(db, 'users', userId), {
-      expenses,
-      categories
-    });
-  }, 800); // שמירה אחרי 800ms של שקט
+  // Summary calculations
+  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const expensesByCategory = categories.map(cat => {
+    const catExps = filteredExpenses.filter(e => e.categoryId === cat.id);
+    const total = catExps.reduce((s, e) => s + e.amount, 0);
+    return { name: cat.name, value: total, color: cat.color, icon: cat.icon, percentage: totalExpenses ? ((total / totalExpenses) * 100).toFixed(1) : '0' };
+  });
 
-  return () => clearTimeout(timeout);
-}, [expenses, categories, userId, hasLoaded]);
-
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthlyData = monthNames.map((m, idx) => ({ month: m, amount: expenses.filter(e => new Date(e.date).getMonth() === idx).reduce((s, e) => s + e.amount, 0) }));
   
 if (loading) {
   return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
@@ -91,73 +140,6 @@ if (loading) {
   if (!user) {
   return <div>Loading or not authenticated...</div>;
 }
-// Handlers
-const handleAddExpense = () => {
-  if (!newExpense.amount || !newExpense.categoryId) return;
-  
-  const expense = {
-    id: Math.floor(Math.random() * 1000000),
-    amount: parseFloat(newExpense.amount),
-      description: newExpense.description,
-      categoryId: parseInt(newExpense.categoryId),
-      date: newExpense.date
-    };
-    
-    setExpenses([...expenses, expense]);
-    setNewExpense({
-      amount: '',
-      description: '',
-      categoryId: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-  };
-  
-  const handleAddCategory = () => {
-    if (!newCategory.name) return;
-    
-    const category = {
-      id: Math.floor(Math.random() * 1000000),
-      name: newCategory.name,
-      color: newCategory.color,
-      icon: newCategory.icon
-    };
-    
-    setCategories([...categories, category]);
-    setNewCategory({
-      name: '',
-      color: '#' + Math.floor(Math.random()*16777215).toString(16),
-      icon: '📊'
-    });
-  };
-  
-  const handleDeleteExpense = (id) => {
-    setExpenses(expenses.filter(expense => expense.id !== id));
-  };
-  
-  // Calculate summary data
- const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-
-const expensesByCategory = categories.map(category => {
-  const categoryExpenses = filteredExpenses.filter(exp => exp.categoryId === category.id);
-  const totalAmount = categoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const percentage = totalExpenses ? (totalAmount / totalExpenses * 100).toFixed(1) : 0;
-
-  return {
-    name: category.name,
-    value: totalAmount,
-    color: category.color,
-    icon: category.icon,
-    percentage
-  };
-});
-const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const monthlyData = monthNames.map((month, index) => {
-  const total = expenses
-    .filter(exp => new Date(exp.date).getMonth() === index)
-    .reduce((sum, exp) => sum + exp.amount, 0);
-  return { month, amount: total };
-});
-
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -308,7 +290,9 @@ const monthlyData = monthNames.map((month, index) => {
                           date.getFullYear() === selectedYear
                         );
                       })
-                      .sort((a, b) => new Date(b.date) - new Date(a.date))
+                       .sort((a, b) =>
+                          new Date(b.date).getTime() - new Date(a.date).getTime()
+                        )
                       .map(expense => {
                         const category = categories.find(c => c.id === expense.categoryId);
                         return (
@@ -347,7 +331,7 @@ const monthlyData = monthNames.map((month, index) => {
                       type="number" 
                       className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
                       value={newExpense.amount}
-                      onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                      onChange={(e) => setNewExpense({...newExpense, amount: parseFloat(e.target.value)})}
                       placeholder="0.00"
                     />
                   </div>
@@ -357,7 +341,7 @@ const monthlyData = monthNames.map((month, index) => {
                     <select 
                       className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
                       value={newExpense.categoryId}
-                      onChange={(e) => setNewExpense({...newExpense, categoryId: e.target.value})}
+                      onChange={(e) => setNewExpense({...newExpense, categoryId: parseInt(e.target.value)})}
                     >
                       <option value="">Select a category</option>
                       {categories.map(category => (
@@ -413,8 +397,9 @@ const monthlyData = monthNames.map((month, index) => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {expenses
-                        .sort((a, b) => new Date(b.date) - new Date(a.date))
-                        .map(expense => {
+                        .sort((a, b) =>
+                          new Date(b.date).getTime() - new Date(a.date).getTime()
+                        )                        .map(expense => {
                           const category = categories.find(c => c.id === expense.categoryId);
                           return (
                             <tr key={expense.id}>
@@ -466,6 +451,20 @@ const monthlyData = monthNames.map((month, index) => {
                     placeholder="e.g. Groceries, Rent, etc."
                   />
                 </div>
+                <label>תיוג (מה מייצג הכסף שהולך לקטגוריה זו)</label>
+                  <select
+                    value={newCategory.tag}
+                    onChange={e => setNewCategory({
+                      ...newCategory,
+                      tag: e.target.value as CategoryTag
+                    })}
+                  >
+                    <option value="need">Needs (בסיסי)</option>
+                    <option value="want">Wants (מותרות)</option>
+                    <option value="debt">Debt (הלוואות)</option>
+                    <option value="emergency">Emergency (חירום)</option>
+                    <option value="goal">Goal (מטרה)</option>
+                  </select>
 
                 {/* Color */}
                 <div>
@@ -502,33 +501,37 @@ const monthlyData = monthNames.map((month, index) => {
 
                 {/* Edit Dropdown */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Optional: edit Existing Category (adds new if none selected)</label>
-                  <select
-                    className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                    value={selectedCategoryId}
-                    onChange={(e) => {
-                      const selectedId = parseInt(e.target.value);
-                      setSelectedCategoryId(selectedId);
-                      const selected = categories.find((cat) => cat.id === selectedId);
-                      if (selected) {
-                        setNewCategory({
-                          name: selected.name,
-                          color: selected.color,
-                          icon: selected.icon,
-                        });
-                      } else {
-                        setNewCategory({ name: '', color: '#000000', icon: '' });
-                      }
-                    }}
-                  >
-                    <option value="">בחר קטגוריה לעריכה</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.icon} {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Optional: edit Existing Category (adds new if none selected)
+            </label>
+            <select
+              className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+              value={selectedCategoryId.toString()}
+              onChange={e => {
+                const val = e.target.value;
+                setSelectedCategoryId(val);
+                const selectedId = parseInt(val, 10);
+                const selected = categories.find(cat => cat.id === selectedId);
+                if (selected) {
+                  setNewCategory({
+                    name: selected.name,
+                    color: selected.color,
+                    icon: selected.icon,
+                    tag: selected.tag
+                  });
+                } else {
+                  setNewCategory({ name: '', color: '#000000', icon: '', tag: 'need' });
+                }
+              }}
+            >
+              <option value="">בחר קטגוריה לעריכה</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>
+                  {category.icon} {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
                 {/* Add/Update Button */}
                 <button
@@ -554,7 +557,7 @@ const monthlyData = monthNames.map((month, index) => {
                     }
 
                     // Clear form
-                    setNewCategory({ name: '', color: '#000000', icon: '' });
+                    setNewCategory({ name: '', color: '#000000', icon: '', tag: 'need' });
                   }}
                 >
                   <Plus className="mr-2 w-4 h-4" />
