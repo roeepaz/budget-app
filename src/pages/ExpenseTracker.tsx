@@ -40,12 +40,14 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
 
   const filteredExpenses = expenses.filter(exp => new Date(exp.date).getMonth() === selectedMonth);
 
-  const [newExpense, setNewExpense] = useState<Partial<Expense>>({
-    amount: undefined,
-    description: '',
-    categoryId: undefined,
-    date: new Date().toISOString().split('T')[0]
-  });
+  // instead of Partial<Expense>, use:
+const [newExpense, setNewExpense] = useState({
+  amount: '',         // <-- empty string, not undefined
+  description: '',
+  categoryId: '',     // <-- empty string here too
+  date: new Date().toISOString().split('T')[0],
+});
+
 
   const [newCategory, setNewCategory] = useState<Omit<Category, 'id'>>({
     name: '',
@@ -95,18 +97,21 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   if (loading) return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
   if (!user) return <div>Loading or not authenticated...</div>;
 
-  // Handlers
-  const handleAddExpense = () => {
-    if (!newExpense.amount || !newExpense.categoryId) return;
-    const exp: Expense = {
-      id: Date.now(),
-      amount: newExpense.amount,
-      description: newExpense.description || '',
-      categoryId: newExpense.categoryId,
-      date: newExpense.date || new Date().toISOString().split('T')[0]
-    };
+ const handleAddExpense = () => {
+  const amt = parseFloat(newExpense.amount);
+  const catId = parseInt(newExpense.categoryId, 10);
+  if (!amt || !catId) return;
+
+  const exp: Expense = {
+    id: Date.now(),
+    amount: amt,
+    description: newExpense.description,
+    categoryId: catId,
+    date: newExpense.date
+  };
+  // …
     setExpenses(prev => [...prev, exp]);
-    setNewExpense({ amount: undefined, description: '', categoryId: undefined, date: new Date().toISOString().split('T')[0] });
+    setNewExpense({ amount: '', description: '', categoryId: '', date: new Date().toISOString().split('T')[0] });
   };
 
   const handleAddCategory = () => {
@@ -133,7 +138,47 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
 
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const monthlyData = monthNames.map((m, idx) => ({ month: m, amount: expenses.filter(e => new Date(e.date).getMonth() === idx).reduce((s, e) => s + e.amount, 0) }));
+  // Filter and sort
+  const filtered = expenses.filter(e => new Date(e.date).getMonth() === selectedMonth)
+                           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                           
+  // ** New: Summary by tag **
+  const tags: CategoryTag[] = ['need','want','debt','emergency','goal'];
   
+const tagColors: Record<CategoryTag, string> = {
+  need:    '#3B82F6', // blue
+  want:    '#10B981', // green
+  debt:    '#F59E0B', // yellow
+  emergency:'#EF4444',// red
+  goal:    '#8B5CF6'  // purple
+};
+
+  // after you compute totalExpenses:
+
+// build your byTag array as before:
+const byTag: { tag: CategoryTag; sum: number }[] = tags.map(tag => {
+  const tagSum = categories
+    .filter(c => c.tag === tag)
+    .reduce((s, c) => {
+      const catSum = filteredExpenses
+        .filter(e => e.categoryId === c.id)
+        .reduce((ss, ex) => ss + ex.amount, 0);
+      return s + catSum;
+    }, 0);
+  return { tag, sum: tagSum };
+});
+
+// now compute percentages using totalExpenses:
+const byTagWithPct = byTag
+  .filter(t => t.sum > 0)
+  .map(t => ({
+    ...t,
+    pct: totalExpenses > 0
+      ? (t.sum / totalExpenses * 100).toFixed(1)
+      : '0'
+  }));
+
+
 if (loading) {
   return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
 }
@@ -147,7 +192,7 @@ if (loading) {
       <header className="bg-blue-600 text-white p-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold flex items-center">
-            <Home className="mr-2" /> Home Expense Tracker
+            <Home className="mr-2" /> מנהל הוצאות
           </h1>
           <div className="text-sm bg-blue-700 px-3 py-1 rounded-lg">
             <h2 className="text-xl font-semibold mb-4">Expense Summary for {monthNames[selectedMonth]}</h2>
@@ -188,7 +233,7 @@ if (loading) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Summary Card */}
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">Expense Summary</h2>
+                <h2 className="text-xl font-semibold mb-4">חלוקה לקטגוריות</h2>
                 <div className="flex items-center justify-center h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -228,7 +273,42 @@ if (loading) {
                     ))}
                 </div>
               </div>
-              
+              {/* New Tag summary bar */}
+             <div className="bg-white p-6 rounded-lg shadow-md">
+              <h2 className="text-xl font-semibold mb-4">חלוקה לסוגי הוצאה</h2>
+              <div className="flex items-center justify-center h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={byTagWithPct}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="sum"
+                      label={({ tag, pct }) => `${tag}: ${pct}%`}
+                      labelLine={false}
+                    >
+                      {byTagWithPct.map((entry, i) => (
+                        <Cell key={i} fill={tagColors[entry.tag]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={v => `₪${v}`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="mt-4">
+                {byTagWithPct.map(t => (
+                  <div key={t.tag} className="flex items-center justify-between py-2 border-b">
+                    <span className="capitalize">{t.tag}</span>
+                  <div className="flex items-center">
+                    <span className="font-medium">₪{t.sum.toFixed(2)}</span>
+                    <span className="ml-2 text-sm text-gray-500">({t.pct}%)</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
               {/* Monthly Trend */}
               <div className="bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-xl font-semibold mb-4">Monthly Trend</h2>
@@ -331,7 +411,7 @@ if (loading) {
                       type="number" 
                       className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
                       value={newExpense.amount}
-                      onChange={(e) => setNewExpense({...newExpense, amount: parseFloat(e.target.value)})}
+                      onChange={(e) => setNewExpense({...newExpense, amount:e.target.value})}
                       placeholder="0.00"
                     />
                   </div>
@@ -341,7 +421,7 @@ if (loading) {
                     <select 
                       className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
                       value={newExpense.categoryId}
-                      onChange={(e) => setNewExpense({...newExpense, categoryId: parseInt(e.target.value)})}
+                      onChange={(e) => setNewExpense({...newExpense, categoryId:e.target.value})}
                     >
                       <option value="">Select a category</option>
                       {categories.map(category => (
