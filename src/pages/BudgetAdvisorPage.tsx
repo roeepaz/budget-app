@@ -10,6 +10,14 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 interface BudgetAdvisorPageProps {
   user: { uid: string } | null;
 }
+interface Category {
+  id: number | string;
+  name: string;
+  color?: string;
+  icon?: string;
+  tag: 'need' | 'want' | 'debt' | 'emergency' | 'goal';
+}
+
 // 2. Extract form-only fields from BudgetInputs
 type FormState = Omit<BudgetInputs, 'debts' | 'savingsGoals'>;
 
@@ -30,6 +38,7 @@ const today = new Date().toISOString().split('T')[0];
 
   const [debts, setDebts] = useState<Debt[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const userId = user?.uid;
 const [loading, setLoading] = useState(true);
 const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
@@ -94,6 +103,12 @@ useEffect(() => {
         setDebts(data.debts);
         setGoals(loadedGoals);
       }
+      // load categories
+        const catRef = doc(db, 'users', userId);
+        const catSnap = await getDoc(catRef);
+        if (catSnap.exists()) {
+          setCategories(catSnap.data().categories || []);
+        }
     } catch (error) {
       console.error('⚠️ שגיאה בטעינת הנתונים:', error);
     } finally {
@@ -211,7 +226,24 @@ currentAmount: g.currentAmount ?? 0,
   const formatCurrency = (amount: number) => {
     return `${form.currency}${amount.toLocaleString()}`;
   };
-
+  // Build distribution lists
+  const needsList = categories.filter(c => c.tag === 'need').map(c => c.name).join(', ');
+  const wantsList = categories.filter(c => c.tag === 'want').map(c => c.name).join(', ');
+// Compute budget distribution recommendations
+  const baseNames = goals /* placeholder to get category names? assume categories state exists*/;
+  // Instead, derive from form tags: assume categories list in closure
+  // Real code should import categories from context or hook
+  // For demonstration, we'll use form.needs and form.wants
+  const needsAmt = form.needs;
+  const wantsAmt = result?.allocations.discretionarySpending ?? 0;
+  const emergencyAmt = result?.allocations.emergencyFundMonthly ?? 0;
+  const generalSavAmt = result?.allocations.generalSavings ?? 0;
+  const budgetDistribution = [
+    `הכנס סכום ${formatCurrency(needsAmt)} לקטגוריות מוצרים בסיסיים: ${needsList}`,
+    `הקצה סכום ${formatCurrency(wantsAmt)} לקטגוריות מותרות: ${wantsList}`,
+    `הכנס סכום ${formatCurrency(emergencyAmt)} לקרן החירום`,
+    `הכנס סכום ${formatCurrency(generalSavAmt)} לחיסכון כללי`
+  ];
   return (
       <div className={`min-h-screen transition-colors duration-300 ${
             darkMode 
@@ -738,6 +770,22 @@ currentAmount: g.currentAmount ?? 0,
                 )}
               </div>
             </div>
+
+          {/* New distribution section */}
+          <div className="bg-indigo-50 dark:bg-indigo-900/30 border p-4 rounded mb-6">
+            <h3 className="font-bold mb-4 text-lg">תזרים חודשי מומלץ</h3>
+            {/* Tabs-style pills */}
+            <div className="flex flex-wrap gap-2">
+              {budgetDistribution.map((line, idx) => (
+                <div
+                  key={idx}
+                  className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 text-indigo-900 dark:text-indigo-100 rounded-full text-sm shadow-sm hover:bg-indigo-200 dark:hover:bg-indigo-700 transition cursor-pointer"
+                >
+                  {line}
+                </div>
+              ))}
+            </div>
+          </div>
 
             {/* Savings Goals */}
             {result.allocations.goalAllocations.length > 0 && (

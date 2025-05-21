@@ -4,7 +4,7 @@ import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } f
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 // Main App Component
-type CategoryTag = 'need'|'want'|'debt'|'emergency'|'goal';
+type CategoryTag = 'need'|'want'|'debt'|'emergency'|'goal' |'savings';
 
 interface Category {
   id: number;
@@ -27,7 +27,10 @@ interface ExpenseTrackerProps {
 
 export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   // Default categories
-  const defaultCategories: Category[] = [];
+  const defaultCategories: Category[] = [
+    { id: 1, name: 'קרן ביטחון', color: '#FF6384', icon: '🛡️', tag: 'emergency' },
+    { id: 2, name: 'חיסכון כללי', color: '#36A2EB', icon: '💰', tag:'savings' },
+  ];
 
   // State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'categories'>('dashboard');
@@ -149,8 +152,10 @@ const tagColors: Record<CategoryTag, string> = {
   need:    '#3B82F6', // blue
   want:    '#10B981', // green
   debt:    '#F59E0B', // yellow
-  emergency:'#EF4444',// red
-  goal:    '#8B5CF6'  // purple
+  emergency:'#FF6384',
+  goal:    '#8B5CF6',  // purple
+  savings:    '#36A2EB'  
+
 };
 
   // after you compute totalExpenses:
