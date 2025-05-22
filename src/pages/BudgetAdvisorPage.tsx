@@ -5,6 +5,7 @@ import { useBudgetModel, BudgetInputs, Debt, SavingsGoal } from '../hooks/useBud
 import { DollarSign, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
 import { db } from '../firebaseConfig.js';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import AdvisorBudgetBuilder from '../components/AdvisorBudgetBuilder';
 
 // 1. Define props
 interface BudgetAdvisorPageProps {
@@ -15,13 +16,16 @@ interface Category {
   name: string;
   color?: string;
   icon?: string;
-  tag: 'need' | 'want' | 'debt' | 'emergency' | 'goal';
+  tag: 'need' | 'want' | 'debt' | 'emergency' | 'goal' | 'savings';
+  currentAmount?: number;
 }
 
 // 2. Extract form-only fields from BudgetInputs
 type FormState = Omit<BudgetInputs, 'debts' | 'savingsGoals'>;
 
 export default function BudgetAdvisorPage({ user }: BudgetAdvisorPageProps) {
+const [showAdvisorBudget, setShowAdvisorBudget] = useState(false);
+
   const [inputs, setInputs] = useState<BudgetInputs | null>(null);
   const [darkMode, setDarkMode] = useState(false);
 
@@ -29,7 +33,7 @@ export default function BudgetAdvisorPage({ user }: BudgetAdvisorPageProps) {
     income: 10000,
     needs: 4000,
     wants: 2000,
-    emergencyFund: 5000,
+    emergencyFund: 0,
     emergencyTargetMonths: 3,
     currentSavings: 500,
     currency: '₪'
@@ -127,12 +131,25 @@ useEffect(() => {
       setDoc(doc(db, 'financial_data', userId), {
         form,
         debts,
-        goals
+        goals,
       });
     }, 800); // שמירה אחרי 800ms של שקט
   
     return () => clearTimeout(timeout);
   }, [form, debts,goals, userId, hasLoaded]);
+
+  useEffect(() => {
+  if (!userId || !hasLoaded) return;
+
+  const timeout = setTimeout(() => {
+    setDoc(doc(db, 'users', userId), {
+      categories, // שומר את הקטגוריות במסמך של המשתמש
+    }, { merge: true }); // חשוב! שלא ימחוק שדות אחרים במסמך
+  }, 800);
+
+  return () => clearTimeout(timeout);
+}, [categories, userId, hasLoaded]);
+
 if (loading) {
   return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
 }
@@ -140,12 +157,16 @@ if (loading) {
   return <div>Loading or not authenticated...</div>;
 }
   const handleSubmit = () => {
-    setInputs({
-      ...form,
-      debts,
-      savingsGoals: goals,
-    });
-  };
+  const emergencyFromCategory = categories.find(c => c.tag === 'emergency')?.currentAmount ?? 0;
+
+  setInputs({
+    ...form,
+    emergencyFund: emergencyFromCategory,
+    debts,
+    savingsGoals: goals,
+  });
+};
+
 // which goal (if any) is being edited
 
 // when user clicks “ערוך”, populate the form
@@ -244,6 +265,21 @@ currentAmount: g.currentAmount ?? 0,
     `הכנס סכום ${formatCurrency(emergencyAmt)} לקרן החירום`,
     `הכנס סכום ${formatCurrency(generalSavAmt)} לחיסכון כללי`
   ];
+
+  const totalDebt = result?.allocations?.debtAllocations?.reduce(
+  (sum, d) => sum + (d.totalPayment ?? 0),
+  0
+);
+
+const totalGoals = result?.allocations?.goalAllocations?.reduce(
+  (sum, g) => sum + (g.allocatedMonthly ?? 0),
+  0
+);
+
+const emergencyFundMonthly = result?.allocations?.emergencyFundMonthly ?? 0;
+const generalSavings = result?.allocations?.generalSavings ?? 0;
+const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
+
   return (
       <div className={`min-h-screen transition-colors duration-300 ${
             darkMode 
@@ -307,38 +343,6 @@ currentAmount: g.currentAmount ?? 0,
               }`}  
               value={form.needs}
               onChange={(e) => setForm({ ...form, needs: Number(e.target.value) })}
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className={`font-medium mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>הוצאות נלוות (רצונות)</label>
-            <input
-              type="number"
-              placeholder="לדוג׳: 2000"
-              title="בילויים, מסעדות, קניות לא הכרחיות וכדומה"
-              className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}  
-              value={form.wants}
-              onChange={(e) => setForm({ ...form, wants: Number(e.target.value) })}
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className={`font-medium mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>חיסכון חירום נוכחי</label>
-            <input
-              type="number"
-              placeholder="לדוג׳: 5000"
-              title="כמה כסף כבר שמור בצד למקרי חירום"
-              className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}  
-              value={form.emergencyFund}
-              onChange={(e) => setForm({ ...form, emergencyFund: Number(e.target.value) })}
             />
           </div>
 
@@ -850,7 +854,75 @@ currentAmount: g.currentAmount ?? 0,
                   ))}
                 </ul>
               </div>
+              
             )}
+ <div className="mt-6 text-center">
+    <button
+      onClick={() => setShowAdvisorBudget(true)}
+      className={`py-2 px-6 rounded-lg text-sm font-medium transition-colors ${
+        darkMode
+          ? 'bg-blue-700 text-white hover:bg-blue-600'
+          : 'bg-blue-600 text-white hover:bg-blue-700'
+      }`}
+    >
+      📊 בנה תקציב לפי המלצת היועץ
+    </button>
+  </div>
+
+
+
+{showAdvisorBudget && result && (
+  <AdvisorBudgetBuilder
+  allocations={{
+    ...result.allocations,
+    emergencyFundMonthly,
+    generalSavings,
+    discretionarySpending,
+    debtAllocations: result.allocations.debtAllocations ?? [],
+    goalAllocations: result.allocations.goalAllocations ?? [],
+  }}
+  totalDebt={totalDebt}
+  totalGoals={totalGoals}
+  totalSavings={generalSavings}
+  totalEmergency={emergencyFundMonthly}
+  totalWants={discretionarySpending}
+  totalNeeds={form.needs}
+  categories={categories}
+  goals={goals.map(g => ({
+    ...g,
+    budget: result.allocations.goalAllocations.find(ga => ga.id === g.id)?.allocatedMonthly ?? g.budget ?? 0,
+  }))}
+  debts={debts.map(d => ({
+    ...d,
+    budget: result.allocations.debtAllocations.find(da => da.id === d.id)?.totalPayment ?? d.budget ?? 0,
+  }))}
+  onClose={() => setShowAdvisorBudget(false)}
+  onUpdate={(updatedCategories, updatedGoals, updatedDebts) => {
+ setCategories(updatedCategories.filter(cat =>
+    !['goal', 'debt'].includes(cat.tag)
+  ));    
+   // ✨ Goals – update only if exists
+setGoals(prevGoals =>
+  prevGoals.map(goal => {
+    const updated = updatedGoals.find(g => g.id === goal.id);
+    return updated ? { ...goal, budget: updated.budget ?? goal.budget ?? 0 } : goal;
+  })
+);
+
+// ✨ Debts – update only if exists
+setDebts(prevDebts =>
+  prevDebts.map(debt => {
+    const updated = updatedDebts.find(d => d.id === debt.id);
+    return updated ? { ...debt, budget: updated.budget ?? debt.budget ?? 0 } : debt;
+  })
+);
+
+
+  }}
+/>
+)}
+
+
 
             <div className="text-center">
               <div className="text-green-600 dark:text-green-400 text-sm font-medium flex items-center justify-center gap-2">

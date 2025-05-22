@@ -13,6 +13,9 @@ export default function BudgetPlanner({ user }) {
   const [activeTab, setActiveTab] = useState('summary');
   const [editingId, setEditingId] = useState(null);
   const [editBudget, setEditBudget] = useState('');
+  const [debts, setDebts] = useState([]);
+  const [goals, setGoals] = useState([]);
+
 
   // Calculate total budget and spending
   const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
@@ -25,51 +28,94 @@ const monthProgress = Math.floor((now.getDate() / daysInMonth) * 100);
   const userId = user?.uid;
 const [loading, setLoading] = useState(true);
 const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
-
 useEffect(() => {
   if (!userId) return;
 
   const loadUserData = async () => {
-    const docRef = doc(db, 'users', userId);
     try {
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const loadedExpenses = data.expenses || [];
-        const loadedCategories = data.categories || [];
+      const userRef = doc(db, 'users', userId);
+      const finRef = doc(db, 'financial_data', userId);
 
-        // חישוב הוצאות לחודש הנוכחי לפי קטגוריה
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
+      const [userSnap, finSnap] = await Promise.all([
+        getDoc(userRef),
+        getDoc(finRef)
+      ]);
 
-        const expensesByCategory = {};
-        for (const exp of loadedExpenses) {
-          const date = new Date(exp.date);
-          if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-            const id = exp.categoryId;
-            expensesByCategory[id] = (expensesByCategory[id] || 0) + exp.amount;
-          }
-        }
+      let loadedExpenses = [];
+      let loadedCategories = [];
+      let loadedDebts = [];
+      let loadedGoals = [];
 
-        // עדכון spent לכל קטגוריה
-        const updatedCategories = loadedCategories.map(cat => ({
-          ...cat,
-          budget: cat.budget || 0,
-          spent: expensesByCategory[cat.id] || 0,
-        }));
-
-        setExpenses(loadedExpenses);
-        setCategories(updatedCategories);
+      if (userSnap.exists()) {
+        const d = userSnap.data();
+        loadedExpenses = d.expenses || [];
+        loadedCategories = d.categories || [];
       }
+
+      if (finSnap.exists()) {
+        const d = finSnap.data();
+        loadedDebts = d.debts || [];
+        loadedGoals = d.goals || [];
+      }
+
+      // הוצאות לפי קטגוריה לחודש נוכחי
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+
+      const expensesByCategory = {};
+      for (const exp of loadedExpenses) {
+        const date = new Date(exp.date);
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+          const id = exp.categoryId;
+          expensesByCategory[id] = (expensesByCategory[id] || 0) + exp.amount;
+        }
+      }
+
+      // חובות ומטרות לקטגוריות
+      const dynamicGoalCats = loadedGoals.map(g => ({
+        id: `goal-${g.id}`,
+        name: g.name,
+        icon: '🎯',
+        tag: 'goal',
+        budget: g.budget || 0,
+      }));
+
+      const dynamicDebtCats = loadedDebts.map(d => ({
+        id: `debt-${d.id}`,
+        name: d.name,
+        icon: '💳',
+        tag: 'debt',
+        budget: d.budget || 0,
+      }));
+
+      const allCategories = [
+        ...loadedCategories,
+        ...dynamicGoalCats,
+        ...dynamicDebtCats,
+      ];
+
+      const updatedCategories = allCategories.map(cat => ({
+        ...cat,
+        spent: expensesByCategory[cat.id] || 0,
+        budget: cat.budget || 0,
+      }));
+
+      setExpenses(loadedExpenses);
+      setDebts(loadedDebts);
+      setGoals(loadedGoals);
+      setCategories(updatedCategories);
+
     } catch (error) {
       console.error("⚠️ שגיאה בטעינת הנתונים:", error);
     }
+
     setHasLoaded(true);
     setLoading(false);
   };
 
   loadUserData();
 }, [userId]);
+
 
   
   useEffect(() => {

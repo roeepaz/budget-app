@@ -9,8 +9,12 @@ export default function HomePage({ user }) {
   const navigate = useNavigate();
   const auth = getAuth();
 
-  const {
+const {
     categories,
+    expenses,
+    debts,
+    goals,
+    loading,
     addExpenseToDB
   } = useUserData(user?.uid);
 
@@ -22,7 +26,37 @@ export default function HomePage({ user }) {
         alert('אירעה שגיאה ביציאה מהמערכת');
       });
   };
-
+   // All possible tags - FIXED: include 'savings'
+  const tags = ['need', 'want', 'debt', 'emergency', 'goal', 'savings'];
+  
+  const tagColors = {
+    need:      '#3B82F6', // blue
+    want:      '#10B981', // green
+    debt:      '#F59E0B', // yellow
+    emergency: '#FF6384', // red
+    goal:      '#8B5CF6', // purple
+    savings:   '#36A2EB'  // light blue
+  };
+  const displayCategories = [
+    ...categories,
+    ...debts.map(d => ({
+      id: `debt-${d.id}`,
+      name: d.name,
+      color: tagColors.debt,
+      icon: '💳',
+      tag: 'debt'
+    })),
+    ...goals.map(g => ({
+      id: `goal-${g.id}`,
+      name: g.name,
+      color: tagColors.goal,
+      icon: '🎯',
+      tag: 'goal'
+    }))
+  ];
+  if (loading) {
+    return <div>🚀 טוען נתונים…</div>;
+  }
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-100 to-purple-200">
       <div className="relative">
@@ -48,7 +82,7 @@ export default function HomePage({ user }) {
                 onClick={() => navigate('/budget')}
                 className="text-xl px-8 py-3 rounded-xl bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition"
               >
-                ניהול השקעות 💰
+                ניהול חסכונות 💰
               </button>
               <button
                 onClick={() => navigate('/expense')}
@@ -58,7 +92,7 @@ export default function HomePage({ user }) {
               </button>
               <QuickAddExpenseButton
                 onAddExpense={(expense) => addExpenseToDB(expense)}
-                categories={categories}
+                categories={displayCategories}
               />
               <button
                 onClick={() => navigate('/budgetPlanner')}

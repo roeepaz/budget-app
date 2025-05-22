@@ -1,13 +1,17 @@
 import React, { useMemo } from 'react';
 
 // --- Types ---
+type CategoryTag = 'need'|'want'|'debt'|'emergency'|'goal' |'savings';
 export interface Debt {
   id: string;
   name: string;
   principal: number;       
   annualRate: number;      
   termMonths: number;      
-  minPayment: number;      
+  minPayment: number;
+  tag?:CategoryTag;      
+  icon?: string;
+  budget?:number;
 }
 
 export interface SavingsGoal {
@@ -16,7 +20,11 @@ export interface SavingsGoal {
   targetAmount: number;
   currentAmount?: number;  
   targetDate: Date;
-  priority: number;        
+  priority: number;      
+  tag?:CategoryTag;
+  icon?:string;      
+  budget?: number;
+  
 }
 
 export interface BudgetInputs {

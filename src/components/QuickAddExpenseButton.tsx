@@ -1,6 +1,25 @@
 import React, { useState } from 'react';
 
-export default function QuickAddExpenseButton({ onAddExpense, categories }) {
+interface Category {
+  id: string | number;
+  name: string;
+  icon: string;
+}
+
+interface Expense {
+  id: number;
+  amount: number;
+  description: string;
+  categoryId: string | number;
+  date: string;
+}
+
+type QuickAddExpenseButtonProps = {
+  onAddExpense: (expense: Expense) => void;
+  categories: Category[];
+};
+
+export default function QuickAddExpenseButton({ onAddExpense, categories }: QuickAddExpenseButtonProps) {
   const [showModal, setShowModal] = useState(false);
   const [quickExpense, setQuickExpense] = useState({
     amount: '',
@@ -12,13 +31,15 @@ export default function QuickAddExpenseButton({ onAddExpense, categories }) {
   const handleSubmit = () => {
     if (!quickExpense.amount || !quickExpense.categoryId) return;
 
-    const expense = {
-      ...quickExpense,
+    const expense: Expense = {
       id: Math.floor(Math.random() * 1000000),
       amount: parseFloat(quickExpense.amount),
+      description: quickExpense.description,
+      categoryId: quickExpense.categoryId,
+      date: quickExpense.date,
     };
 
-    onAddExpense(expense); // רק מחזיר את ההוצאה
+    onAddExpense(expense);
     setQuickExpense({
       amount: '',
       description: '',
@@ -52,11 +73,11 @@ export default function QuickAddExpenseButton({ onAddExpense, categories }) {
               <select
                 className="w-full p-2 border rounded"
                 value={quickExpense.categoryId}
-                onChange={(e) => setQuickExpense({ ...quickExpense, categoryId: parseFloat(e.target.value) })}
+                onChange={(e) => setQuickExpense({ ...quickExpense, categoryId: e.target.value })}
               >
                 <option value="">בחר קטגוריה</option>
                 {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
+                  <option key={String(cat.id)} value={String(cat.id)}>
                     {cat.icon} {cat.name}
                   </option>
                 ))}
