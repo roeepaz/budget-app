@@ -1,24 +1,13 @@
 import { Timestamp } from 'firebase/firestore';
 
 import React, { useState, useEffect } from 'react';
-import { useBudgetModel, BudgetInputs, Debt, SavingsGoal } from '../hooks/useBudgetModel';
+import { useBudgetModel} from '../hooks/useBudgetModel';
 import { DollarSign, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
 import { db } from '../firebaseConfig.js';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import AdvisorBudgetBuilder from '../components/AdvisorBudgetBuilder';
+import {BudgetInputs,BudgetAdvisorPageProps, Debt, SavingsGoal,Category} from '../type/appTypes'
 
-// 1. Define props
-interface BudgetAdvisorPageProps {
-  user: { uid: string } | null;
-}
-interface Category {
-  id: number | string;
-  name: string;
-  color?: string;
-  icon?: string;
-  tag: 'need' | 'want' | 'debt' | 'emergency' | 'goal' | 'savings';
-  currentAmount?: number;
-}
 
 // 2. Extract form-only fields from BudgetInputs
 type FormState = Omit<BudgetInputs, 'debts' | 'savingsGoals'>;
@@ -46,6 +35,7 @@ const today = new Date().toISOString().split('T')[0];
   const userId = user?.uid;
 const [loading, setLoading] = useState(true);
 const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
+const [loadError, setLoadError] = useState(false);
 
 const [newGoal, setNewGoal] = useState({
   name: '',
@@ -72,54 +62,42 @@ useEffect(() => {
   if (!userId) return;
 
   const loadUserData = async () => {
-    try {
-      const docRef = doc(db, 'financial_data', userId);
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        const data = snapshot.data() as {
-          form: FormState;
-          debts: Debt[];
-          goals: Array<{
-            id: string;
-            name: string;
-            targetAmount: number;
-            currentAmount: number;
-            priority: number;
-            targetDate: unknown;
-          }>;
-        };
+  try {
+    const docRef = doc(db, 'financial_data', userId);
+    const snapshot = await getDoc(docRef);
 
-        // נרמול תאריכים
-        const loadedGoals: SavingsGoal[] = data.goals.map(g => ({
-          id: g.id,
-          name: g.name,
-          targetAmount: g.targetAmount,
-          currentAmount: g.currentAmount,
-          priority: g.priority,
-          // אם זה Timestamp של Firestore → toDate(), אחרת נניח מחרוזת ISO
-          targetDate:
-            g.targetDate instanceof Timestamp
-              ? g.targetDate.toDate()
-              : new Date(g.targetDate as string),
-        }));
+    const catRef = doc(db, 'users', userId);
+    const catSnap = await getDoc(catRef);
 
-        setForm(data.form);
-        setDebts(data.debts);
-        setGoals(loadedGoals);
-      }
-      // load categories
-        const catRef = doc(db, 'users', userId);
-        const catSnap = await getDoc(catRef);
-        if (catSnap.exists()) {
-          setCategories(catSnap.data().categories || []);
-        }
-    } catch (error) {
-      console.error('⚠️ שגיאה בטעינת הנתונים:', error);
-    } finally {
+    if (snapshot.exists() && catSnap.exists()) {
+      // Load financial data
+      const data = snapshot.data() as { form: FormState; debts: Debt[]; goals: SavingsGoal[] };
+      const goals = data.goals.map(g => ({
+        ...g,
+        targetDate: g.targetDate as Timestamp
+      }));
+
+      setForm(data.form);
+      setDebts(data.debts);
+      setGoals(goals);
+
+      // Load categories
+      setCategories(catSnap.data().categories || []);
+      
+      // ✅ טוענים רק אם הכול הצליח
       setHasLoaded(true);
-      setLoading(false);
+    } else {
+      throw new Error("מסמך לא נמצא");
     }
-  };
+
+  } catch (error) {
+    //console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+    setLoadError(true);
+    setHasLoaded(false); // ❌ אל תאפשר שמירה
+  } finally {
+    setLoading(false);
+  }
+};
 
   loadUserData();
 }, [userId]);
@@ -156,6 +134,14 @@ if (loading) {
   if (!user) {
   return <div>Loading or not authenticated...</div>;
 }
+if (loadError) {
+  return (
+    <div className="p-6 text-center text-red-600" dir="rtl">
+      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
+    </div>
+  );
+}
+
   const handleSubmit = () => {
   const emergencyFromCategory = categories.find(c => c.tag === 'emergency')?.currentAmount ?? 0;
 
@@ -175,33 +161,39 @@ const startEditGoal = (g: SavingsGoal) => {
   setNewGoal({
     name:         g.name,
     targetAmount: g.targetAmount,
-currentAmount: g.currentAmount ?? 0,
-    // convert Date → yyyy-MM-dd string for <input type="date">
-    targetDate:   g.targetDate.toISOString().split('T')[0],
+    currentAmount: g.currentAmount ?? 0,
+    targetDate:   g.targetDate.toDate().toISOString().split('T')[0], // ✅
     priority:     g.priority,
   });
 };
 
-  const addGoal = () => {
-  if (!newGoal.name || !newGoal.targetAmount || !newGoal.targetDate) return;
+
+ const addGoal = () => {
+  if (!newGoal.name || !newGoal.targetAmount) return;
 
   if (editingGoalId) {
-    // update existing
-    setGoals(goals.map(g =>
-      g.id === editingGoalId
-        ? {
-            ...g,
-            name:         newGoal.name,
-            targetAmount: newGoal.targetAmount,
-            currentAmount: newGoal.currentAmount,
-            targetDate:   new Date(newGoal.targetDate),
-            priority:     newGoal.priority,
-          }
-        : g
-    ));
+    setGoals(goals.map(g => {
+      if (g.id === editingGoalId) {
+        const rawDate = new Date(newGoal.targetDate + 'T00:00:00');
+        const isValidDate = !isNaN(rawDate.getTime());
+
+        return {
+          ...g,
+          name: newGoal.name,
+          targetAmount: newGoal.targetAmount,
+          currentAmount: newGoal.currentAmount,
+          targetDate: isValidDate ? Timestamp.fromDate(rawDate) : g.targetDate,
+          priority: newGoal.priority,
+        };
+
+      }
+      return g;
+    }));
     setEditingGoalId(null);
   } else {
-    // add new
+    // הוספה רגילה
+    if (!newGoal.targetDate) return; // במקרה חדש – חייב תאריך תקין
+
     setGoals([
       ...goals,
       {
@@ -209,13 +201,13 @@ currentAmount: g.currentAmount ?? 0,
         name: newGoal.name,
         targetAmount: newGoal.targetAmount,
         currentAmount: newGoal.currentAmount,
-        targetDate: new Date(newGoal.targetDate),
+        targetDate: Timestamp.fromDate(new Date(newGoal.targetDate + 'T00:00:00')),
         priority: newGoal.priority,
       },
     ]);
   }
 
-  // reset form
+  // איפוס טופס
   setNewGoal({ name: '', targetAmount: 0, currentAmount: 0, targetDate: '', priority: 3 });
 };
 
@@ -492,7 +484,7 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
                       }`}>
                     <span className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
                       🎯 {goal.name} – {formatCurrency(goal.currentAmount || 0)} / {formatCurrency(goal.targetAmount)}
-                      (עד {goal.targetDate.toLocaleDateString('he-IL')})
+                      (עד {goal.targetDate.toDate().toLocaleDateString('he-IL')})
                     </span>
                     <div className="flex gap-2">
                       <button

@@ -1,18 +1,5 @@
 import React, { useState } from 'react';
-
-interface Category {
-  id: string | number;
-  name: string;
-  icon: string;
-}
-
-interface Expense {
-  id: number;
-  amount: number;
-  description: string;
-  categoryId: string | number;
-  date: string;
-}
+import {Expense,Category} from '../type/appTypes'
 
 type QuickAddExpenseButtonProps = {
   onAddExpense: (expense: Expense) => void;

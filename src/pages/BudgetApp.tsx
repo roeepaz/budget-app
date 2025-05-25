@@ -20,7 +20,7 @@ import {
 } from 'recharts';
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { Debt, SavingsGoal } from '../hooks/useBudgetModel';
+import {SavingsGoal, Expense} from '../type/appTypes'
 
 const DARK_MODE_KEY = 'budget-app-dark-mode';
 
@@ -35,13 +35,6 @@ interface SummaryCat {
   currentAmount?: number;
 }
 
-// ארגוני הוצאות עבור קרן חירום / חיסכון כללי
-interface Expense {
-  id: number;
-  amount: number;
-  categoryId: string;
-  date: string;
-}
 
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6', '#3B82F6', '#EF4444'];
 
@@ -59,8 +52,8 @@ export default function BudgetApp({ user }: { user: { uid: string } }) {
 
   // --- states for התקציב הרגיל ---
   const [loading, setLoading] = useState(true);
+const [loadError, setLoadError] = useState(false);
 
-  const [exchangeRate, setExchangeRate] = useState(0.27);
   const [isDarkMode, setIsDarkMode] = useState(() => 
     JSON.parse(localStorage.getItem(DARK_MODE_KEY) || 'false')
   );
@@ -116,9 +109,10 @@ export default function BudgetApp({ user }: { user: { uid: string } }) {
               : new Date(g.targetDate)
           })) || []);
         }
-      } catch (e) {
-        console.error(e);
-      } finally {
+      } catch (error) {
+    //console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+    setLoadError(true);
+  } finally {
         setSummaryLoading(false);
         setLoading(false);
       }
@@ -207,7 +201,13 @@ const cleanCategories = newCategories.map(cat => {
       </div>
     );
   }
-
+if (loadError) {
+  return (
+    <div className="p-6 text-center text-red-600" dir="rtl">
+      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
+    </div>
+  );
+}
   // בחר רק את הקרן emergency + savings
   const savingsCats = categories.filter(c => c.tag === 'emergency' || c.tag === 'savings');
   // מטרה כקטגוריה

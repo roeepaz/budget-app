@@ -5,153 +5,158 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 
 export default function BudgetPlanner({ user }) {
-    const navigate = useNavigate();
-
-  // Sample data - in a real app, this would come from your backend
-  const [trueCategories, setTrueCategories] = useState([]); // Renamed from categories
+  const navigate = useNavigate();
+  const [trueCategories, setTrueCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [activeTab, setActiveTab] = useState('summary');
   const [editingId, setEditingId] = useState(null);
-  const [editingType, setEditingType] = useState(null); // Added for edit context
+  const [editingType, setEditingType] = useState(null);
   const [editBudget, setEditBudget] = useState('');
   const [debts, setDebts] = useState([]);
   const [goals, setGoals] = useState([]);
+  const [loadError, setLoadError] = useState(false);
 
   const displayItems = useMemo(() => {
     const goalItems = goals.map(g => ({
       id: `goal-${g.id}`,
-      originalId: g.id, // Keep original ID for saving edits
+      originalId: g.id,
       name: g.name,
       icon: '🎯',
       tag: 'goal',
-      type: 'goal', // For startEdit
+      type: 'goal',
       budget: g.budget || 0,
       spent: expenses.filter(e => e.categoryId === `goal-${g.id}`).reduce((sum, e) => sum + e.amount, 0)
     }));
     const debtItems = debts.map(d => ({
       id: `debt-${d.id}`,
-      originalId: d.id, // Keep original ID for saving edits
+      originalId: d.id,
       name: d.name,
       icon: '💳',
       tag: 'debt',
-      type: 'debt', // For startEdit
+      type: 'debt',
       budget: d.budget || 0,
       spent: expenses.filter(e => e.categoryId === `debt-${d.id}`).reduce((sum, e) => sum + e.amount, 0)
     }));
     const processedTrueCategories = trueCategories.map(cat => ({
       ...cat,
-      type: 'category', // For startEdit
-      // spent is already calculated in loadUserData for trueCategories
+      type: 'category'
     }));
     return [...processedTrueCategories, ...goalItems, ...debtItems];
   }, [trueCategories, goals, debts, expenses]);
 
-  // Calculate total budget and spending using displayItems
   const totalBudget = displayItems.reduce((sum, item) => sum + item.budget, 0);
   const totalSpent = displayItems.reduce((sum, item) => sum + item.spent, 0);
   const totalRemaining = totalBudget - totalSpent;
+
   const now = new Date();
-const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-const monthProgress = Math.floor((now.getDate() / daysInMonth) * 100);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthProgress = Math.floor((now.getDate() / daysInMonth) * 100);
 
   const userId = user?.uid;
-const [loading, setLoading] = useState(true);
-const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
-useEffect(() => {
-  if (!userId) return;
+  const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  const loadUserData = async () => {
-    try {
-      const userRef = doc(db, 'users', userId);
-      const finRef = doc(db, 'financial_data', userId);
-
-      const [userSnap, finSnap] = await Promise.all([
-        getDoc(userRef),
-        getDoc(finRef)
-      ]);
-
-      let loadedExpenses = [];
-      let loadedCategoriesData = []; // Renamed to avoid confusion
-      let loadedDebtsData = []; // Renamed
-      let loadedGoalsData = []; // Renamed
-
-      if (userSnap.exists()) {
-        const d = userSnap.data();
-        loadedExpenses = d.expenses || [];
-        loadedCategoriesData = d.categories || [];
-      }
-
-      if (finSnap.exists()) {
-        const d = finSnap.data();
-        loadedDebtsData = d.debts || [];
-        loadedGoalsData = d.goals || [];
-      }
-
-      // הוצאות לפי קטגוריה לחודש נוכחי
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-
-      const expensesByCategory = {};
-      for (const exp of loadedExpenses) {
-        const date = new Date(exp.date);
-        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-          const id = exp.categoryId; // This includes goal-id and debt-id
-          expensesByCategory[id] = (expensesByCategory[id] || 0) + exp.amount;
-        }
-      }
-      
-      const processedCategories = loadedCategoriesData.map(cat => ({
-        ...cat,
-        spent: expensesByCategory[cat.id] || 0, 
-        budget: cat.budget || 0,
-      }));
-
-      // Goals and Debts will have their 'spent' calculated in displayItems or similar
-      // Their 'budget' is already part of their structure
-      setExpenses(loadedExpenses);
-      setDebts(loadedDebtsData);
-      setGoals(loadedGoalsData);
-      setTrueCategories(processedCategories);
-
-    } catch (error) {
-      console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-    }
-
-    setHasLoaded(true);
-    setLoading(false);
-  };
-
-  loadUserData();
-}, [userId]);
-
-
-  
   useEffect(() => {
-    if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
-    
-    // Saving logic will be updated in a subsequent step
+    if (!userId) return;
+
+    const loadUserData = async () => {
+      try {
+        const userRef = doc(db, 'users', userId);
+        const finRef = doc(db, 'financial_data', userId);
+
+        const [userSnap, finSnap] = await Promise.all([
+          getDoc(userRef),
+          getDoc(finRef)
+        ]);
+
+        let loadedExpenses = [];
+        let loadedCategoriesData = [];
+        let loadedDebtsData = [];
+        let loadedGoalsData = [];
+
+        if (userSnap.exists()) {
+          const d = userSnap.data();
+          loadedExpenses = d.expenses || [];
+          loadedCategoriesData = d.categories || [];
+        }
+
+        if (finSnap.exists()) {
+          const d = finSnap.data();
+          loadedDebtsData = d.debts || [];
+          loadedGoalsData = d.goals || [];
+        }
+
+        const currentMonth = new Date().getMonth();
+        const currentYear = new Date().getFullYear();
+        const expensesByCategory = {};
+
+        for (const exp of loadedExpenses) {
+          const date = new Date(exp.date);
+          if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+            const id = exp.categoryId;
+            expensesByCategory[id] = (expensesByCategory[id] || 0) + exp.amount;
+          }
+        }
+
+        const processedCategories = loadedCategoriesData.map(cat => ({
+          ...cat,
+          spent: expensesByCategory[cat.id] || 0,
+          budget: cat.budget || 0,
+        }));
+
+        setExpenses(loadedExpenses);
+        setDebts(loadedDebtsData);
+        setGoals(loadedGoalsData);
+        setTrueCategories(processedCategories);
+      } catch (error) {
+        console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+        setLoadError(true);
+      } finally {
+        setHasLoaded(true);
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId || !hasLoaded) return;
+
     const userDocData = {
       expenses,
-      categories: trueCategories, // Save trueCategories here
+      categories: trueCategories
     };
 
     const financialDocData = {
       goals,
-      debts,
+      debts
     };
 
-    const timeout = setTimeout(() => {
-      setDoc(doc(db, 'users', userId), userDocData);
-      setDoc(doc(db, 'financial_data', userId), financialDocData, { merge: true }); // merge true just in case
-    }, 800); // שמירה אחרי 800ms של שקט
-  
+    const timeout = setTimeout(async () => {
+      try {
+        await setDoc(doc(db, 'users', userId), userDocData);
+        await setDoc(doc(db, 'financial_data', userId), financialDocData, { merge: true });
+      } catch (error) {
+        console.error("⚠️ שגיאה בשמירת הנתונים:", error);
+      }
+    }, 800);
+
     return () => clearTimeout(timeout);
-  }, [expenses, trueCategories, goals, debts, userId, hasLoaded]); // Added goals, debts
+  }, [expenses, trueCategories, goals, debts, userId, hasLoaded]);
+
 if (loading) {
   return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
 }
   if (!user) {
   return <div>Loading or not authenticated...</div>;
+}
+if (loadError) {
+  return (
+    <div className="p-6 text-center text-red-600" dir="rtl">
+      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
+    </div>
+  );
 }
 const formatCategoryCount = (count) => {
   if (count === 1) return 'קטגוריה אחת';

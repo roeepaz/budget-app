@@ -4,31 +4,7 @@ import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } f
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
-import { Debt, SavingsGoal } from '../hooks/useBudgetModel';
-
-// Type definitions
-type CategoryTag = 'need' | 'want' | 'debt' | 'emergency' | 'goal' | 'savings';
-
-interface Category {
-  id: string | number;
-  name: string;
-  color: string;
-  icon: string;
-  tag: CategoryTag;
-  currentAmount?: number; // רק עבור savings/emergency
-}
-
-export interface Expense {
-  id: number;
-  amount: number;
-  description: string;
-  categoryId: string | number; // Allow both string and number for flexibility
-  date: string; // ISO yyyy-MM-dd
-}
-
-interface ExpenseTrackerProps {
-  user: { uid: string } | null;
-}
+import {Category,Expense,CategoryTag,ExpenseTrackerProps,Debt, SavingsGoal} from '../type/appTypes'
 
 export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   // Default categories
@@ -47,7 +23,7 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
-
+  const [loadError, setLoadError] = useState<boolean>(false);
   // Form state
   const [newExpense, setNewExpense] = useState({
     amount: '',         // Use empty string for form input
@@ -115,14 +91,13 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
         if (finSnap.exists()) {
           const data = finSnap.data() as any;
           setDebts(data.debts || []);
-          setGoals((data.goals || []).map((g: any) => ({
-            ...g,
-            targetDate: g.targetDate instanceof Timestamp ? g.targetDate.toDate() : new Date(g.targetDate)
-          })));
+          setGoals(data.goals || []);
         }
-      } catch (err) {
-        console.error(err);
-      } finally {
+      } catch (error) {
+    //console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+    setLoadError(true);
+    setHasLoaded(false); // ❌ אל תאפשר שמירה
+  }  finally {
         setHasLoaded(true);
         setLoading(false);
       }
@@ -137,8 +112,15 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
       const cleanCategories = cleanDataForFirebase(categories);
       const cleanExpenses = cleanDataForFirebase(expenses);
       const cleanDebts = cleanDataForFirebase(debts);
-      const cleanGoals = cleanDataForFirebase(goals);
-
+      const cleanGoals: SavingsGoal[] = goals.map(g => ({
+              id: g.id,
+              name: g.name,
+              targetAmount: g.targetAmount,
+              currentAmount: g.currentAmount,
+              priority: g.priority,
+              targetDate: g.targetDate as Timestamp  // לא ממירים ל-Date
+            }));
+    
       setDoc(doc(db, 'users', userId), { 
         categories: cleanCategories, 
         expenses: cleanExpenses 
@@ -349,6 +331,13 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   if (!user) {
     return <div dir="rtl">המשתמש לא מחובר...</div>;
   }
+  if (loadError) {
+  return (
+    <div className="p-6 text-center text-red-600" dir="rtl">
+      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
+    </div>
+  );
+}
   return (
     <div className="flex flex-col h-screen bg-gray-50" dir="rtl">
       {/* Header */}
@@ -408,7 +397,7 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
-                        label={({name, percentage}) => `${name}: ${percentage}%`}
+                        //label={({name, percentage}) => `${name}: ${percentage}%`}
                       >
                         {expensesByCategory.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
@@ -449,18 +438,7 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
                         cy="50%"
                         outerRadius={80}
                         dataKey="sum"
-                        label={({ tag, pct }) => {
-                          // Translate tag names to Hebrew
-                          const tagNames: Record<CategoryTag, string> = {
-                            need: 'צרכים',
-                            want: 'רצונות',
-                            debt: 'חובות',
-                            emergency: 'חירום',
-                            goal: 'מטרות',
-                            savings: 'חסכונות'
-                          };
-                          return `${tagNames[tag as CategoryTag]}: ${pct}%`;
-                        }}
+            
                         labelLine={false}
                       >
                         {byTagWithPct.map((entry, i) => (
@@ -479,7 +457,7 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
                       need: 'צרכים',
                       want: 'רצונות',
                       debt: 'חובות',
-                      emergency: 'חירום',
+                      emergency: 'קרן חירום',
                       goal: 'מטרות',
                       savings: 'חסכונות'
                     };

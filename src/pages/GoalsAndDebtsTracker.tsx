@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Target, DollarSign, Plus, Edit2, Trash2, CheckCircle, TrendingUp, Calendar, AlertCircle } from 'lucide-react';
-import { Debt, SavingsGoal } from '../hooks/useBudgetModel';
+import { Debt, SavingsGoal } from '../type/appTypes';
 import { db } from '../firebaseConfig.js';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';

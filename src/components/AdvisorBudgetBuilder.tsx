@@ -1,19 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { SavingsGoal } from '../hooks/useBudgetModel';
+import { Category,Debt, SavingsGoal } from '../type/appTypes';
 
-interface Category {
-  id: string | number;
-  name: string;
-  tag: 'need' | 'want' | 'debt' | 'emergency' | 'goal' | 'savings';
-  budget?: number;
-}
 
-interface Debt {
-  id: string;
-  name: string;
-  budget?: number;
-}
 
 interface Allocations {
   emergencyFundMonthly: number;
