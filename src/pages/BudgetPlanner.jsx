@@ -8,18 +8,47 @@ export default function BudgetPlanner({ user }) {
     const navigate = useNavigate();
 
   // Sample data - in a real app, this would come from your backend
-  const [categories, setCategories] = useState([]);
+  const [trueCategories, setTrueCategories] = useState([]); // Renamed from categories
   const [expenses, setExpenses] = useState([]);
   const [activeTab, setActiveTab] = useState('summary');
   const [editingId, setEditingId] = useState(null);
+  const [editingType, setEditingType] = useState(null); // Added for edit context
   const [editBudget, setEditBudget] = useState('');
   const [debts, setDebts] = useState([]);
   const [goals, setGoals] = useState([]);
 
+  const displayItems = useMemo(() => {
+    const goalItems = goals.map(g => ({
+      id: `goal-${g.id}`,
+      originalId: g.id, // Keep original ID for saving edits
+      name: g.name,
+      icon: '🎯',
+      tag: 'goal',
+      type: 'goal', // For startEdit
+      budget: g.budget || 0,
+      spent: expenses.filter(e => e.categoryId === `goal-${g.id}`).reduce((sum, e) => sum + e.amount, 0)
+    }));
+    const debtItems = debts.map(d => ({
+      id: `debt-${d.id}`,
+      originalId: d.id, // Keep original ID for saving edits
+      name: d.name,
+      icon: '💳',
+      tag: 'debt',
+      type: 'debt', // For startEdit
+      budget: d.budget || 0,
+      spent: expenses.filter(e => e.categoryId === `debt-${d.id}`).reduce((sum, e) => sum + e.amount, 0)
+    }));
+    const processedTrueCategories = trueCategories.map(cat => ({
+      ...cat,
+      type: 'category', // For startEdit
+      // spent is already calculated in loadUserData for trueCategories
+    }));
+    return [...processedTrueCategories, ...goalItems, ...debtItems];
+  }, [trueCategories, goals, debts, expenses]);
 
-  // Calculate total budget and spending
-  const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
-  const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
+  // Calculate total budget and spending using displayItems
+  const totalBudget = displayItems.reduce((sum, item) => sum + item.budget, 0);
+  const totalSpent = displayItems.reduce((sum, item) => sum + item.spent, 0);
   const totalRemaining = totalBudget - totalSpent;
   const now = new Date();
 const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -42,20 +71,20 @@ useEffect(() => {
       ]);
 
       let loadedExpenses = [];
-      let loadedCategories = [];
-      let loadedDebts = [];
-      let loadedGoals = [];
+      let loadedCategoriesData = []; // Renamed to avoid confusion
+      let loadedDebtsData = []; // Renamed
+      let loadedGoalsData = []; // Renamed
 
       if (userSnap.exists()) {
         const d = userSnap.data();
         loadedExpenses = d.expenses || [];
-        loadedCategories = d.categories || [];
+        loadedCategoriesData = d.categories || [];
       }
 
       if (finSnap.exists()) {
         const d = finSnap.data();
-        loadedDebts = d.debts || [];
-        loadedGoals = d.goals || [];
+        loadedDebtsData = d.debts || [];
+        loadedGoalsData = d.goals || [];
       }
 
       // הוצאות לפי קטגוריה לחודש נוכחי
@@ -66,44 +95,23 @@ useEffect(() => {
       for (const exp of loadedExpenses) {
         const date = new Date(exp.date);
         if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-          const id = exp.categoryId;
+          const id = exp.categoryId; // This includes goal-id and debt-id
           expensesByCategory[id] = (expensesByCategory[id] || 0) + exp.amount;
         }
       }
-
-      // חובות ומטרות לקטגוריות
-      const dynamicGoalCats = loadedGoals.map(g => ({
-        id: `goal-${g.id}`,
-        name: g.name,
-        icon: '🎯',
-        tag: 'goal',
-        budget: g.budget || 0,
-      }));
-
-      const dynamicDebtCats = loadedDebts.map(d => ({
-        id: `debt-${d.id}`,
-        name: d.name,
-        icon: '💳',
-        tag: 'debt',
-        budget: d.budget || 0,
-      }));
-
-      const allCategories = [
-        ...loadedCategories,
-        ...dynamicGoalCats,
-        ...dynamicDebtCats,
-      ];
-
-      const updatedCategories = allCategories.map(cat => ({
+      
+      const processedCategories = loadedCategoriesData.map(cat => ({
         ...cat,
-        spent: expensesByCategory[cat.id] || 0,
+        spent: expensesByCategory[cat.id] || 0, 
         budget: cat.budget || 0,
       }));
 
+      // Goals and Debts will have their 'spent' calculated in displayItems or similar
+      // Their 'budget' is already part of their structure
       setExpenses(loadedExpenses);
-      setDebts(loadedDebts);
-      setGoals(loadedGoals);
-      setCategories(updatedCategories);
+      setDebts(loadedDebtsData);
+      setGoals(loadedGoalsData);
+      setTrueCategories(processedCategories);
 
     } catch (error) {
       console.error("⚠️ שגיאה בטעינת הנתונים:", error);
@@ -120,16 +128,25 @@ useEffect(() => {
   
   useEffect(() => {
     if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
-  
+    
+    // Saving logic will be updated in a subsequent step
+    const userDocData = {
+      expenses,
+      categories: trueCategories, // Save trueCategories here
+    };
+
+    const financialDocData = {
+      goals,
+      debts,
+    };
+
     const timeout = setTimeout(() => {
-      setDoc(doc(db, 'users', userId), {
-        expenses,
-        categories
-      });
+      setDoc(doc(db, 'users', userId), userDocData);
+      setDoc(doc(db, 'financial_data', userId), financialDocData, { merge: true }); // merge true just in case
     }, 800); // שמירה אחרי 800ms של שקט
   
     return () => clearTimeout(timeout);
-  }, [expenses, categories, userId, hasLoaded]);
+  }, [expenses, trueCategories, goals, debts, userId, hasLoaded]); // Added goals, debts
 if (loading) {
   return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
 }
@@ -146,30 +163,29 @@ const formatCategoryCount = (count) => {
   if (totalBudget === 0) return [];
 
   const insights = [];
-
-  const overBudgetCategories = categories.filter(cat => cat.spent > cat.budget);
-  const closeToLimitCategories = categories.filter(
-    cat => cat.spent >= cat.budget * 0.8 && cat.spent < cat.budget
+  // The insights generation will need to use displayItems or re-calculate based on combined data.
+  const overBudgetItems = displayItems.filter(item => item.budget > 0 && item.spent > item.budget);
+  const closeToLimitItems = displayItems.filter(
+    item => item.budget > 0 && item.spent >= item.budget * 0.8 && item.spent < item.budget
   );
 
-  if (overBudgetCategories.length > 0) {
-  const names = overBudgetCategories.slice(0, 3).map(c => c.name).join(', ');
-  const countText = formatCategoryCount(overBudgetCategories.length, 'קטגורי');
+  if (overBudgetItems.length > 0) {
+  const names = overBudgetItems.slice(0, 3).map(c => c.name).join(', ');
+  const countText = formatCategoryCount(overBudgetItems.length, 'פריטי תקציב'); // Changed from 'קטגורי'
   insights.push({
     type: 'warning',
     icon: <AlertCircle className="text-red-500" />,
-    text: `${countText} חרגו מהתקציב: ${names}${overBudgetCategories.length > 3 ? ' ועוד' : ''}`,
+    text: `${countText} חרגו מהתקציב: ${names}${overBudgetItems.length > 3 ? ' ועוד' : ''}`,
   });
 }
 
-
- if (closeToLimitCategories.length > 0) {
-  const names = closeToLimitCategories.slice(0, 3).map(c => c.name).join(', ');
-  const countText = formatCategoryCount(closeToLimitCategories.length, 'קטגורי');
+if (closeToLimitItems.length > 0) {
+  const names = closeToLimitItems.slice(0, 3).map(c => c.name).join(', ');
+  const countText = formatCategoryCount(closeToLimitItems.length, 'פריטי תקציב'); // Changed from 'קטגורי'
   insights.push({
     type: 'alert',
     icon: <AlertCircle className="text-amber-500" />,
-    text: `${countText} מתקרבות למגבלת התקציב: ${names}${closeToLimitCategories.length > 3 ? ' ועוד' : ''}`,
+    text: `${countText} מתקרבות למגבלת התקציב: ${names}${closeToLimitItems.length > 3 ? ' ועוד' : ''}`,
   });
 }
 
@@ -237,19 +253,40 @@ const comparison = generateMonthlyComparison();
 
 
   // Handle editing a budget
-  const startEdit = (id, currentBudget) => {
+  const startEdit = (id, currentBudget, type) => {
     setEditingId(id);
     setEditBudget(currentBudget.toString());
+    setEditingType(type); // Set the type of item being edited
   };
 
   const saveEdit = () => {
     const budget = parseFloat(editBudget);
-    if (!isNaN(budget)) {
-      setCategories(categories.map(cat => 
+    if (isNaN(budget)) return;
+
+    if (editingType === 'category') {
+      setTrueCategories(trueCategories.map(cat => 
         cat.id === editingId ? {...cat, budget: budget} : cat
       ));
-      setEditingId(null);
+    } else if (editingType === 'goal') {
+      // editingId for goals in displayItems is `goal-${original_goal_id}`
+      // We need to use originalId which is stored on the goal item in displayItems
+      const itemToEdit = displayItems.find(item => item.id === editingId);
+      if (itemToEdit && itemToEdit.originalId) {
+        setGoals(goals.map(goal => 
+          goal.id === itemToEdit.originalId ? {...goal, budget: budget} : goal
+        ));
+      }
+    } else if (editingType === 'debt') {
+      // Similarly for debts
+      const itemToEdit = displayItems.find(item => item.id === editingId);
+      if (itemToEdit && itemToEdit.originalId) {
+        setDebts(debts.map(debt =>
+          debt.id === itemToEdit.originalId ? {...debt, budget: budget} : debt
+        ));
+      }
     }
+    setEditingId(null);
+    setEditingType(null);
   };
 const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
   year: 'numeric',
@@ -373,16 +410,24 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
           </div>
           
           
-          {/* Categories List */}
+          {/* Categories List - Now iterates over displayItems */}
           <div className="space-y-4">
-            {categories.map((category) => (
-              <div key={category.id} className="border border-gray-200 rounded-lg p-4">
+            {displayItems.map((item) => ( 
+              <div key={item.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center">
-                    <span className="text-xl mr-2">{category.icon}</span>
-                    <span className="font-medium">{category.name}</span>
+                    <span className="text-xl mr-2">{item.icon}</span>
+                    <span className="font-medium">{item.name}</span>
+                     {item.tag && (
+                      <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
+                        item.tag === 'goal' ? 'bg-green-100 text-green-700' :
+                        item.tag === 'debt' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'}`}>
+                        {item.tag === 'goal' ? 'מטרה' : item.tag === 'debt' ? 'חוב' : ''}
+                      </span>
+                    )}
                   </div>
-                  {editingId === category.id ? (
+                  {editingId === item.id ? (
                     <div className="flex items-center">
                       <input 
                         type="number" 
@@ -392,7 +437,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                       />
                       <button 
                         className="text-blue-600 text-sm"
-                        onClick={saveEdit}
+                        onClick={saveEdit} 
                       >
                         שמור
                       </button>
@@ -400,7 +445,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                   ) : (
                     <button 
                       className="text-sm text-gray-500"
-                      onClick={() => startEdit(category.id, category.budget)}
+                      onClick={() => startEdit(item.id, item.budget, item.type)} 
                     >
                       עריכה
                     </button>
@@ -408,10 +453,10 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                 </div>
                 
                <div className="flex justify-between text-sm text-gray-500 mb-1">
-                <div>₪{category.spent.toFixed(2)} / ₪{category.budget.toFixed(2)}</div>
+                <div>₪{item.spent.toFixed(2)} / ₪{item.budget.toFixed(2)}</div>
                 <div>
-                    {category.budget > 0 
-                    ? `${Math.round((category.spent / category.budget) * 100)}%`
+                    {item.budget > 0 
+                    ? `${Math.round((item.spent / item.budget) * 100)}%`
                     : '—'}
                 </div>
                 </div>
@@ -419,17 +464,17 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
                         className={`h-2 rounded-full ${
-                        category.spent > category.budget
+                        item.spent > item.budget
                             ? 'bg-red-600'
-                            : category.spent > category.budget * 0.8
+                            : item.spent > item.budget * 0.8
                             ? 'bg-yellow-500'
                             : 'bg-green-500'
                         }`}
                         style={{
-                        width: category.budget > 0 
-                            ? `${Math.min((category.spent / category.budget) * 100, 100)}%` 
+                        width: item.budget > 0 
+                            ? `${Math.min((item.spent / item.budget) * 100, 100)}%` 
                             : '0%',
-                        minWidth: category.spent > 0 ? '4px' : '0px'
+                        minWidth: item.spent > 0 ? '4px' : '0px'
                         }}
                     ></div>
                 </div>
@@ -437,7 +482,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                 
                 <div className="mt-2 text-sm">
                   <span className="font-medium">
-                    נותר: ₪{(category.budget - category.spent).toFixed(2)}
+                    נותר: ₪{(item.budget - item.spent).toFixed(2)}
                   </span>
                 </div>
               </div>
