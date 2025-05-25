@@ -259,35 +259,34 @@ const comparison = generateMonthlyComparison();
     setEditingType(type); // Set the type of item being edited
   };
 
-  const saveEdit = () => {
-    const budget = parseFloat(editBudget);
-    if (isNaN(budget)) return;
+ const saveEdit = () => {
+  const budget = parseFloat(editBudget);
+  if (isNaN(budget)) return;
 
-    if (editingType === 'category') {
-      setTrueCategories(trueCategories.map(cat => 
-        cat.id === editingId ? {...cat, budget: budget} : cat
+  if (editingType === 'category') {
+    setTrueCategories(trueCategories.map(cat => 
+      cat.id === editingId ? { ...cat, budget } : cat
+    ));
+  } else if (editingType === 'goal') {
+    const itemToEdit = displayItems.find(item => item.id === editingId);
+    if (itemToEdit && itemToEdit.originalId) {
+      setGoals(goals.map(goal => 
+        goal.id === itemToEdit.originalId ? { ...goal, budget } : goal
       ));
-    } else if (editingType === 'goal') {
-      // editingId for goals in displayItems is `goal-${original_goal_id}`
-      // We need to use originalId which is stored on the goal item in displayItems
-      const itemToEdit = displayItems.find(item => item.id === editingId);
-      if (itemToEdit && itemToEdit.originalId) {
-        setGoals(goals.map(goal => 
-          goal.id === itemToEdit.originalId ? {...goal, budget: budget} : goal
-        ));
-      }
-    } else if (editingType === 'debt') {
-      // Similarly for debts
-      const itemToEdit = displayItems.find(item => item.id === editingId);
-      if (itemToEdit && itemToEdit.originalId) {
-        setDebts(debts.map(debt =>
-          debt.id === itemToEdit.originalId ? {...debt, budget: budget} : debt
-        ));
-      }
     }
-    setEditingId(null);
-    setEditingType(null);
-  };
+  } else if (editingType === 'debt') {
+    const itemToEdit = displayItems.find(item => item.id === editingId);
+    if (itemToEdit && itemToEdit.originalId) {
+      setDebts(debts.map(debt =>
+        debt.id === itemToEdit.originalId ? { ...debt, budget } : debt
+      ));
+    }
+  }
+
+  setEditingId(null);
+  setEditingType(null);
+};
+
 const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
   year: 'numeric',
   month: 'long'

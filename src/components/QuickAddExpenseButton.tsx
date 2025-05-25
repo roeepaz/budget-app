@@ -31,14 +31,17 @@ export default function QuickAddExpenseButton({ onAddExpense, categories }: Quic
   const handleSubmit = () => {
     if (!quickExpense.amount || !quickExpense.categoryId) return;
 
+    const cat = categories.find(c => String(c.id) === quickExpense.categoryId);
+    if (!cat) return;
+
     const expense: Expense = {
       id: Math.floor(Math.random() * 1000000),
       amount: parseFloat(quickExpense.amount),
       description: quickExpense.description,
-      categoryId: quickExpense.categoryId,
+      categoryId: cat.id,
       date: quickExpense.date,
     };
-
+    
     onAddExpense(expense);
     setQuickExpense({
       amount: '',
