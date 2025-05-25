@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home, Target, DollarSign } from 'lucide-react'; // Added Target and DollarSign
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 // Main App Component
@@ -23,6 +23,8 @@ export default function ExpenseTracker({ user }) {
   const [categories, setCategories] = useState(defaultCategories);
   const [expenses, setExpenses] = useState([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [userDebts, setUserDebts] = useState([]);
+  const [userSavingsGoals, setUserSavingsGoals] = useState([]);
 
 
 
@@ -53,23 +55,51 @@ useEffect(() => {
   if (!userId) return;
 
   const loadUserData = async () => {
-    const docRef = doc(db, 'users', userId);
+    setLoading(true);
     try {
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        setExpenses(data.expenses || []);
-        setCategories(data.categories || defaultCategories);
+      // Load expenses and categories
+      const userDocRef = doc(db, 'users', userId);
+      const userSnapshot = await getDoc(userDocRef);
+      if (userSnapshot.exists()) {
+        const userData = userSnapshot.data();
+        setExpenses(userData.expenses || []);
+        setCategories(userData.categories || defaultCategories);
+      } else {
+        setExpenses([]);
+        setCategories(defaultCategories);
       }
+
+      // Load debts and savings goals
+      const financialDataRef = doc(db, 'financial_data', userId);
+      const financialSnapshot = await getDoc(financialDataRef);
+      if (financialSnapshot.exists()) {
+        const financialData = financialSnapshot.data();
+        setUserDebts(financialData.debts || []);
+        // Convert Firestore Timestamps to Date objects for savingsGoals if necessary, though not used in this display
+        const loadedGoals = (financialData.goals || []).map(goal => ({
+          ...goal,
+          // targetDate: goal.targetDate && goal.targetDate.toDate ? goal.targetDate.toDate() : (goal.targetDate ? new Date(goal.targetDate) : new Date()),
+        }));
+        setUserSavingsGoals(loadedGoals);
+      } else {
+        setUserDebts([]);
+        setUserSavingsGoals([]);
+      }
+
     } catch (error) {
       console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+      setExpenses([]);
+      setCategories(defaultCategories);
+      setUserDebts([]);
+      setUserSavingsGoals([]);
+    } finally {
+      setHasLoaded(true);
+      setLoading(false);
     }
-    setHasLoaded(true);
-    setLoading(false);
   };
 
   loadUserData();
-}, [userId]);
+}, [userId, defaultCategories]); // Added defaultCategories to dependency array as it's used in error/no data case
 
 useEffect(() => {
   if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
@@ -285,13 +315,57 @@ const monthlyData = monthNames.map((month, index) => {
                 </div>
               </div>
               
+              {/* Planned Payments Card */}
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-xl font-semibold mb-4 text-gray-700">תשלומים מתוכננים למטרות והלוואות</h2>
+                
+                {/* Savings Goals Contributions */}
+                <div className="mb-4">
+                  <h3 className="text-md font-semibold text-blue-600 mb-2 flex items-center">
+                    <Target size={18} className="mr-2" /> חסכונות למטרות
+                  </h3>
+                  {userSavingsGoals.length > 0 ? (
+                    <ul className="space-y-1 text-sm text-gray-600">
+                      {userSavingsGoals.map(goal => (
+                        <li key={goal.id} className="flex justify-between">
+                          <span>{goal.name}:</span>
+                          <span className="font-medium">₪{(goal.userAllocatedContribution ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500">אין תרומות מתוכננות למטרות חיסכון.</p>
+                  )}
+                </div>
+
+                {/* Debt Payments */}
+                <div>
+                  <h3 className="text-md font-semibold text-red-600 mb-2 flex items-center">
+                    <DollarSign size={18} className="mr-2" /> החזרי הלוואות
+                  </h3>
+                  {userDebts.length > 0 ? (
+                    <ul className="space-y-1 text-sm text-gray-600">
+                      {userDebts.map(debt => (
+                        <li key={debt.id} className="flex justify-between">
+                          <span>{debt.name}:</span>
+                          <span className="font-medium">₪{(debt.userAllocatedPayment ?? debt.minPayment).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500">אין החזרי הלוואות מתוכננים.</p>
+                  )}
+                </div>
+              </div>
+
               {/* Recent Transactions */}
               <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
-                <h2 className="text-xl font-semibold mb-4">הוצאות לחודש המוצג</h2>
+                <h2 className="text-xl font-semibold mb-4">הוצאות לחודש המוצג ({monthNames[selectedMonth]})</h2>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                      <tr dir="rtl">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">קטגוריה</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תיאור</th>
@@ -300,14 +374,7 @@ const monthlyData = monthNames.map((month, index) => {
 
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                    {expenses
-                      .filter(expense => {
-                        const date = new Date(expense.date);
-                        return (
-                          date.getMonth()  === selectedMonth &&
-                          date.getFullYear() === selectedYear
-                        );
-                      })
+                    {filteredExpenses // Use pre-filtered expenses for the selected month
                       .sort((a, b) => new Date(b.date) - new Date(a.date))
                       .map(expense => {
                         const category = categories.find(c => c.id === expense.categoryId);
@@ -315,7 +382,7 @@ const monthlyData = monthNames.map((month, index) => {
                           <tr key={expense.id}>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.date}</td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-row-reverse items-center justify-end">
+                              <div className="flex items-center"> {/* Adjusted for LTR icon display */}
                                 <span className="mr-2" style={{ color: category?.color }}>
                                   {category?.icon}
                                 </span>

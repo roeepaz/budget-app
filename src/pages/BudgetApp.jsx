@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, PieChart, Plus, Minus, RefreshCw } from 'lucide-react';
+import { DollarSign, PieChart, Plus, Minus, RefreshCw, Target } from 'lucide-react';
 import {
   PieChart as RePieChart,
   Pie,
@@ -32,6 +32,7 @@ export default function BudgetApp({ user }) {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [budgetData, setBudgetData] = useState([]);
   const [availableFunds, setAvailableFunds] = useState(0);
+  const [userSavingsGoals, setUserSavingsGoals] = useState([]);
 
   // Currency conversion state
   const [currencyMode, setCurrencyMode] = useState(() => {
@@ -110,29 +111,53 @@ export default function BudgetApp({ user }) {
 
   useEffect(() => {
     const loadData = async () => {
-      const ref = doc(db, 'budgets', userId);
+      setLoading(true);
       try {
-        const snapshot = await getDoc(ref);
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setBudgetData(data.budgetData || initialBudgetData);
-          setAvailableFunds(data.availableFunds || 0);
+        // Fetch investment budget data
+        const budgetDocRef = doc(db, 'budgets', userId);
+        const budgetSnapshot = await getDoc(budgetDocRef);
+        if (budgetSnapshot.exists()) {
+          const budgetDocData = budgetSnapshot.data();
+          setBudgetData(budgetDocData.budgetData || initialBudgetData);
+          setAvailableFunds(budgetDocData.availableFunds || 0);
+        } else {
+          setBudgetData(initialBudgetData);
+          setAvailableFunds(0);
+        }
+
+        // Fetch savings goals data
+        const financialDataRef = doc(db, 'financial_data', userId);
+        const financialSnapshot = await getDoc(financialDataRef);
+        if (financialSnapshot.exists()) {
+          const financialData = financialSnapshot.data();
+          const loadedGoals = (financialData.goals || []).map(goal => ({
+            ...goal,
+            targetDate: goal.targetDate && goal.targetDate.toDate ? goal.targetDate.toDate() : (goal.targetDate ? new Date(goal.targetDate) : new Date()),
+          }));
+          setUserSavingsGoals(loadedGoals);
+        } else {
+          setUserSavingsGoals([]);
         }
       } catch (error) {
         console.error("Error loading data", error);
+        setBudgetData(initialBudgetData); // Default on error
+        setAvailableFunds(0); // Default on error
+        setUserSavingsGoals([]); // Default on error
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     loadData();
   }, [userId]);
 
   useEffect(() => {
     if (!userId || loading) return;
+    // Only save budgetData and availableFunds related to this app's context
     const timeout = setTimeout(() => {
       setDoc(doc(db, 'budgets', userId), { budgetData, availableFunds });
     }, 800);
     return () => clearTimeout(timeout);
-  }, [budgetData, availableFunds, userId]);
+  }, [budgetData, availableFunds, userId, loading]);
 
   useEffect(() => {
     const newTotal = budgetData.reduce((sum, item) => sum + item.amount, 0);
@@ -361,6 +386,46 @@ export default function BudgetApp({ user }) {
               </ResponsiveContainer>
             </div>
 
+          </div>
+
+          {/* Savings Goals Progress Section */}
+          <div className={`rounded-lg shadow-md p-4 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <Target size={20} className="mr-2 text-blue-500" />
+              מעקב מטרות חיסכון
+            </h2>
+            {userSavingsGoals.length > 0 ? (
+              <div className="space-y-4">
+                {userSavingsGoals.map(goal => {
+                  const progress = goal.targetAmount > 0 ? ((goal.currentAmount ?? 0) / goal.targetAmount) * 100 : 0;
+                  return (
+                    <div key={goal.id} className={`p-3 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-600'}`}>{goal.name}</span>
+                        <span className={`text-sm font-semibold ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>
+                          {displayValue(goal.userAllocatedContribution ?? 0)}/חודש
+                        </span>
+                      </div>
+                      <div className="text-xs mb-1">
+                        יעד: {displayValue(goal.targetAmount)} | 
+                        נוכחי: {displayValue(goal.currentAmount ?? 0)}
+                      </div>
+                      <div className={`w-full rounded-full h-2.5 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
+                        <div
+                          className="bg-blue-500 h-2.5 rounded-full"
+                          style={{ width: `${Math.min(progress, 100).toFixed(2)}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-right mt-1">{Math.min(progress, 100).toFixed(1)}% הושלם</div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-300'}`}>
+                אין מטרות חיסכון זמינות מיועץ התקציב.
+              </p>
+            )}
           </div>
         </div>
 

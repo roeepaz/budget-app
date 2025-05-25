@@ -54,6 +54,11 @@ const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 // Only calculate result if inputs are set
 const result =  useBudgetModel(inputs) 
 
+useEffect(() => {
+  if (result) {
+    console.log("Budget Model Result:", JSON.stringify(result, null, 2));
+  }
+}, [result]);
 
 useEffect(() => {
   if (!userId) return;
@@ -65,10 +70,11 @@ useEffect(() => {
       if (snapshot.exists()) {
         const data = snapshot.data() as {
           form: FormState;
-          debts: Debt[];
+          debts: Array<Debt & { userAllocatedPayment?: number }>;
           goals: Array<{
             id: string;
             name: string;
+            userAllocatedContribution?: number;
             targetAmount: number;
             currentAmount: number;
             priority: number;
@@ -76,6 +82,11 @@ useEffect(() => {
           }>;
         };
 
+        const loadedDebts: Debt[] = data.debts.map(d => ({
+          ...d,
+          userAllocatedPayment: d.userAllocatedPayment ?? d.minPayment, 
+        }));
+        
         // נרמול תאריכים
         const loadedGoals: SavingsGoal[] = data.goals.map(g => ({
           id: g.id,
@@ -83,6 +94,7 @@ useEffect(() => {
           targetAmount: g.targetAmount,
           currentAmount: g.currentAmount,
           priority: g.priority,
+          userAllocatedContribution: g.userAllocatedContribution ?? 0,
           // אם זה Timestamp של Firestore → toDate(), אחרת נניח מחרוזת ISO
           targetDate:
             g.targetDate instanceof Timestamp
@@ -91,7 +103,7 @@ useEffect(() => {
         }));
 
         setForm(data.form);
-        setDebts(data.debts);
+        setDebts(loadedDebts);
         setGoals(loadedGoals);
       }
     } catch (error) {
@@ -125,6 +137,9 @@ if (loading) {
   return <div>Loading or not authenticated...</div>;
 }
   const handleSubmit = () => {
+    console.log("Submitting to useBudgetModel - Form:", JSON.stringify(form, null, 2));
+    console.log("Submitting to useBudgetModel - Debts:", JSON.stringify(debts, null, 2));
+    console.log("Submitting to useBudgetModel - Goals:", JSON.stringify(goals, null, 2));
     setInputs({
       ...form,
       debts,
@@ -175,6 +190,7 @@ currentAmount: g.currentAmount ?? 0,
         currentAmount: newGoal.currentAmount,
         targetDate: new Date(newGoal.targetDate),
         priority: newGoal.priority,
+        userAllocatedContribution: 0, // Initialize userAllocatedContribution
       },
     ]);
   }
@@ -195,6 +211,7 @@ currentAmount: g.currentAmount ?? 0,
         annualRate: newDebt.annualRate,
         termMonths: newDebt.termMonths,
         minPayment: newDebt.minPayment,
+        userAllocatedPayment: newDebt.minPayment, // Initialize userAllocatedPayment
       },
     ]);
     setNewDebt({ name: '', principal: 0, annualRate: 0, termMonths: 12, minPayment: 0 });
@@ -454,13 +471,41 @@ currentAmount: g.currentAmount ?? 0,
                           ? 'bg-gray-800 border-gray-600'
                           : 'bg-white border-gray-300'
                       }`}>
-                    <span className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                      🎯 {goal.name} – {formatCurrency(goal.currentAmount || 0)} / {formatCurrency(goal.targetAmount)}
-                      (עד {goal.targetDate.toLocaleDateString('he-IL')})
-                    </span>
-                    <div className="flex gap-2">
+                    <div className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      <div>
+                        🎯 {goal.name} – {formatCurrency(goal.currentAmount || 0)} / {formatCurrency(goal.targetAmount)}
+                        (עד {goal.targetDate.toLocaleDateString('he-IL')})
+                      </div>
+                      <div className="mt-1">
+                        <label htmlFor={`goal-contrib-${goal.id}`} className="text-xs mr-2">הקצאה חודשית שלך:</label>
+                        <input
+                          type="number"
+                          id={`goal-contrib-${goal.id}`}
+                          value={goal.userAllocatedContribution ?? ''}
+                          onChange={(e) => {
+                            const newGoalValue = parseFloat(e.target.value) || 0;
+                            setGoals(currentGoals => {
+                              const updatedGoals = currentGoals.map(g =>
+                                g.id === goal.id
+                                  ? { ...g, userAllocatedContribution: newGoalValue }
+                                  : g
+                              );
+                              console.log(`Goal ${goal.id} userAllocatedContribution changed to:`, newGoalValue, "Updated Goals State:", JSON.stringify(updatedGoals, null, 2));
+                              return updatedGoals;
+                            });
+                          }}
+                          className={`p-1 border rounded w-24 text-xs ${
+                            darkMode
+                              ? 'bg-gray-700 border-gray-600 text-white'
+                              : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="סכום"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 items-start">
                       <button
-                        className={`text-xs hover:underline ${darkMode ? 'text-blue-400' : 'text-blue-500'}`}
+                        className={`text-xs hover:underline ${darkMode ? 'text-blue-400' : 'text-blue-500'} mt-1`}
                         onClick={() => startEditGoal(goal)}
                       >
                         ערוך
@@ -585,13 +630,42 @@ currentAmount: g.currentAmount ?? 0,
                       ? 'bg-gray-800 border-gray-600' 
                       : 'bg-white border-gray-300'
                   }`}>
-                    <span className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                      🏦 {debt.name} - קרן: {formatCurrency(debt.principal)} | 
-                      ריבית: {(debt.annualRate * 100).toFixed(1)}% | 
-                      תשלום: {formatCurrency(debt.minPayment)}
-                    </span>
+                    <div className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      <div>
+                        🏦 {debt.name} - קרן: {formatCurrency(debt.principal)} | 
+                        ריבית: {(debt.annualRate * 100).toFixed(1)}% | 
+                        תשלום מינימלי: {formatCurrency(debt.minPayment)}
+                      </div>
+                      <div className="mt-1">
+                        <label htmlFor={`debt-alloc-${debt.id}`} className="text-xs mr-2">התשלום החודשי שלך:</label>
+                        <input
+                          type="number"
+                          id={`debt-alloc-${debt.id}`}
+                          value={debt.userAllocatedPayment ?? ''}
+                          min={debt.minPayment}
+                          onChange={(e) => {
+                            const newDebtValue = parseFloat(e.target.value) || 0;
+                            setDebts(currentDebts => {
+                              const updatedDebts = currentDebts.map(d =>
+                                d.id === debt.id
+                                  ? { ...d, userAllocatedPayment: newDebtValue }
+                                  : d
+                              );
+                              console.log(`Debt ${debt.id} userAllocatedPayment changed to:`, newDebtValue, "Updated Debts State:", JSON.stringify(updatedDebts, null, 2));
+                              return updatedDebts;
+                            });
+                          }}
+                          className={`p-1 border rounded w-24 text-xs ${
+                            darkMode
+                              ? 'bg-gray-700 border-gray-600 text-white'
+                              : 'bg-white border-gray-300 text-gray-900'
+                          }`}
+                          placeholder="סכום"
+                        />
+                      </div>
+                    </div>
                     <button
-                      className={`text-xs hover:underline ${darkMode ? 'text-red-400' : 'text-red-500'}`}
+                      className={`text-xs hover:underline ${darkMode ? 'text-red-400' : 'text-red-500'} mt-1`}
                       onClick={() => removeDebt(debt.id)}
                     >
                       הסר

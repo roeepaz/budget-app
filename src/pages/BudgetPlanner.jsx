@@ -10,6 +10,8 @@ export default function BudgetPlanner({ user }) {
   // Sample data - in a real app, this would come from your backend
   const [categories, setCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [userDebts, setUserDebts] = useState([]);
+  const [userSavingsGoals, setUserSavingsGoals] = useState([]);
   const [activeTab, setActiveTab] = useState('summary');
   const [editingId, setEditingId] = useState(null);
   const [editBudget, setEditBudget] = useState('');
@@ -30,18 +32,18 @@ useEffect(() => {
   if (!userId) return;
 
   const loadUserData = async () => {
-    const docRef = doc(db, 'users', userId);
+    setLoading(true);
     try {
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const loadedExpenses = data.expenses || [];
-        const loadedCategories = data.categories || [];
+      // Fetch categories and expenses from 'users/{userId}'
+      const userDocRef = doc(db, 'users', userId);
+      const userSnapshot = await getDoc(userDocRef);
+      if (userSnapshot.exists()) {
+        const userData = userSnapshot.data();
+        const loadedExpenses = userData.expenses || [];
+        const loadedCategories = userData.categories || [];
 
-        // חישוב הוצאות לחודש הנוכחי לפי קטגוריה
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
-
         const expensesByCategory = {};
         for (const exp of loadedExpenses) {
           const date = new Date(exp.date);
@@ -50,22 +52,43 @@ useEffect(() => {
             expensesByCategory[id] = (expensesByCategory[id] || 0) + exp.amount;
           }
         }
-
-        // עדכון spent לכל קטגוריה
         const updatedCategories = loadedCategories.map(cat => ({
           ...cat,
           budget: cat.budget || 0,
           spent: expensesByCategory[cat.id] || 0,
         }));
-
         setExpenses(loadedExpenses);
         setCategories(updatedCategories);
       }
+
+      // Fetch debts and savingsGoals from 'financial_data/{userId}'
+      const financialDataRef = doc(db, 'financial_data', userId);
+      const financialSnapshot = await getDoc(financialDataRef);
+      if (financialSnapshot.exists()) {
+        const financialData = financialSnapshot.data();
+        setUserDebts(financialData.debts || []);
+        // Convert Firestore Timestamps to Date objects for savingsGoals
+        const loadedGoals = (financialData.goals || []).map(goal => ({
+          ...goal,
+          targetDate: goal.targetDate && goal.targetDate.toDate ? goal.targetDate.toDate() : (goal.targetDate ? new Date(goal.targetDate) : new Date()),
+        }));
+        setUserSavingsGoals(loadedGoals);
+      } else {
+        setUserDebts([]);
+        setUserSavingsGoals([]);
+      }
+
     } catch (error) {
       console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+      // Set to empty arrays in case of error to avoid render issues
+      setExpenses([]);
+      setCategories([]);
+      setUserDebts([]);
+      setUserSavingsGoals([]);
+    } finally {
+      setHasLoaded(true);
+      setLoading(false);
     }
-    setHasLoaded(true);
-    setLoading(false);
   };
 
   loadUserData();
@@ -256,12 +279,12 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
           {/* Budget Overview */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-semibold">סיכום תקציב חודשי</h2>
+              <h2 className="text-lg font-semibold text-gray-700">סיכום תקציב חודשי</h2>
               <div className="text-sm text-gray-500 text-right">{hebrewMonthYear}</div>
 
             </div>
             
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="text-sm text-gray-500 mb-1">תקציב כולל</div>
                 <div className="text-xl font-bold">₪{totalBudget.toFixed(2)}</div>
@@ -307,13 +330,67 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
           
           {/* Key Insights */}
           <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h3 className="font-medium mb-3">תובנות מהירות</h3>
+            <h3 className="font-medium mb-3 text-gray-700">תובנות מהירות</h3>
             {insights.slice(0, 2).map((insight, index) => (
-              <div key={index} className="flex items-start mb-2">
-                <div className="mr-2">{insight.icon}</div>
+              <div key={index} className="flex items-start mb-2 text-gray-600">
+                <div className="ml-2 rtl:mr-2 rtl:ml-0">{insight.icon}</div>
                 <div className="text-sm">{insight.text}</div>
               </div>
             ))}
+          </div>
+
+          {/* Savings Goal Contributions Section */}
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-gray-700 mb-3">💰 מטרות חיסכון פעילות</h2>
+            {userSavingsGoals.length > 0 ? (
+              <div className="space-y-3">
+                {userSavingsGoals.map(goal => (
+                  <div key={goal.id} className="bg-green-50 p-3 rounded-lg shadow-sm">
+                    <div className="font-medium text-green-700">{goal.name}</div>
+                    <div className="text-sm text-gray-600">
+                      הקצאה חודשית: ₪{(goal.userAllocatedContribution ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      התקדמות: ₪{(goal.currentAmount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / ₪{goal.targetAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    {goal.targetDate && (
+                       <div className="text-xs text-gray-500">
+                         יעד: {new Date(goal.targetDate).toLocaleDateString('he-IL')}
+                       </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">אין מטרות חיסכון שהוגדרו ביועץ התקציב.</p>
+            )}
+          </div>
+
+          {/* Debt Payments Section */}
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold text-gray-700 mb-3">💳 תשלומי חובות חודשיים</h2>
+            {userDebts.length > 0 ? (
+              <div className="space-y-3">
+                {userDebts.map(debt => (
+                  <div key={debt.id} className="bg-red-50 p-3 rounded-lg shadow-sm">
+                    <div className="font-medium text-red-700">{debt.name}</div>
+                    <div className="text-sm text-gray-600">
+                      תשלום חודשי מתוכנן: ₪{(debt.userAllocatedPayment ?? debt.minPayment).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      יתרת קרן: ₪{debt.principal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                    {debt.annualRate !== undefined && (
+                       <div className="text-xs text-gray-500">
+                         ריבית שנתית: {(debt.annualRate * 100).toFixed(1)}%
+                       </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">אין חובות שהוגדרו ביועץ התקציב.</p>
+            )}
           </div>
         </div>
       )}
@@ -333,19 +410,19 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
               <div key={category.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center">
-                    <span className="text-xl mr-2">{category.icon}</span>
-                    <span className="font-medium">{category.name}</span>
+                    <span className="text-xl ml-2 rtl:mr-2 rtl:ml-0">{category.icon}</span>
+                    <span className="font-medium text-gray-800">{category.name}</span>
                   </div>
                   {editingId === category.id ? (
                     <div className="flex items-center">
                       <input 
                         type="number" 
-                        className="w-24 p-1 border border-gray-300 rounded-md text-sm ml-2"
+                        className="w-24 p-1 border border-gray-300 rounded-md text-sm ml-2 rtl:mr-2 rtl:ml-0"
                         value={editBudget}
                         onChange={(e) => setEditBudget(e.target.value)}
                       />
                       <button 
-                        className="text-blue-600 text-sm"
+                        className="text-blue-600 text-sm hover:text-blue-800"
                         onClick={saveEdit}
                       >
                         שמור
@@ -429,9 +506,9 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
             {insights.map((insight, index) => (
               <div key={index} className="border-r-4 border-blue-500 bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-start">
-                  <div className="ml-3">{insight.icon}</div>
+                <div className="ml-3 rtl:mr-3 rtl:ml-0">{insight.icon}</div>
                   <div>
-                    <div className="font-medium mb-1">
+                  <div className="font-medium mb-1 text-gray-800">
                       {insight.type === 'warning' ? 'אזהרה' : 
                        insight.type === 'alert' ? 'התראה' :
                        insight.type === 'rate' ? 'קצב הוצאות' :
@@ -444,13 +521,13 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
             ))}
             
             {/* Tips */}
-            <div className="border-r-4 border-green-500 bg-gray-50 p-4 rounded-lg">
+            <div className="border-r-4 rtl:border-l-4 rtl:border-r-0 border-green-500 bg-gray-50 p-4 rounded-lg">
               <div className="flex items-start">
-                <div className="ml-3"><TrendingUp className="text-green-500" /></div>
+                <div className="ml-3 rtl:mr-3 rtl:ml-0"><TrendingUp className="text-green-500" /></div>
                 <div>
-                  <div className="font-medium mb-1">טיפ לחיסכון</div>
+                  <div className="font-medium mb-1 text-gray-800">טיפ לחיסכון</div>
                   <div className="text-sm text-gray-700">
-                    שקול להקצות 10% לחיסכון בכל חודש
+                    שקול להקצות 10% לחיסכון בכל חודש. בדוק את 'יועץ התקציב החכם' לקבלת המלצות נוספות.
                   </div>
                 </div>
               </div>
