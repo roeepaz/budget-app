@@ -873,57 +873,51 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
 
 {showAdvisorBudget && result && (
   <AdvisorBudgetBuilder
-  allocations={{
-    ...result.allocations,
-    emergencyFundMonthly,
-    generalSavings,
-    discretionarySpending,
-    debtAllocations: result.allocations.debtAllocations ?? [],
-    goalAllocations: result.allocations.goalAllocations ?? [],
-  }}
-  totalDebt={totalDebt}
-  totalGoals={totalGoals}
-  totalSavings={generalSavings}
-  totalEmergency={emergencyFundMonthly}
-  totalWants={discretionarySpending}
-  totalNeeds={form.needs}
-  categories={categories}
-  goals={goals.map(g => ({
-    ...g,
-    budget: result.allocations.goalAllocations.find(ga => ga.id === g.id)?.allocatedMonthly ?? g.budget ?? 0,
-  }))}
-  debts={debts.map(d => ({
-    ...d,
-    budget: result.allocations.debtAllocations.find(da => da.id === d.id)?.totalPayment ?? d.budget ?? 0,
-  }))}
-  onClose={() => setShowAdvisorBudget(false)}
-  onUpdate={(updatedCategories, updatedGoals, updatedDebts) => {
- setCategories(updatedCategories.filter(cat =>
-    !['goal', 'debt'].includes(cat.tag)
-  ));    
-   // ✨ Goals – update only if exists
-setGoals(prevGoals =>
-  prevGoals.map(goal => {
-    const updated = updatedGoals.find(g => g.id === goal.id);
-    return updated ? { ...goal, budget: updated.budget ?? goal.budget ?? 0 } : goal;
-  })
-);
-
-// ✨ Debts – update only if exists
-setDebts(prevDebts =>
-  prevDebts.map(debt => {
-    const updated = updatedDebts.find(d => d.id === debt.id);
-    return updated ? { ...debt, budget: updated.budget ?? debt.budget ?? 0 } : debt;
-  })
-);
-
-
-  }}
-/>
-)}
-
-
-
+      allocations={{
+        ...result.allocations,
+        emergencyFundMonthly,
+        generalSavings,
+        discretionarySpending,
+        debtAllocations: result.allocations.debtAllocations ?? [],
+        goalAllocations: result.allocations.goalAllocations ?? [],
+      }}
+      totalDebt={totalDebt}
+      totalGoals={totalGoals}
+      totalSavings={generalSavings}
+      totalEmergency={emergencyFundMonthly}
+      totalWants={discretionarySpending}
+      totalNeeds={form.needs}
+      categories={categories}
+      goals={goals.map(g => ({
+        ...g,
+        budget: result.allocations.goalAllocations.find(ga => ga.id === g.id)?.allocatedMonthly ?? g.budget ?? 0,
+      }))}
+      debts={debts.map(d => ({
+        ...d,
+        budget: result.allocations.debtAllocations.find(da => da.id === d.id)?.totalPayment ?? d.budget ?? 0,
+      }))}
+      onClose={() => setShowAdvisorBudget(false)}
+      onUpdate={(updatedCategories, updatedGoals, updatedDebts) => {
+        setCategories(updatedCategories.filter(cat =>
+            !['goal', 'debt'].includes(cat.tag)
+          ));    
+          // ✨ Goals – update only if exists
+          setGoals(prevGoals =>
+            prevGoals.map(goal => {
+            const updated = updatedGoals.find(g => g.id === goal.id);
+            return updated ? { ...goal, ...updated } : goal;
+          })
+          );
+        // ✨ Debts – update only if exists
+        setDebts(prevDebts =>
+          prevDebts.map(debt => {
+            const updated = updatedDebts.find(d => d.id === debt.id);
+            return updated ? { ...debt, budget: updated.budget ?? debt.budget ?? 0 } : debt;
+          })
+        );
+      }}
+    />
+    )}
             <div className="text-center">
               <div className="text-green-600 dark:text-green-400 text-sm font-medium flex items-center justify-center gap-2">
                 <CheckCircle className="w-5 h-5" />

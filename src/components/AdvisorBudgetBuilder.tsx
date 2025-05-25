@@ -1,16 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calculator, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { SavingsGoal } from '../hooks/useBudgetModel';
 
 interface Category {
   id: string | number;
   name: string;
   tag: 'need' | 'want' | 'debt' | 'emergency' | 'goal' | 'savings';
-  budget?: number;
-}
-
-interface Goal {
-  id: string;
-  name: string;
   budget?: number;
 }
 
@@ -25,13 +20,13 @@ interface Allocations {
   generalSavings: number;
   discretionarySpending: number;
   debtAllocations: { id: string; name: string; totalPayment: number }[];
-  goalAllocations: { id: string; name: string; allocatedMonthly: number }[];
+  goalAllocations: { id: string; name: string; allocatedMonthly: number  }[];
 }
 
 interface Props {
   allocations: Allocations;
   categories: Category[];
-  goals: Goal[];
+  goals: SavingsGoal[];
   debts: Debt[];
   totalDebt: number | undefined;
   totalGoals: number | undefined;
@@ -42,7 +37,7 @@ interface Props {
   onClose: () => void;
   onUpdate: (
     updatedCategories: Category[],
-    updatedGoals: Goal[],
+    updatedGoals: SavingsGoal[],
     updatedDebts: Debt[]
   ) => void;
 }
