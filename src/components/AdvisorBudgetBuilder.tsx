@@ -51,14 +51,14 @@ useEffect(() => {
   const savingCats = categories.filter(c => c.tag === 'savings');
   const emergencyCats = categories.filter(c => c.tag === 'emergency');
 
-  const needsPerCat = needCats.length > 0 ? totalNeeds / needCats.length : 0;
-  const wantsPerCat = wantCats.length > 0 ? allocations.discretionarySpending / wantCats.length : 0;
-  const savingsPerCat = savingCats.length > 0 ? allocations.generalSavings / savingCats.length : 0;
-  const emergencyPerCat = emergencyCats.length > 0 ? allocations.emergencyFundMonthly / emergencyCats.length : 0;
+  const needsPerCat = needCats.length > 0 ? Math.round(totalNeeds / needCats.length) : 0;
+  const wantsPerCat = wantCats.length > 0 ? Math.round(allocations.discretionarySpending / wantCats.length) : 0;
+  const savingsPerCat = savingCats.length > 0 ? Math.round(allocations.generalSavings / savingCats.length) : 0;
+  const emergencyPerCat = emergencyCats.length > 0 ? Math.round(allocations.emergencyFundMonthly / emergencyCats.length) : 0;
 
   setLocalCategories(
     categories.map(cat => {
-      let recommendedBudget = cat.budget ?? 0;
+      let recommendedBudget = Math.round(cat.budget ?? 0);
       switch (cat.tag) {
         case 'need': recommendedBudget = needsPerCat; break;
         case 'want': recommendedBudget = wantsPerCat; break;
@@ -72,14 +72,14 @@ useEffect(() => {
   setLocalDebts(
     debts.map(debt => ({
       ...debt,
-      budget: allocations.debtAllocations.find(d => d.id === debt.id)?.totalPayment ?? debt.budget ?? 0,
+      budget: Math.round(allocations.debtAllocations.find(d => d.id === debt.id)?.totalPayment ?? debt.budget ?? 0),
     }))
   );
 
   setLocalGoals(
     goals.map(goal => ({
       ...goal,
-      budget: allocations.goalAllocations.find(g => g.id === goal.id)?.allocatedMonthly ?? goal.budget ?? 0,
+      budget: Math.round(allocations.goalAllocations.find(g => g.id === goal.id)?.allocatedMonthly ?? goal.budget ?? 0),
     }))
   );
 }, []);
@@ -87,20 +87,20 @@ useEffect(() => {
 
   const updateCategory = (id: string | number, budget: number) => {
     setLocalCategories(prev =>
-      prev.map(cat => cat.id === id ? { ...cat, budget: Math.max(0, budget) } : cat)
+      prev.map(cat => cat.id === id ? { ...cat, budget: Math.max(0, Math.round(budget)) } : cat)
     );
   };
 
 
 const updateDebt = (id: string | number, budget: number) => {
   setLocalDebts(prev =>
-    prev.map(g => (g.id === id ? { ...g, budget: Math.max(0, budget) } : g))
+    prev.map(g => (g.id === id ? { ...g, budget: Math.max(0, Math.round(budget)) } : g))
   );
 };
 
   const updateGoal = (id: string | number, budget: number) => {
   setLocalGoals(prev =>
-    prev.map(g => (g.id === id ? { ...g, budget: Math.max(0, budget) } : g))
+    prev.map(g => (g.id === id ? { ...g, budget: Math.max(0, Math.round(budget)) } : g))
   );
 };
 
@@ -111,7 +111,18 @@ const updateDebt = (id: string | number, budget: number) => {
       currency: 'ILS',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(Math.round(amount));
+  };
+
+  const formatNumber = (num: number) => {
+    return Math.round(num).toLocaleString('he-IL');
+  };
+
+  // פונקציה לטיפול בהזנת טקסט עם פסיקים
+  const parseNumberInput = (value: string): number => {
+    const cleanValue = value.replace(/[,\s]/g, '');
+    const parsed = parseInt(cleanValue) || 0;
+    return Math.max(0, parsed);
   };
 
   const calculateTotals = () => {
@@ -134,10 +145,10 @@ const updateDebt = (id: string | number, budget: number) => {
   };
 
   const totals = calculateTotals();
-  const recommendedTotal = totalNeeds + allocations.discretionarySpending + allocations.generalSavings + 
+  const recommendedTotal = Math.round(totalNeeds + allocations.discretionarySpending + allocations.generalSavings + 
                           allocations.emergencyFundMonthly + 
                           allocations.debtAllocations.reduce((sum, d) => sum + d.totalPayment, 0) +
-                          allocations.goalAllocations.reduce((sum, g) => sum + g.allocatedMonthly, 0);
+                          allocations.goalAllocations.reduce((sum, g) => sum + g.allocatedMonthly, 0));
 
   const renderBudgetSection = (
     title: string,
@@ -177,17 +188,48 @@ const updateDebt = (id: string | number, budget: number) => {
         ) : (
           <div className="space-y-2">
             {items.map((item) => (
-              <div key={item.id} className="flex justify-between items-center bg-gray-50 rounded p-3">
+              <div key={item.id} className="flex justify-between items-center bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
                 <span className="font-medium text-gray-700">{item.name}</span>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    className="w-24 border rounded px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    value={item.budget || 0}
-                    onChange={(e) => onUpdate(item.id, Number(e.target.value))}
-                    min="0"
-                  />
-                  <span className="text-sm text-gray-500">₪</span>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      className="w-32 border-2 rounded-lg px-3 py-2 text-center font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors"
+                      value={formatNumber(item.budget || 0)}
+                      onChange={(e) => onUpdate(item.id, parseNumberInput(e.target.value))}
+                      onFocus={(e) => e.target.select()}
+                      onKeyDown={(e) => {
+                        // מקשי קיצור לשינוי מהיר
+                        if (e.key === 'ArrowUp') {
+                          e.preventDefault();
+                          onUpdate(item.id, (item.budget || 0) + 100);
+                        } else if (e.key === 'ArrowDown') {
+                          e.preventDefault();
+                          onUpdate(item.id, Math.max(0, (item.budget || 0) - 100));
+                        } else if (e.key === 'Enter') {
+                          (e.target as HTMLElement).blur();
+                        }
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <span className="text-lg text-gray-600 font-medium">₪</span>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => onUpdate(item.id, (item.budget || 0) + 100)}
+                      className="w-6 h-6 bg-blue-100 hover:bg-blue-200 rounded text-blue-600 text-xs font-bold transition-colors"
+                      title="הוסף 100 ₪"
+                    >
+                      +
+                    </button>
+                    <button
+                      onClick={() => onUpdate(item.id, Math.max(0, (item.budget || 0) - 100))}
+                      className="w-6 h-6 bg-red-100 hover:bg-red-200 rounded text-red-600 text-xs font-bold transition-colors"
+                      title="הפחת 100 ₪"
+                    >
+                      -
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -207,7 +249,7 @@ const updateDebt = (id: string | number, budget: number) => {
     onClose();
   };
 
-  const isBalanced = Math.abs(totals.grandTotal - recommendedTotal) < 10;
+  const isBalanced = Math.abs(totals.grandTotal - recommendedTotal) < 50;
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-start p-4 overflow-auto">
@@ -216,7 +258,7 @@ const updateDebt = (id: string | number, budget: number) => {
         <div className="bg-blue-600 text-white p-6 rounded-t-lg">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-white hover:text-gray-200"
+            className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -224,7 +266,7 @@ const updateDebt = (id: string | number, budget: number) => {
             <Calculator className="w-8 h-8" />
             <div>
               <h2 className="text-2xl font-bold">📊 בונה תקציב לפי המלצות היועץ</h2>
-              <p className="text-blue-100 mt-1">התאם את ההקצאות לפי הצרכים שלך</p>
+              <p className="text-blue-100 mt-1">התאם את ההקצאות לפי הצרכים שלך • השתמש בחצים למעלה/מטה לשינוי מהיר</p>
             </div>
           </div>
         </div>
@@ -234,11 +276,11 @@ const updateDebt = (id: string | number, budget: number) => {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">סה"כ תקציב מומלץ:</span>
-              <span className="font-bold text-lg">{formatCurrency(recommendedTotal)}</span>
+              <span className="font-bold text-xl">{formatCurrency(recommendedTotal)}</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-gray-600">סה"כ תקציב בפועל:</span>
-              <span className={`font-bold text-lg ${isBalanced ? 'text-green-600' : 'text-orange-600'}`}>
+              <span className={`font-bold text-xl ${isBalanced ? 'text-green-600' : 'text-orange-600'}`}>
                 {formatCurrency(totals.grandTotal)}
               </span>
               {isBalanced ? (
@@ -250,7 +292,7 @@ const updateDebt = (id: string | number, budget: number) => {
           </div>
           {!isBalanced && (
             <div className="mt-2 text-center">
-              <span className="text-sm text-orange-600">
+              <span className="text-sm text-orange-600 font-medium">
                 הפרש: {formatCurrency(Math.abs(totals.grandTotal - recommendedTotal))} 
                 {totals.grandTotal > recommendedTotal ? ' מעל התקציב' : ' מתחת לתקציב'}
               </span>
@@ -263,7 +305,7 @@ const updateDebt = (id: string | number, budget: number) => {
           {renderBudgetSection(
             '🏠 צרכים בסיסיים (Needs)', 
             needCats, 
-            totalNeeds, 
+            Math.round(totalNeeds), 
             totals.needsTotal, 
             updateCategory,
             'green'
@@ -272,7 +314,7 @@ const updateDebt = (id: string | number, budget: number) => {
           {renderBudgetSection(
             '🎉 רצונות (Wants)', 
             wantCats, 
-            allocations.discretionarySpending, 
+            Math.round(allocations.discretionarySpending), 
             totals.wantsTotal, 
             updateCategory,
             'purple'
@@ -281,7 +323,7 @@ const updateDebt = (id: string | number, budget: number) => {
           {renderBudgetSection(
             '💰 חיסכון כללי', 
             savingCats, 
-            allocations.generalSavings, 
+            Math.round(allocations.generalSavings), 
             totals.savingsTotal, 
             updateCategory,
             'blue'
@@ -290,7 +332,7 @@ const updateDebt = (id: string | number, budget: number) => {
           {renderBudgetSection(
             '🛡️ קרן חירום', 
             emergencyCats, 
-            allocations.emergencyFundMonthly, 
+            Math.round(allocations.emergencyFundMonthly), 
             totals.emergencyTotal, 
             updateCategory,
             'yellow'
@@ -299,7 +341,7 @@ const updateDebt = (id: string | number, budget: number) => {
           {renderBudgetSection(
             '💳 חובות',
             localDebts,
-            allocations.debtAllocations.reduce((sum, d) => sum + d.totalPayment, 0),
+            Math.round(allocations.debtAllocations.reduce((sum, d) => sum + d.totalPayment, 0)),
             totals.debtsTotal,
             updateDebt,
             'red'
@@ -308,7 +350,7 @@ const updateDebt = (id: string | number, budget: number) => {
           {renderBudgetSection(
             '🎯 מטרות חסכון',
             localGoals,
-            allocations.goalAllocations.reduce((sum, g) => sum + g.allocatedMonthly, 0),
+            Math.round(allocations.goalAllocations.reduce((sum, g) => sum + g.allocatedMonthly, 0)),
             totals.goalsTotal,
             updateGoal,
             'indigo'
@@ -320,13 +362,13 @@ const updateDebt = (id: string | number, budget: number) => {
           <div className="flex justify-between items-center">
             <button
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
             >
               ביטול
             </button>
             <button
               onClick={confirmAndClose}
-              className={`px-6 py-2 rounded-lg text-white font-medium transition ${
+              className={`px-6 py-2 rounded-lg text-white font-medium transition-colors ${
                 isBalanced 
                   ? 'bg-green-600 hover:bg-green-700' 
                   : 'bg-orange-600 hover:bg-orange-700'
@@ -340,6 +382,9 @@ const updateDebt = (id: string | number, budget: number) => {
               💡 כדאי לאזן את התקציב לפני האישור
             </div>
           )}
+          <div className="mt-2 text-center text-xs text-gray-500">
+            💡 טיפ: השתמש בחצים ↑↓ במקלדת לשינוי מהיר של 100₪ • לחץ על השדה לבחירה מלאה
+          </div>
         </div>
       </div>
     </div>

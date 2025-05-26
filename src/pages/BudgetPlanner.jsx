@@ -301,7 +301,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
     <div className="bg-white rounded-lg shadow-lg p-6 mx-auto" dir="rtl">
       <div className="flex justify-between items-center mb-6">
        <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
-         🎯 <span className="text-yellow-500">מתכנן התקציב החכם</span>
+         🎯 <span className="text-yellow-500">מנהל התקציב</span>
         </h1>
 
             <button 

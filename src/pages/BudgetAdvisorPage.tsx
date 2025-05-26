@@ -1,5 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
-
+import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { useBudgetModel} from '../hooks/useBudgetModel';
 import { DollarSign, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
@@ -13,6 +13,8 @@ import {BudgetInputs,BudgetAdvisorPageProps, Debt, SavingsGoal,Category} from '.
 type FormState = Omit<BudgetInputs, 'debts' | 'savingsGoals'>;
 
 export default function BudgetAdvisorPage({ user }: BudgetAdvisorPageProps) {
+  const navigate = useNavigate();
+
 const [showAdvisorBudget, setShowAdvisorBudget] = useState(false);
 
   const [inputs, setInputs] = useState<BudgetInputs | null>(null);
@@ -817,6 +819,39 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
                 </div>
               </div>
             )}
+           <div className="mt-8 text-center">
+            <button
+              onClick={() => setShowAdvisorBudget(true)}
+              className={`group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold rounded-2xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl active:scale-95 ${
+                darkMode
+                  ? 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white hover:from-blue-500 hover:via-blue-600 hover:to-indigo-600 shadow-lg shadow-blue-900/30'
+                  : 'bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 text-white hover:from-blue-400 hover:via-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/30'
+              }`}
+            >
+              {/* רקע מנצנץ */}
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-300"></div>
+              
+              {/* תוכן הכפתור */}
+              <div className="relative flex items-center gap-3">
+                <div className="text-2xl animate-bounce">🤖</div>
+                <div className="flex flex-col items-start">
+                  <span className="text-xl font-extrabold tracking-wide">
+                    בנה תקציב חכם
+                  </span>
+                  <span className="text-sm opacity-90 font-normal">
+                    עם המלצות היועץ הפיננסי שלך
+                  </span>
+                </div>
+                <div className="text-2xl group-hover:rotate-12 transition-transform duration-300">📊</div>
+              </div>   
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400/0 via-blue-300/30 to-blue-400/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm"></div>  
+              <div className="absolute inset-0 rounded-2xl border-2 border-transparent bg-gradient-to-r from-blue-300/50 via-indigo-300/50 to-blue-300/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" style={{backgroundClip: 'padding-box'}}></div>
+            </button>
+            
+            <div className="mt-3 text-sm text-gray-500 dark:text-gray-400 animate-fade-in">
+              ✨ קבל המלצות מותאמות אישית לתקציב המושלם שלך
+            </div>
+          </div>
 
             {/* Warnings */}
             {result.warnings.length > 0 && (
@@ -848,21 +883,7 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
               </div>
               
             )}
- <div className="mt-6 text-center">
-    <button
-      onClick={() => setShowAdvisorBudget(true)}
-      className={`py-2 px-6 rounded-lg text-sm font-medium transition-colors ${
-        darkMode
-          ? 'bg-blue-700 text-white hover:bg-blue-600'
-          : 'bg-blue-600 text-white hover:bg-blue-700'
-      }`}
-    >
-      📊 בנה תקציב לפי המלצת היועץ
-    </button>
-  </div>
-
-
-
+ 
 {showAdvisorBudget && result && (
   <AdvisorBudgetBuilder
       allocations={{
@@ -888,7 +909,11 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
         ...d,
         budget: result.allocations.debtAllocations.find(da => da.id === d.id)?.totalPayment ?? d.budget ?? 0,
       }))}
-      onClose={() => setShowAdvisorBudget(false)}
+     onClose={() => {
+        setShowAdvisorBudget(false);
+        navigate('/BudgetPlanner'); // שנה את הנתיב לנתיב שתרצה לנווט אליו
+      }}
+
       onUpdate={(updatedCategories, updatedGoals, updatedDebts) => {
         setCategories(updatedCategories.filter(cat =>
             !['goal', 'debt'].includes(cat.tag)

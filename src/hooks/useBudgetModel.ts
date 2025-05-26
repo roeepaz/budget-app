@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import {BudgetInputs,BudgetResult,DebtAllocation,GoalAllocation} from '../type/appTypes'
+import { Timestamp } from 'firebase/firestore';
 
 export function useBudgetModel(inputs: BudgetInputs | null): BudgetResult | null {
   return useMemo(() => {
@@ -96,25 +97,38 @@ export function useBudgetModel(inputs: BudgetInputs | null): BudgetResult | null
 
     // --- Step 6: Savings goals allocation ---
     let remaining = remainingAfterDebt;
-    const goalAllocations: GoalAllocation[] = savingsGoals
-      .map(g => {
-        const current      = g.currentAmount ?? 0;
-        const needed       = Math.max(0, g.targetAmount - current);
-        const monthsToTarget = Math.max(1, getMonthsBetween(new Date(), g.targetDate));
-        return {
-          id: g.id,
-          name: g.name,
-          requiredMonthly: needed / monthsToTarget,
-          allocatedMonthly: 0,
-          shortfall: 0,
-          onTrack: false
-        };
-      })
-      .sort((a, b) => {
-        const pa = savingsGoals.find(g => g.id === a.id)!.priority;
-        const pb = savingsGoals.find(g => g.id === b.id)!.priority;
-        return pb - pa;
-      });
+
+// פונקציית עזר להמרת כל סוג תאריך לאובייקט Date תקני
+function normalizeToDate(input: any): Date {
+  if (input instanceof Date) return input;
+  if (input instanceof Timestamp) return input.toDate();
+  return new Date(input);
+}
+
+  const goalAllocations: GoalAllocation[] = savingsGoals
+    .map(g => {
+      const current = g.currentAmount ?? 0;
+      const needed = Math.max(0, g.targetAmount - current);
+
+      const monthsToTarget = Math.max(
+        1,
+        getMonthsBetween(new Date(), normalizeToDate(g.targetDate))
+      );
+
+      return {
+        id: g.id,
+        name: g.name,
+        requiredMonthly: needed / monthsToTarget,
+        allocatedMonthly: 0,
+        shortfall: 0,
+        onTrack: false,
+      };
+    })
+    .sort((a, b) => {
+      const pa = savingsGoals.find(g => g.id === a.id)!.priority;
+      const pb = savingsGoals.find(g => g.id === b.id)!.priority;
+      return pb - pa;
+    });
 
     for (const alloc of goalAllocations) {
       const give               = Math.min(alloc.requiredMonthly, remaining);
@@ -193,3 +207,4 @@ function getMonthsBetween(start: Date, end: Date): number {
     (end.getMonth() - start.getMonth())
   );
 }
+
