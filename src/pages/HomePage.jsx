@@ -17,6 +17,7 @@ import {
   CreditCard,
   AlertCircle
 } from 'lucide-react';
+import { AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 
 export default function HomePage({ user }) {
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ export default function HomePage({ user }) {
     return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
   }).reduce((sum, exp) => sum + exp.amount, 0);
 
-  const totalDebts = debts.reduce((sum, debt) => sum + debt.amount, 0);
+  const totalDebts = debts.reduce((sum, debt) => sum + (debt.principal || 0), 0);
   const totalGoals = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
   const goalsProgress = goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
 
@@ -97,6 +98,86 @@ const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBud
     { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
     { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
   ];
+  const generateQuickInsights = () => {
+  if (!categories || !expenses) return [];
+
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const day = now.getDate();
+  const monthProgress = Math.floor((day / daysInMonth) * 100);
+
+  const totalBudget = [...categories, ...debts, ...goals].reduce(
+    (sum, item) => sum + (item.budget || 0), 0
+  );
+  const totalSpent = expenses
+    .filter(exp => {
+      const d = new Date(exp.date);
+      return d.getMonth() === month && d.getFullYear() === year;
+    })
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const percentUsed = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
+
+  const insights = [];
+
+  if (percentUsed > 100) {
+    insights.push({
+      icon: <AlertCircle className="text-red-500" />,
+      text: 'חרגת מהתקציב החודשי. כדאי לבדוק את הקטגוריות.'
+    });
+  } else if (monthProgress < 50 && percentUsed > 60) {
+    insights.push({
+      icon: <TrendingUp className="text-orange-500" />,
+      text: 'קצב ההוצאות גבוה יחסית לתחילת החודש.'
+    });
+  } else if (monthProgress > 80 && percentUsed < 70) {
+    insights.push({
+      icon: <ArrowDownCircle className="text-green-500" />,
+      text: 'אתה חוסך יותר מהצפוי – מעולה!'
+    });
+  } else {
+    insights.push({
+      icon: <DollarSign className="text-blue-500" />,
+      text: 'התקציב שלך מאוזן נכון לעכשיו.'
+    });
+  }
+
+  return insights;
+};
+const getCategoryBudgetAlerts = () => {
+  const items = [
+    ...categories.map(c => ({
+      name: c.name,
+      spent: expenses
+        .filter(e => String(e.categoryId) === String(c.id))
+        .reduce((sum, e) => sum + e.amount, 0),
+      budget: c.budget || 0,
+    })),
+    ...goals.map(g => ({
+      name: g.name,
+      spent: expenses
+        .filter(e => String(e.categoryId) === `goal-${g.id}`)
+        .reduce((sum, e) => sum + e.amount, 0),
+      budget: g.budget || 0,
+    })),
+    ...debts.map(d => ({
+      name: d.name,
+      spent: expenses
+        .filter(e => String(e.categoryId) === `debt-${d.id}`)
+        .reduce((sum, e) => sum + e.amount, 0),
+      budget: d.budget || 0,
+    })),
+  ];
+
+  const overLimit = items.filter(i => i.budget > 0 && i.spent > i.budget);
+  const nearLimit = items.filter(
+    i => i.budget > 0 && i.spent >= 0.8 * i.budget && i.spent <= i.budget
+  );
+
+  return { overLimit, nearLimit };
+};
 
   if (loading) {
     return (
@@ -209,7 +290,7 @@ const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBud
           </div>
 
           {/* כרטיסי סיכום */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8" dir="rtl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6 mb-8" dir="rtl">
             {/* הוצאות חודשיות */}
             <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-blue-500">
               <div className="flex items-center justify-between">
@@ -255,20 +336,6 @@ const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBud
               </div>
             </div>
 
-            {/* התקדמות יעדים */}
-            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-purple-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">התקדמות יעדים</p>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-800">
-                    {totalGoals ? Math.round((goalsProgress / totalGoals) * 100) : 0}%
-                  </p>
-                </div>
-                <div className="p-2 lg:p-3 bg-purple-100 rounded-lg">
-                  <Target className="w-5 h-5 lg:w-6 lg:h-6 text-purple-600" />
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* תרשימים ונתונים נוספים */}
@@ -346,6 +413,58 @@ const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBud
               )}
             </div>
           </div>
+      {/* התראות קטגוריה */}
+      <div className="mt-6 border border-yellow-300 bg-yellow-50 rounded-xl p-5 shadow-sm">
+        <h3 className="text-md font-bold text-yellow-800 mb-3 flex items-center gap-2">
+          <AlertCircle className="w-5 h-5" />
+          התראות קטגוריה
+        </h3>
+
+        <ul className="space-y-2 text-sm">
+          {getCategoryBudgetAlerts().overLimit.map((item, i) => (
+            <li key={`over-${i}`} className="flex items-center gap-2 text-red-700">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              <span>
+                <span className="font-semibold">חריגה:</span> "{item.name}" חרגה מהתקציב שלה
+              </span>
+            </li>
+          ))}
+
+          {getCategoryBudgetAlerts().nearLimit.map((item, i) => (
+            <li key={`near-${i}`} className="flex items-center gap-2 text-orange-700">
+              <AlertCircle className="w-4 h-4 text-orange-400" />
+              <span>
+                <span className="font-semibold">התראה:</span> "{item.name}" מתקרבת לקצה התקציב
+              </span>
+            </li>
+          ))}
+
+          {getCategoryBudgetAlerts().overLimit.length === 0 && 
+          getCategoryBudgetAlerts().nearLimit.length === 0 && (
+            <li className="text-green-700 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              כל הקטגוריות עומדות בתקציב החודשי 🎯
+            </li>
+          )}
+        </ul>
+      </div>
+
+          {/* תובנות תקציביות */} 
+          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              תובנות החודש
+            </h3>
+            <ul className="text-gray-700 text-sm space-y-2">
+              {generateQuickInsights().map((insight, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span>{insight.icon}</span>
+                  <span>{insight.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
 
           {/* טיפים והתראות */}
           {(totalDebts > 0 || monthlyExpenses > totalExpenses * 0.3) && (
