@@ -1,15 +1,29 @@
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
 import QuickAddExpenseButton from '../components/QuickAddExpenseButton';
-import BudgetAdvisorPage from './BudgetAdvisorPage';
 import { useUserData } from '../hooks/useUserData';
-import { DollarSign} from 'lucide-react';
+import { 
+  DollarSign, 
+  Menu, 
+  X, 
+  Home, 
+  PieChart as PieIcon, 
+  TrendingUp, 
+  Calculator,
+  LogOut,
+  Wallet,
+  Target,
+  CreditCard,
+  AlertCircle
+} from 'lucide-react';
 
 export default function HomePage({ user }) {
   const navigate = useNavigate();
   const auth = getAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-const {
+  const {
     categories,
     expenses,
     debts,
@@ -26,17 +40,18 @@ const {
         alert('אירעה שגיאה ביציאה מהמערכת');
       });
   };
-   // All possible tags - FIXED: include 'savings'
+
   const tags = ['need', 'want', 'debt', 'emergency', 'goal', 'savings'];
   
   const tagColors = {
-    need:      '#3B82F6', // blue
-    want:      '#10B981', // green
-    debt:      '#F59E0B', // yellow
-    emergency: '#FF6384', // red
-    goal:      '#8B5CF6', // purple
-    savings:   '#36A2EB'  // light blue
+    need: '#3B82F6',
+    want: '#10B981',
+    debt: '#F59E0B',
+    emergency: '#FF6384',
+    goal: '#8B5CF6',
+    savings: '#36A2EB'
   };
+
   const displayCategories = [
     ...categories,
     ...debts.map(d => ({
@@ -54,69 +69,306 @@ const {
       tag: 'goal'
     }))
   ];
+
+  // חישוב סטטיסטיקות
+  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const monthlyExpenses = expenses.filter(exp => {
+    const expDate = new Date(exp.date);
+    const now = new Date();
+    return expDate.getMonth() === now.getMonth() && expDate.getFullYear() === now.getFullYear();
+  }).reduce((sum, exp) => sum + exp.amount, 0);
+
+  const totalDebts = debts.reduce((sum, debt) => sum + debt.amount, 0);
+  const totalGoals = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
+  const goalsProgress = goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
+
+const totalCategoryBudget = categories.reduce((sum, c) => sum + (c.budget || 0), 0);
+const totalGoalBudget = goals.reduce((sum, g) => sum + (g.budget || 0), 0);
+const totalDebtBudget = debts.reduce((sum, d) => sum + (d.budget || 0), 0);
+
+const totalBudget = totalCategoryBudget + totalGoalBudget + totalDebtBudget;
+const totalSpent = monthlyExpenses;
+const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+
+  const menuItems = [
+    { icon: Home, label: 'דף הבית', path: '/', current: true },
+    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
+    { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
+    { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
+    { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
+  ];
+
   if (loading) {
-    return <div>🚀 טוען נתונים…</div>;
-  }
-  return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-100 to-purple-200">
-      <div className="relative">
-        <button
-          onClick={handleLogout}
-          className="absolute top-4 left-4 px-4 py-2 bg-red-500 text-white rounded-lg shadow hover:bg-red-600 transition text-sm"
-        >
-          🔓 התנתק
-        </button>
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
+        </div>
       </div>
+    );
+  }
 
-      <main className="flex-grow flex items-center justify-center p-6">
-      <div className="flex flex-col items-center justify-center text-center space-y-6">
-          <div className="flex flex-col items-center justify-center text-center space-y-6">
-            <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight leading-snug">
-              ניהול כלכלי חכם<br />
-              <span className="text-yellow-500">מאת רועי פז המוכשר 🎓</span>
-            </h1>
-            <p className="text-lg text-gray-700">שלום, {user.displayName} 👋</p>
+  return (
+    <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+      {/* כפתור תפריט במובייל */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="lg:hidden fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+      >
+        <Menu className="w-6 h-6 text-gray-700" />
+      </button>
 
-            <div className="flex gap-6 flex-wrap justify-center">
-              <button
-                onClick={() => navigate('/budget')}
-                className="text-xl px-8 py-3 rounded-xl bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition"
-              >
-                ניהול חסכונות 💰
-              </button>
-              <button
-                onClick={() => navigate('/expense')}
-                className="text-xl px-8 py-3 rounded-xl bg-green-600 text-white shadow-lg hover:bg-green-700 transition"
-              >
-                מעקב הוצאות 📊
-              </button>
-              <QuickAddExpenseButton
-                onAddExpense={(expense) => addExpenseToDB(expense)}
-                categories={displayCategories}
-              />
-              <button
-                onClick={() => navigate('/budgetPlanner')}
-                className="text-lg px-6 py-3 rounded-lg bg-yellow-500 text-gray-900 shadow-md hover:bg-yellow-600 transition duration-300"
-              >
-                ניהול תקציב 💸
-              </button>
-               <button
-                onClick={() => navigate('/advisor')}
-                className="text-lg px-6 py-3 rounded-lg bg-indigo-500 text-white shadow-md hover:bg-indigo-600 transition duration-300 flex items-center gap-2"
-              >
-                <DollarSign className="w-5 h-5" /> ייעוץ פיננסי חכם
-              </button>
+      {/* Overlay למובייל */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
+      {/* תפריט צד */}
+      <div className={`
+  fixed lg:static inset-y-0 right-0 z-50
+  w-72 bg-white shadow-2xl
+  transform transition-transform duration-300 ease-in-out
+  ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+  lg:w-64 lg:block
+  flex flex-col
+  h-screen  // <- זה העיקרי
+`}>
+        {/* כותרת תפריט */}
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-l from-blue-600 to-purple-600 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold">ניהול כלכלי חכם</h2>
+              <p className="text-blue-100 text-sm mt-1">שלום, {user.displayName} 👋</p>
             </div>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
-      </main>
 
-      <footer className="p-4 bg-gradient-to-tr from-purple-50 to-yellow-50 text-gray-700 text-center rounded-t-xl shadow-inner border-t border-purple-200">
-        <p className="text-sm font-medium tracking-wide">
-          🎨 ניהול תקציב אישי — <span className="font-bold text-purple-600">רועי פז</span> © 2025
-        </p>
-      </footer>
+        {/* תפריט ניווט */}
+        <nav className="p-4 space-y-2 flex-1">
+          {menuItems.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => {
+                if (item.path !== '/') {
+                  navigate(item.path);
+                }
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-right ${
+                item.current 
+                  ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-600' 
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <item.icon className="w-5 h-5" />
+              <span className="font-medium">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* הוספת הוצאה מהירה */}
+        <div className="p-4 border-t border-gray-200">
+          <QuickAddExpenseButton
+            onAddExpense={(expense) => addExpenseToDB(expense)}
+            categories={displayCategories}
+            className="w-full"
+          />
+        </div>
+
+        {/* כפתור התנתקות */}
+        <div className="p-4 border-t border-gray-200">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            התנתק
+          </button>
+        </div>
+      </div>
+
+      {/* תוכן עיקרי */}
+      <div className="flex-1 lg:mr-64 overflow-y-auto">
+        <div className="p-4 lg:p-8 pt-20 lg:pt-8">
+          {/* כותרת עיקרית */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl lg:text-5xl font-extrabold text-gray-800 mb-2">
+              לוח הבקרה הכלכלי שלך
+            </h1>
+            <p className="text-gray-600 text-base lg:text-lg">מאת רועי פז המוכשר 🎓</p>
+          </div>
+
+          {/* כרטיסי סיכום */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8" dir="rtl">
+            {/* הוצאות חודשיות */}
+            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-blue-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">הוצאות החודש</p>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-800">₪{monthlyExpenses.toLocaleString()}</p>
+                </div>
+                <div className="p-2 lg:p-3 bg-blue-100 rounded-lg">
+                  <TrendingUp className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* ניצול תקציב */}
+<div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-green-500">
+  <div className="flex items-center justify-between">
+    <div>
+      <p className="text-gray-600 text-sm font-medium">ניצול תקציב</p>
+      <p className="text-xl lg:text-2xl font-bold text-gray-800">
+        {budgetUsedPercentage}%
+      </p>
+    </div>
+    <div className="p-2 lg:p-3 bg-green-100 rounded-lg">
+      <Wallet className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
+    </div>
+  </div>
+</div>
+
+
+
+            {/* חובות */}
+            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-orange-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">חובות</p>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-800">
+                    {totalDebts > 0 ? `₪${totalDebts.toLocaleString()}` : 'אין חובות'}
+                  </p>
+                </div>
+                <div className="p-2 lg:p-3 bg-orange-100 rounded-lg">
+                  <CreditCard className="w-5 h-5 lg:w-6 lg:h-6 text-orange-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* התקדמות יעדים */}
+            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-purple-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">התקדמות יעדים</p>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-800">
+                    {totalGoals ? Math.round((goalsProgress / totalGoals) * 100) : 0}%
+                  </p>
+                </div>
+                <div className="p-2 lg:p-3 bg-purple-100 rounded-lg">
+                  <Target className="w-5 h-5 lg:w-6 lg:h-6 text-purple-600" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* תרשימים ונתונים נוספים */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* הוצאות לפי קטגוריות */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <PieIcon className="w-6 h-6 text-blue-600" />
+                הוצאות לפי קטגוריות
+              </h3>
+              {categories.length > 0 ? (
+                <div className="space-y-3">
+                  {categories.slice(0, 5).map((category) => {
+                    const categoryExpenses = expenses
+                      .filter(exp => String(exp.categoryId) === String(category.id))
+                      .reduce((sum, exp) => sum + exp.amount, 0);
+
+                    const percentage = totalExpenses ? (categoryExpenses / totalExpenses) * 100 : 0;
+                    
+                    return (
+                      <div key={category.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: category.color }}
+                          />
+                          <span className="text-gray-700 font-medium text-sm lg:text-base">{category.name}</span>
+                        </div>
+                        <div className="text-left">
+                          <span className="text-gray-800 font-bold text-sm lg:text-base">₪{categoryExpenses.toLocaleString()}</span>
+                          <span className="text-gray-500 text-xs lg:text-sm mr-2">({percentage.toFixed(1)}%)</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו קטגוריות</p>
+              )}
+            </div>
+
+            {/* יעדים פעילים */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <Target className="w-6 h-6 text-purple-600" />
+                יעדים פעילים
+              </h3>
+              {goals.length > 0 ? (
+                <div className="space-y-4">
+                  {goals.slice(0, 3).map((goal) => {
+                    const progress = goal.currentAmount || 0;
+                    const percentage = (progress / goal.targetAmount) * 100;
+                    
+                    return (
+                      <div key={goal.id} className="p-4 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-semibold text-gray-800 text-sm lg:text-base">{goal.name}</h4>
+                          <span className="text-xs lg:text-sm text-gray-600">
+                            ₪{progress.toLocaleString()} / ₪{goal.targetAmount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.min(percentage, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-xs lg:text-sm text-gray-600 mt-1">{percentage.toFixed(1)}% הושלם</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו יעדים</p>
+              )}
+            </div>
+          </div>
+
+          {/* טיפים והתראות */}
+          {(totalDebts > 0 || monthlyExpenses > totalExpenses * 0.3) && (
+            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4 lg:p-6">
+              <h3 className="text-lg font-bold text-yellow-800 mb-3 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                התראות פיננסיות
+              </h3>
+              <div className="space-y-2 text-yellow-700 text-sm lg:text-base">
+                {totalDebts > 0 && (
+                  <p>• יש לך חובות בסך ₪{totalDebts.toLocaleString()} - כדאי לתכנן החזרה</p>
+                )}
+                {monthlyExpenses > totalExpenses * 0.3 && (
+                  <p>• ההוצאות החודשיות גבוהות יחסית - כדאי לבדוק את התקציב</p>
+                )}
+              </div>
+            </div>
+          )}
+          {budgetUsedPercentage > 100 && (
+              <p className="text-sm text-red-600 mt-1">חריגה מהתקציב! 😬</p>
+            )}
+        </div>
+      </div>
     </div>
   );
 }

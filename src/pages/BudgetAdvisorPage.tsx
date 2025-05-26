@@ -911,30 +911,34 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
       }))}
      onClose={() => {
         setShowAdvisorBudget(false);
-        navigate('/BudgetPlanner'); // שנה את הנתיב לנתיב שתרצה לנווט אליו
+        //navigate('/BudgetPlanner'); 
       }}
 
-      onUpdate={(updatedCategories, updatedGoals, updatedDebts) => {
+      onUpdate={async (updatedCategories, updatedGoals, updatedDebts) => {
+        const userDoc = doc(db, 'users', user.uid);
+        const financialDoc = doc(db, 'financial_data', user.uid);
+
+        // 1. עדכון סטייט מקומי
         setCategories(updatedCategories.filter(cat =>
-            !['goal', 'debt'].includes(cat.tag)
-          ));    
-          // ✨ Goals – update only if exists
-          setGoals(prevGoals =>
-            prevGoals.map(goal => {
-            const updated = updatedGoals.find(g => g.id === goal.id);
-            return updated ? { ...goal, ...updated } : goal;
-          })
-          );
-        // ✨ Debts – update only if exists
-        setDebts(prevDebts =>
-          prevDebts.map(debt => {
-            const updated = updatedDebts.find(d => d.id === debt.id);
-            return updated ? { ...debt, budget: updated.budget ?? debt.budget ?? 0 } : debt;
-          })
-        );
+          !['goal', 'debt'].includes(cat.tag)
+        ));
+
+        setGoals(updatedGoals);
+        setDebts(updatedDebts);
+
+        // 2. שמירה ל־Firestore
+        await setDoc(userDoc, { categories: updatedCategories }, { merge: true });
+        await setDoc(financialDoc, {
+          form,
+          goals: updatedGoals,
+          debts: updatedDebts,
+        }, { merge: true });
+
+        // 3. מעבר בטוח לעמוד הבא
+        navigate('/BudgetPlanner');
       }}
-    />
-    )}
+      />
+      )}
             <div className="text-center">
               <div className="text-green-600 dark:text-green-400 text-sm font-medium flex items-center justify-center gap-2">
                 <CheckCircle className="w-5 h-5" />
