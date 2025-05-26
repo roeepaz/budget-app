@@ -94,10 +94,10 @@ const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBud
 
   const menuItems = [
     { icon: Home, label: 'דף הבית', path: '/', current: true },
-    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
     { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
     { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
     { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
+    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
   ];
   const generateQuickInsights = () => {
   if (!categories || !expenses) return [];
