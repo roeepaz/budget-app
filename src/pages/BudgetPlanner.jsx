@@ -1,9 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { ChevronLeft, PlusCircle, TrendingUp, AlertCircle, ArrowUpCircle, ArrowDownCircle, DollarSign, Percent } from 'lucide-react';
+import { 
+  Home, 
+  PieChart as PieIcon, 
+  Calculator,
+  LogOut,
+  Wallet,
+} from 'lucide-react';
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-
+import Sidebar from '../components/Sidebar'; // הנתיב לפי מיקום הקובץ
+import { useUserData } from '../hooks/useUserData';
 export default function BudgetPlanner({ user }) {
   const navigate = useNavigate();
   const [trueCategories, setTrueCategories] = useState([]);
@@ -15,6 +23,7 @@ export default function BudgetPlanner({ user }) {
   const [debts, setDebts] = useState([]);
   const [goals, setGoals] = useState([]);
   const [loadError, setLoadError] = useState(false);
+const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const displayItems = useMemo(() => {
     const goalItems = goals.map(g => ({
@@ -56,6 +65,10 @@ export default function BudgetPlanner({ user }) {
   const [loading, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
 
+  const {
+    categories,
+    addExpenseToDB
+  } = useUserData(user?.uid);
   useEffect(() => {
     if (!userId) return;
 
@@ -296,9 +309,51 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
   year: 'numeric',
   month: 'long'
 });
-
+  const tagColors = {
+    need: '#3B82F6',
+    want: '#10B981',
+    debt: '#F59E0B',
+    emergency: '#FF6384',
+    goal: '#8B5CF6',
+    savings: '#36A2EB'
+  };
+ const menuItems = [
+    { icon: Home, label: 'דף הבית', path: '/', current: true },
+    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
+    { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
+    { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
+    { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
+  ];
+  
+  const displayCategories = [
+    ...categories,
+    ...debts.map(d => ({
+      id: `debt-${d.id}`,
+      name: d.name,
+      color: tagColors.debt,
+      icon: '💳',
+      tag: 'debt'
+    })),
+    ...goals.map(g => ({
+      id: `goal-${g.id}`,
+      name: g.name,
+      color: tagColors.goal,
+      icon: '🎯',
+      tag: 'goal'
+    }))
+  ];
+  
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mx-auto" dir="rtl">
+      <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50" dir="rtl">
+      <Sidebar
+        user={user}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        menuItems={menuItems}
+        displayCategories={displayCategories}
+        addExpenseToDB={addExpenseToDB}
+      />
+       <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
        <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
          🎯 <span className="text-yellow-500">מנהל התקציב</span>
@@ -553,6 +608,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

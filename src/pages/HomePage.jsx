@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import Sidebar from '../components/Sidebar';
 
 export default function HomePage({ user }) {
   const navigate = useNavigate();
@@ -191,7 +192,7 @@ const getCategoryBudgetAlerts = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+    <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 relative">
       {/* כפתור תפריט במובייל */}
       <button
         onClick={() => setSidebarOpen(true)}
@@ -207,79 +208,16 @@ const getCategoryBudgetAlerts = () => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-
-      {/* תפריט צד */}
-      <div className={`
-  fixed lg:static inset-y-0 right-0 z-50
-  w-72 bg-white shadow-2xl
-  transform transition-transform duration-300 ease-in-out
-  ${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
-  lg:w-64 lg:block
-  flex flex-col
-  h-screen  // <- זה העיקרי
-`}>
-        {/* כותרת תפריט */}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-l from-blue-600 to-purple-600 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">ניהול כלכלי חכם</h2>
-              <p className="text-blue-100 text-sm mt-1">שלום, {user.displayName} 👋</p>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* תפריט ניווט */}
-        <nav className="p-4 space-y-2 flex-1">
-          {menuItems.map((item) => (
-            <button
-              key={item.path}
-              onClick={() => {
-                if (item.path !== '/') {
-                  navigate(item.path);
-                }
-                setSidebarOpen(false);
-              }}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-right ${
-                item.current 
-                  ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-600' 
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
-            </button>
-          ))}
-        </nav>
-
-        {/* הוספת הוצאה מהירה */}
-        <div className="p-4 border-t border-gray-200">
-          <QuickAddExpenseButton
-            onAddExpense={(expense) => addExpenseToDB(expense)}
-            categories={displayCategories}
-            className="w-full"
-          />
-        </div>
-
-        {/* כפתור התנתקות */}
-        <div className="p-4 border-t border-gray-200">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            התנתק
-          </button>
-        </div>
-      </div>
-
+      <Sidebar
+        user={user}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        menuItems={menuItems}
+        displayCategories={displayCategories}
+        addExpenseToDB={addExpenseToDB}
+      />
       {/* תוכן עיקרי */}
-      <div className="flex-1 lg:mr-64 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         <div className="p-4 lg:p-8 pt-20 lg:pt-8">
           {/* כותרת עיקרית */}
           <div className="text-center mb-8">
@@ -304,7 +242,7 @@ const getCategoryBudgetAlerts = () => {
               </div>
             </div>
 
-            {/* ניצול תקציב */}
+{/* ניצול תקציב */}
 <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-green-500">
   <div className="flex items-center justify-between">
     <div>
@@ -312,12 +250,18 @@ const getCategoryBudgetAlerts = () => {
       <p className="text-xl lg:text-2xl font-bold text-gray-800">
         {budgetUsedPercentage}%
       </p>
+      <p className={`text-xs mt-1 ${totalSpent > totalBudget ? 'text-red-600' : 'text-gray-500'}`}>
+        {totalSpent > totalBudget
+          ? `חריגה של ₪${(totalSpent - totalBudget).toFixed(2)}`
+          : `נותרו ₪${(totalBudget - totalSpent).toFixed(2)} לניצול`}
+      </p>
     </div>
     <div className="p-2 lg:p-3 bg-green-100 rounded-lg">
       <Wallet className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
     </div>
   </div>
 </div>
+
 
 
 

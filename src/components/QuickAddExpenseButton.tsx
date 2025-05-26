@@ -4,6 +4,7 @@ import {Expense,Category} from '../type/appTypes'
 type QuickAddExpenseButtonProps = {
   onAddExpense: (expense: Expense) => void;
   categories: Category[];
+    className?: string; // הוספת תמיכה ב־className
 };
 
 export default function QuickAddExpenseButton({ onAddExpense, categories }: QuickAddExpenseButtonProps) {
