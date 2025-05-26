@@ -15,6 +15,7 @@ export default function QuickAddExpenseButton({ onAddExpense, categories }: Quic
     categoryId: '',
     date: new Date().toISOString().split('T')[0],
   });
+const visibleCategories = categories.filter(c => !c.hidden);
 
   const handleSubmit = () => {
     if (!quickExpense.amount || !quickExpense.categoryId) return;
@@ -67,7 +68,7 @@ export default function QuickAddExpenseButton({ onAddExpense, categories }: Quic
                 onChange={(e) => setQuickExpense({ ...quickExpense, categoryId: e.target.value })}
               >
                 <option value="">בחר קטגוריה</option>
-                {categories.map((cat) => (
+                {visibleCategories.map((cat) => (
                   <option key={String(cat.id)} value={String(cat.id)}>
                     {cat.icon} {cat.name}
                   </option>

@@ -8,6 +8,7 @@ import Login from './Login';
 import { auth } from './firebase'; 
 import BudgetPlanner from './pages/BudgetPlanner'
 import BudgetAdvisorPage from './pages/BudgetAdvisorPage'
+import CategoryManager from './pages/CategoryManager'
 import { onAuthStateChanged } from 'firebase/auth';
 
 const container = document.getElementById('root');
@@ -39,7 +40,7 @@ function App() {
         <Route path="/expense" element={<ExpenseTracker user={user} />} />
         <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
         <Route path="/advisor" element={<BudgetAdvisorPage user={user}/>} />
-
+        <Route path="/categoryManager" element={<CategoryManager user={user}/>} />
       </Routes>
     </BrowserRouter>
   );

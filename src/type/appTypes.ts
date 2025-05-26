@@ -9,7 +9,8 @@ export interface Category {
   icon: string;
   tag: CategoryTag;
   currentAmount?: number; 
-  budget?: number
+  budget?: number;
+  hidden?: boolean;
 }
 
 export interface Expense {

@@ -80,17 +80,18 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
         const userSnap = await getDoc(doc(db, 'users', userId));
         if (userSnap.exists()) {
           const data = userSnap.data() as any;
-setCategories(data.categories?.map((c: any) => ({
-  id: c.id,
-  name: c.name,
-  color: c.color,
-  icon: c.icon,
-  tag: c.tag,
-  budget: c.budget ?? 0,
-  currentAmount: ['savings', 'emergency'].includes(c.tag)
-    ? c.currentAmount ?? 0
-    : c.currentAmount
-})) || defaultCategories);
+          setCategories(data.categories?.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            color: c.color,
+            icon: c.icon,
+            tag: c.tag,
+            budget: c.budget ?? 0,
+            hidden: c.hidden ?? false,
+            currentAmount: ['savings', 'emergency'].includes(c.tag)
+              ? c.currentAmount ?? 0
+              : c.currentAmount
+          })) || defaultCategories);
 
 
           setExpenses(data.expenses || []);
@@ -161,8 +162,10 @@ setCategories(data.categories?.map((c: any) => ({
       tag: 'goal' as CategoryTag
     }))
   ];
-  
-  const displayCategories = [...categories, ...dynamicCats];
+  const visibleCategories = categories.filter(c => !c.hidden);
+
+  const displayCategories = [...visibleCategories, ...dynamicCats];
+  const displayCategoriesWithTheHidden = [...categories, ...dynamicCats];
 
   // Filter expenses for current month
   const filteredExpenses = expenses.filter(exp => new Date(exp.date).getMonth() === selectedMonth);
@@ -550,7 +553,7 @@ setCategories(data.categories?.map((c: any) => ({
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                         .map(expense => {
                           // Find matching category
-                          const category = displayCategories.find(c => String(c.id) === String(expense.categoryId));
+                          const category = displayCategoriesWithTheHidden.find(c => String(c.id) === String(expense.categoryId));
                           
                           return (
                             <tr key={expense.id}>
@@ -658,7 +661,7 @@ setCategories(data.categories?.map((c: any) => ({
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                         .map(expense => {
                           // Find matching category
-                          const category = displayCategories.find(c => String(c.id) === String(expense.categoryId));
+                          const category = displayCategoriesWithTheHidden.find(c => String(c.id) === String(expense.categoryId));
                           
                           return (
                             <tr key={expense.id}>

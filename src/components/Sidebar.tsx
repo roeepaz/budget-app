@@ -25,10 +25,13 @@ interface MenuItem {
 }
 
 interface SidebarProps {
-  user: { displayName?: string };
-  sidebarOpen: boolean;
+ user: {
+    uid: string;
+    email?: string;
+    displayName?: string;
+  } | null;
+    sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  menuItems: MenuItem[];
   displayCategories: Category[];
   addExpenseToDB: (expense: any) => void;
 }
@@ -37,13 +40,21 @@ export default function Sidebar({
   user,
   sidebarOpen,
   setSidebarOpen,
-  menuItems,
   displayCategories,
   addExpenseToDB
 }: SidebarProps) {
   const navigate = useNavigate();
   const auth = getAuth();
 
+  const menuItems = [
+    { icon: Home, label: 'דף הבית', path: '/', current: true },
+    { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
+    { icon: Wallet, label: 'ניהול הקטגוריות שלי', path: '/categoryManager' },
+    { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
+    { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
+    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
+
+  ];
   const handleLogout = () => {
     signOut(auth)
       .then(() => navigate('/'))
@@ -80,7 +91,10 @@ export default function Sidebar({
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold">ניהול כלכלי חכם</h2>
-              <p className="text-blue-100 text-sm mt-1">שלום, {user.displayName} 👋</p>
+                {user && (
+                  <p className="text-blue-100 text-sm mt-1">שלום, {user.displayName} 👋</p>
+                )}
+
             </div>
             <button
               onClick={() => setSidebarOpen(false)}

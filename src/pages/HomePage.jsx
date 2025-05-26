@@ -92,13 +92,6 @@ const totalBudget = totalCategoryBudget + totalGoalBudget + totalDebtBudget;
 const totalSpent = monthlyExpenses;
 const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
-  const menuItems = [
-    { icon: Home, label: 'דף הבית', path: '/', current: true },
-    { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
-    { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
-    { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
-    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
-  ];
   const generateQuickInsights = () => {
   if (!categories || !expenses) return [];
 
@@ -212,7 +205,6 @@ const getCategoryBudgetAlerts = () => {
         user={user}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        menuItems={menuItems}
         displayCategories={displayCategories}
         addExpenseToDB={addExpenseToDB}
       />

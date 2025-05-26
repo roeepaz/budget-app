@@ -84,19 +84,24 @@ const [loadError, setLoadError] = useState(false);
         if (uSnap.exists()) {
           const d = uSnap.data() as any;
           setCategories(
-  (d.categories || []).map((c: any) => {
-    const base = {
-      ...c,
-      id: String(c.id),
-    };
-    if (['emergency', 'savings'].includes(c.tag)) {
-      return { ...base, currentAmount: c.currentAmount ?? 0 };
-    }
-    return base; // בלי currentAmount בכלל
-  })
-);
+            (d.categories || []).map((c: any) => {
+              const base = {
+                ...c,
+                id: String(c.id),
+                hidden: c.hidden ?? false,
+                budget: c.budget ?? 0,
+              };
 
+              if (['savings', 'emergency'].includes(c.tag)) {
+                return {
+                  ...base,
+                  currentAmount: c.currentAmount ?? 0
+                };
+              }
 
+              return base;
+            })
+          );
           setExpenses(d.expenses || []);
         }
         // financial_data/{uid}
