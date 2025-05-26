@@ -80,10 +80,19 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
         const userSnap = await getDoc(doc(db, 'users', userId));
         if (userSnap.exists()) {
           const data = userSnap.data() as any;
-          setCategories(data.categories?.map((c: any) => ({
-            ...c,
-            currentAmount: c.currentAmount ?? (['savings','emergency'].includes(c.tag) ? 0 : undefined)
-          })) || defaultCategories);
+setCategories(data.categories?.map((c: any) => ({
+  id: c.id,
+  name: c.name,
+  color: c.color,
+  icon: c.icon,
+  tag: c.tag,
+  budget: c.budget ?? 0,
+  currentAmount: ['savings', 'emergency'].includes(c.tag)
+    ? c.currentAmount ?? 0
+    : c.currentAmount
+})) || defaultCategories);
+
+
           setExpenses(data.expenses || []);
         }
         // Load debts & goals from financial_data/{uid}
@@ -118,7 +127,8 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
               targetAmount: g.targetAmount,
               currentAmount: g.currentAmount,
               priority: g.priority,
-              targetDate: g.targetDate as Timestamp  // לא ממירים ל-Date
+              targetDate: g.targetDate as Timestamp,
+              budget: g.budget ?? 0
             }));
     
       setDoc(doc(db, 'users', userId), { 
