@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ChevronLeft, PlusCircle, TrendingUp, AlertCircle, ArrowUpCircle, ArrowDownCircle, DollarSign, Percent } from 'lucide-react';
 import { 
   Home, 
@@ -14,6 +15,8 @@ import Sidebar from '../components/Sidebar'; // הנתיב לפי מיקום ה�
 import { useUserData } from '../hooks/useUserData';
 export default function BudgetPlanner({ user }) {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const [trueCategories, setTrueCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [activeTab, setActiveTab] = useState('summary');
@@ -317,14 +320,17 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
     goal: '#8B5CF6',
     savings: '#36A2EB'
   };
- const menuItems = [
-    { icon: Home, label: 'דף הבית', path: '/', current: true },
-    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
-    { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
-    { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
-    { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
-  ];
-  
+const menuItems = [
+  { icon: Home, label: 'דף הבית', path: '/' },
+  { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
+  { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
+  { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
+  { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
+].map(item => ({
+  ...item,
+  current: location.pathname === item.path
+}));
+
   const displayCategories = [
     ...categories,
     ...debts.map(d => ({

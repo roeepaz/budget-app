@@ -96,8 +96,11 @@ export default function Sidebar({
             <button
               key={item.path}
               onClick={() => {
-                if (item.path !== '/') {
+                if (location.pathname !== item.path) {
                   navigate(item.path);
+                } else {
+                  // אתה כבר בדף הזה – אפשר לגלול לראש העמוד למשל
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
                 setSidebarOpen(false);
               }}
