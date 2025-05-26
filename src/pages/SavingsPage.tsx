@@ -19,7 +19,7 @@ import {
   Legend
 } from 'recharts';
 import { db } from '../firebaseConfig';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc,updateDoc } from 'firebase/firestore';
 import {SavingsGoal, Expense} from '../type/appTypes'
 
 const DARK_MODE_KEY = 'budget-app-dark-mode';
@@ -47,7 +47,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
-export default function BudgetApp({ user }: { user: { uid: string } }) {
+export default function SavingsPage({ user }: { user: { uid: string } }) {
   const userId = user.uid;
 
   // --- states for התקציב הרגיל ---
@@ -83,31 +83,32 @@ const [loadError, setLoadError] = useState(false);
         const uSnap = await getDoc(doc(db, 'users', userId));
         if (uSnap.exists()) {
           const d = uSnap.data() as any;
-          setCategories(d.categories?.map((c: any) => ({
-            id: String(c.id),
-            name: c.name,
-            color: c.color || COLORS[Math.floor(Math.random() * COLORS.length)],
-            icon: c.icon,
-            tag: c.tag as CategoryTag,
-            currentAmount: ['emergency', 'savings'].includes(c.tag) ? c.currentAmount ?? 0 : undefined
+          setCategories(
+  (d.categories || []).map((c: any) => {
+    const base = {
+      ...c,
+      id: String(c.id),
+    };
+    if (['emergency', 'savings'].includes(c.tag)) {
+      return { ...base, currentAmount: c.currentAmount ?? 0 };
+    }
+    return base; // בלי currentAmount בכלל
+  })
+);
 
-          })) || []);
+
           setExpenses(d.expenses || []);
         }
         // financial_data/{uid}
         const fSnap = await getDoc(doc(db, 'financial_data', userId));
         if (fSnap.exists()) {
           const d = fSnap.data() as any;
-          setGoals(d.goals?.map((g: any) => ({
-            id: g.id,
-            name: g.name,
-            targetAmount: g.targetAmount,
-            currentAmount: g.currentAmount,
-            priority: g.priority,
-            targetDate: g.targetDate?.toDate
-              ? g.targetDate.toDate()
-              : new Date(g.targetDate)
-          })) || []);
+          setGoals(
+  (d.goals || []).map((g: any) => ({
+    ...g,
+    targetDate: g.targetDate?.toDate ? g.targetDate.toDate() : new Date(g.targetDate)
+  }))
+);
         }
       } catch (error) {
     //console.error("⚠️ שגיאה בטעינת הנתונים:", error);
@@ -123,65 +124,48 @@ const [loadError, setLoadError] = useState(false);
     localStorage.setItem(DARK_MODE_KEY, JSON.stringify(isDarkMode));
   }, [isDarkMode]);
 
+
 const handleWithdraw = async () => {
   if (!withdrawTarget || withdrawAmount <= 0) return;
   const { id, type } = withdrawTarget;
 
-  let newGoals = [...goals];
-  let newCategories = categories.map(c => {
-  if ((type === 'savings' || type === 'emergency') && c.tag === type && String(c.id) === id) {
-    return {
-      ...c,
-      currentAmount: (c.currentAmount ?? 0) - withdrawAmount
-    };
-  }
-  return c;
-});
+  let updatedCategories = categories;
+  let updatedGoals = goals;
 
   if (type === 'goal') {
-    newGoals = goals.map(g =>
+    updatedGoals = goals.map(g =>
       `goal-${g.id}` === id
         ? { ...g, currentAmount: (g.currentAmount ?? 0) - withdrawAmount }
         : g
     );
-
-  } else if (type === 'savings' || type === 'emergency') {
-    newCategories = categories.map(c =>
+    setGoals(updatedGoals);
+  } else {
+    updatedCategories = categories.map(c =>
       String(c.id) === id
         ? { ...c, currentAmount: (c.currentAmount ?? 0) - withdrawAmount }
         : c
     );
-
-    
+    setCategories(updatedCategories);
   }
 
-  // עדכון מצב
-  setGoals(newGoals);
-  setCategories(newCategories);
-const cleanCategories = newCategories.map(cat => {
-  const copy = { ...cat };
-  if (copy.currentAmount === undefined) {
-    delete copy.currentAmount;
-  }
-  return copy;
-});
-
-  // כתיבה ל־Firestore
   try {
+    // שמירה של כל הקטגוריות כמו שהן
     await setDoc(
       doc(db, 'users', userId),
-      { categories: cleanCategories  },
+      { categories: updatedCategories },
       { merge: true }
     );
+
+    // שמירה של כל המטרות כמו שהן
     await setDoc(
       doc(db, 'financial_data', userId),
-      { goals: newGoals },
+      { goals: updatedGoals },
       { merge: true }
     );
   } catch (e: any) {
-  console.error('שגיאה בשמירת המשיכה:', e.code, e.message);
-  alert(`שגיאה: ${e.code} - ${e.message}`);
-}
+    console.error('שגיאה בשמירת המשיכה:', e.code, e.message);
+    alert(`שגיאה: ${e.code} - ${e.message}`);
+  }
 
   // איפוס
   setWithdrawAmount(0);
@@ -393,7 +377,7 @@ const totalPerCat = displayCats.map(c => {
             <div className={`p-2 rounded-full ${isDarkMode ? 'bg-indigo-800' : 'bg-indigo-500'}`}>
               <Wallet size={24}/>
             </div>
-            <h1 className="text-xl font-bold">ניהול תקציב חכם</h1>
+            <h1 className="text-xl font-bold">ניהול חסכונות</h1>
           </div>
           <button onClick={() => setIsDarkMode((prev: boolean) => !prev)}>
   {isDarkMode ? '☀' : '🌙'}

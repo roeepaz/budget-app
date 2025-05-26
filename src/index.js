@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import BudgetApp from './pages/BudgetApp';
+import SavingsPage from './pages/SavingsPage';
 import ExpenseTracker from './pages/ExpenseTracker';
 import HomePage from './pages/HomePage';
 import Login from './Login';
@@ -35,7 +35,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage user={user} />} />
-        <Route path="/budget" element={<BudgetApp user={user} />} />
+        <Route path="/budget" element={<SavingsPage user={user} />} />
         <Route path="/expense" element={<ExpenseTracker user={user} />} />
         <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
         <Route path="/advisor" element={<BudgetAdvisorPage user={user}/>} />
