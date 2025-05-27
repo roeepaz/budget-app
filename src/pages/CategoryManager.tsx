@@ -250,6 +250,8 @@ if (loading || !user) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 תיוג (מה מייצג הכסף שהולך לקטגוריה זו)
+                <br></br>
+                *מטרות וחובות עדכן בדף היועץ
               </label>
               <select
                 className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
@@ -263,8 +265,6 @@ if (loading || !user) {
                 <option value="want">רצונות (מותרות)</option>
                 <option value="emergency">קרן חירום</option>
                 <option value="savings">חיסכון כללי</option>
-                <option value="debt">חובות</option>
-                <option value="goal">מטרות חיסכון</option>
               </select>
             </div>
 
