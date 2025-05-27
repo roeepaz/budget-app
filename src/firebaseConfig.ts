@@ -2,8 +2,7 @@
 import { initializeApp, FirebaseApp }         from 'firebase/app';
 import { getFirestore, Firestore }            from 'firebase/firestore';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import dotenv from 'dotenv';
-dotenv.config();
+
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
   authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
