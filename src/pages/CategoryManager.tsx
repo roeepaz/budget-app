@@ -63,6 +63,26 @@ const {
     savings: 'חסכונות'
   };
 
+  // צבעי רקע עדינים לכל תיוג
+  const tagBackgroundColors: Record<CategoryTag, string> = {
+    need: 'bg-blue-50 border-blue-100',
+    want: 'bg-emerald-50 border-emerald-100',
+    debt: 'bg-amber-50 border-amber-100',
+    emergency: 'bg-red-50 border-red-100',
+    goal: 'bg-purple-50 border-purple-100',
+    savings: 'bg-cyan-50 border-cyan-100'
+  };
+
+  // צבעי כותרת לכל תיוג
+  const tagHeaderColors: Record<CategoryTag, string> = {
+    need: 'text-blue-700 border-blue-200',
+    want: 'text-emerald-700 border-emerald-200',
+    debt: 'text-amber-700 border-amber-200',
+    emergency: 'text-red-700 border-red-200',
+    goal: 'text-purple-700 border-purple-200',
+    savings: 'text-cyan-700 border-cyan-200'
+  };
+
   const visibleCategories = useMemo(() => categories.filter(c => !c.hidden), [categories]);
 
   const handleAddCategory = () => {
@@ -329,8 +349,8 @@ if (loading || !user) {
             if (tagCategories.length === 0) return null;
 
             return (
-              <div key={tag} className="mb-6">
-                <h3 className="text-lg font-medium mb-3 text-gray-700 border-b pb-1">
+              <div key={tag} className={`mb-6 p-4 rounded-lg border-2 ${tagBackgroundColors[tag]}`}>
+                <h3 className={`text-lg font-medium mb-3 pb-2 border-b-2 ${tagHeaderColors[tag]}`}>
                   {tagNames[tag]}
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -342,7 +362,7 @@ if (loading || !user) {
                     return (
                       <div 
                         key={category.id} 
-                        className="border rounded-lg p-4 flex flex-col relative group hover:shadow-md transition-shadow"
+                        className="bg-white border rounded-lg p-4 flex flex-col relative group hover:shadow-md transition-shadow"
                         style={{borderRightColor: category.color, borderRightWidth: '4px'}}
                       >
                         {/* Action Buttons */}

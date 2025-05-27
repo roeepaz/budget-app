@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronRight, TrendingUp, Calculator, DollarSign, User, Calendar } from 'lucide-react';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc,getDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useLocation } from 'react-router-dom';
 import { db } from '../firebaseConfig'; // ודא שהנתיב נכון בהתאם למבנה שלך
@@ -69,6 +69,7 @@ const [currentStep, setCurrentStep] = useState<Step>(
     }));
   };
 const auth = getAuth();
+
 const goToAdvisor = async (): Promise<void> => {
     const userId = auth.currentUser?.uid;
     
@@ -88,6 +89,21 @@ const goToAdvisor = async (): Promise<void> => {
       onboardingStep: 'done',
       lastIncomeMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
     }, { merge: true });
+    const formRef = doc(db, 'financial_data', userId);
+
+    const formSnap = await getDoc(formRef);
+    if (formSnap.exists()) {
+      await updateDoc(formRef, {
+        'form.income': totalIncome
+      });
+    } else {
+      await setDoc(formRef, {
+        form: {
+          'form.income': totalIncome
+        }
+      }, { merge: true });
+    }
+
     navigate('/advisor');
 
   };
