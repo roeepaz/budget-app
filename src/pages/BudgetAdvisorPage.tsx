@@ -156,11 +156,11 @@ setForm(sanitizeForm(data.form));
     if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
   
     const timeout = setTimeout(() => {
-      setDoc(doc(db, 'financial_data', userId), {
-        form,
-        debts,
-        goals,
-      });
+     setDoc(doc(db, 'financial_data', userId), {
+  form,
+  debts,
+  goals,
+}, { merge: true });
     }, 800); // שמירה אחרי 800ms של שקט
   
     return () => clearTimeout(timeout);
