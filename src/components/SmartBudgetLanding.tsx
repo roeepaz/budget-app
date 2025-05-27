@@ -1,13 +1,24 @@
 import React from 'react';
 import { ChevronLeft, Target, Shield, PiggyBank, CreditCard, TrendingUp, Calculator, Brain, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
+import { getAuth } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig'; // או הנתיב שלך
 const SmartBudgetLanding = () => {
-      const navigate = useNavigate();
-    
-  const handleNavigateToCategories = () => {
-    // כאן תוכל להוסיף ניווט לדף הקטגוריות
-      navigate('/categoryManager');
+  const navigate = useNavigate();
+  
+  const handleNavigateToCategories = async () => {
+    const userId = getAuth().currentUser?.uid;
+    if (!userId) {
+      alert('לא נמצא משתמש מחובר');
+      return;
+    }
+
+    await setDoc(doc(db, 'income_update', userId), {
+      onboardingStep: 'income'
+    }, { merge: true });
+
+    navigate('/categoryManager');
   };
 
   return (
@@ -255,7 +266,7 @@ const SmartBudgetLanding = () => {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-800">היועץ האוטומטי שלכם</h2>
-              <p className="text-gray-600">AI חכם שמנתח את המצב שלכם ומציע המלצות מותאמות אישית</p>
+              <p className="text-gray-600">יוצץ חכם שמנתח את המצב שלכם ומציע המלצות מותאמות אישית</p>
             </div>
           </div>
           

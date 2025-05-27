@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig'; // או הנתיב שלך
 import QuickAddExpenseButton from '../components/QuickAddExpenseButton';
 import { useUserData } from '../hooks/useUserData';
 import { 
@@ -39,7 +41,33 @@ export default function HomePage({ user }) {
       navigate('/landing');
     }
   }, [loading, categories, navigate]);
-  
+
+
+useEffect(() => {
+  if (!user || loading) return;
+
+  const checkOnboarding = async () => {
+    const ref = doc(db, 'income_update', user.uid);
+    const snap = await getDoc(ref);
+    const data = snap.data() || {};
+
+    const step = data.onboardingStep || 'landing';
+    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    
+    if (step === 'landing') {
+      navigate('/landing');
+    } else if (step === 'income') {
+      navigate('/monthlyIncome', { state: { isNewUser: true } });
+    } else if (data.lastIncomeMonth !== currentMonth) {
+      navigate('/monthlyIncome', { state: { isNewUser: false } });
+    }
+  };
+
+  checkOnboarding();
+}, [user, loading]);
+
+
+
   const handleLogout = () => {
     signOut(auth)
       .then(() => navigate('/'))
