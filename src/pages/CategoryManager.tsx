@@ -108,13 +108,12 @@ const {
     if (!selectedCategoryId || !newCategory.name.trim()) return;
 
     const updatedCategory: Category = {
-      ...newCategory,
-      id: selectedCategoryId,
-      currentAmount: ['savings', 'emergency'].includes(newCategory.tag) ? 0 : undefined
-    };
-
+  ...newCategory,
+  id: Number(selectedCategoryId),
+  currentAmount: ['savings', 'emergency'].includes(newCategory.tag) ? 0 : undefined
+};
     const updatedList = categories.map(cat =>
-  cat.id === selectedCategoryId ? updatedCategory : cat
+  cat.id === Number(selectedCategoryId) ? updatedCategory : cat
 );
 
 setCategories(updatedList);

@@ -4,7 +4,7 @@ import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } f
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
-import {Category,Expense,CategoryTag,ExpenseTrackerProps,Debt, SavingsGoal} from '../type/appTypes'
+import {Category,Expense,CategoryTag,ExpenseTrackerProps,Debt, SavingsGoal, RecurringExpense} from '../type/appTypes'
 
 export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   // Default categories
@@ -12,6 +12,16 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
     { id: 1, name: 'קרן ביטחון', color: '#FF6384', icon: '🛡️', tag: 'emergency', currentAmount: 0 },
     { id: 2, name: 'חיסכון כללי', color: '#36A2EB', icon: '💰', tag: 'savings', currentAmount: 0 },
   ];
+const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+const [showRecurringForm, setShowRecurringForm] = useState(false);
+const [recurringForm, setRecurringForm] = useState({
+  amount: '',
+  description: '',
+  categoryId: '',
+  dayOfMonth: 1,
+  startDate: new Date().toISOString().split('T')[0],
+  endDate: ''
+});
 
   // State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'categories'>('dashboard');
@@ -131,19 +141,73 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
               targetDate: g.targetDate as Timestamp,
               budget: g.budget ?? 0
             }));
-    
-      setDoc(doc(db, 'users', userId), { 
-        categories: cleanCategories, 
-        expenses: cleanExpenses 
-      }, { merge: true });
       
       setDoc(doc(db, 'financial_data', userId), { 
         debts: cleanDebts, 
         goals: cleanGoals 
       }, { merge: true });
+      const cleanRecurring = cleanDataForFirebase(recurringExpenses);
+
+      setDoc(doc(db, 'users', userId), { 
+        categories: cleanCategories, 
+        expenses: cleanExpenses,
+        recurringExpenses: cleanRecurring // ✅ שמירה
+      }, { merge: true });
+
     }, 800);
     return () => clearTimeout(timeout);
   }, [categories, expenses, debts, goals, userId, hasLoaded]);
+ const [generatedThisMonth, setGeneratedThisMonth] = useState<Set<string>>(new Set());
+
+
+useEffect(() => {
+  if (!hasLoaded || !userId) return;
+
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  const keyForRecurring = (r: RecurringExpense) =>
+    `${r.id}_${year}_${month}`;
+
+  const generated: Expense[] = [];
+  const newKeys: string[] = [];
+
+  for (const r of recurringExpenses) {
+    const key = keyForRecurring(r);
+
+    // אם כבר נוצרה החודש — מדלג
+    if (generatedThisMonth.has(key)) continue;
+
+    const start = new Date(r.startDate);
+    const end = r.endDate ? new Date(r.endDate) : null;
+    const valid = start <= today && (!end || today <= end);
+    if (!valid) continue;
+
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const safeDay = Math.min(r.dayOfMonth, lastDay);
+    const date = new Date(year, month, safeDay);
+
+    generated.push({
+      id: Date.now() + Math.random(),
+      amount: r.amount,
+      description: r.description,
+      categoryId: r.categoryId,
+      date: date.toISOString().split('T')[0]
+    });
+
+    newKeys.push(key);
+  }
+
+  if (generated.length > 0) {
+    setExpenses(prev => [...prev, ...generated]);
+    setGeneratedThisMonth(prev => {
+      const updated = new Set(prev);
+      newKeys.forEach(k => updated.add(k));
+      return updated;
+    });
+  }
+}, [recurringExpenses, hasLoaded, userId]);
 
   // Create dynamic categories from debts and goals
   const dynamicCats: Category[] = [
@@ -224,31 +288,6 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
     });
   };
 
-  const handleAddCategory = () => {
-    if (!newCategory.name.trim()) return;
-
-    const isSavingType = newCategory.tag === 'savings' || newCategory.tag === 'emergency';
-
-    const cat: Category = {
-      id: Date.now(),
-      name: newCategory.name,
-      color: newCategory.color,
-      icon: newCategory.icon,
-      tag: newCategory.tag,
-      ...(isSavingType && { currentAmount: 0 })  // מוסיף רק אם צריך
-    };
-
-    setCategories(prev => [...prev, cat]);
-
-    // איפוס הטופס
-    setNewCategory({ 
-      name: '', 
-      color: '#' + Math.floor(Math.random() * 16777215).toString(16), 
-      icon: '📊', 
-      tag: 'need' 
-    });
-  };
-
   // Delete expense handler
   const handleDeleteExpense = (id: number) => {
     setExpenses(prev => prev.filter(e => e.id !== id));
@@ -314,6 +353,57 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
     
     return { tag, sum: tagSum };
   });
+const handleAddRecurring = () => {
+  const { amount, description, categoryId, dayOfMonth, startDate, endDate } = recurringForm;
+
+  // בדיקות בסיסיות
+  if (!amount || !description || !categoryId || !dayOfMonth || !startDate) {
+    alert('אנא מלא את כל השדות הנדרשים');
+    return;
+  }
+
+  const newRecurring: RecurringExpense = {
+    id: String(Date.now()),
+    amount: parseFloat(amount),
+    description,
+    categoryId,
+    dayOfMonth: Number(dayOfMonth),
+    startDate,
+    endDate: endDate || undefined
+  };
+
+  setRecurringExpenses(prev => [...prev, newRecurring]);
+
+  // איפוס טופס
+  setRecurringForm({
+    amount: '',
+    description: '',
+    categoryId: '',
+    dayOfMonth: 1,
+    startDate: new Date().toISOString().split('T')[0],
+    endDate: ''
+  });
+
+  setShowRecurringForm(false);
+};
+const handleDeleteRecurring = (id: string) => {
+  setRecurringExpenses(prev => prev.filter(r => r.id !== id));
+
+  // מחיקה של ההוצאה הצפויה הבאה (אם נוצרה)
+  setExpenses(prev => prev.filter(exp => {
+    const match = recurringExpenses.find(r => r.id === id);
+    if (!match) return true;
+
+    const expDate = new Date(exp.date);
+    const now = new Date();
+    return !(
+      exp.description === match.description &&
+      exp.categoryId === match.categoryId &&
+      expDate.getMonth() === now.getMonth() &&
+      expDate.getFullYear() === now.getFullYear()
+    );
+  }));
+};
 
   // Add percentages to tag data
   type TagSum = { tag: CategoryTag; sum: number };
@@ -656,6 +746,132 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
                     <Plus className="ml-2 w-4 h-4" /> הוסף הוצאה
                   </button>
                 </div>
+                {/* Recurring Expenses Section */}
+                <div className="bg-white p-6 rounded-lg shadow-md mt-6">
+                  <h2 className="text-xl font-semibold mb-4">הוראות קבע</h2>
+                  <button
+                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                    onClick={() => setShowRecurringForm(!showRecurringForm)}
+                  >
+                    {showRecurringForm ? 'בטל' : '➕ הוסף הוראת קבע'}
+                  </button>
+
+                  {showRecurringForm && (
+  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+    {/* תיאור */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
+      <input
+        type="text"
+        placeholder="למשל: ביטוח"
+        className="w-full border p-2 rounded"
+        value={recurringForm.description}
+        onChange={(e) => setRecurringForm({ ...recurringForm, description: e.target.value })}
+      />
+    </div>
+
+    {/* סכום */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">סכום (₪)</label>
+      <input
+        type="number"
+        min={0}
+        className="w-full border p-2 rounded"
+        value={recurringForm.amount}
+        onChange={(e) => setRecurringForm({ ...recurringForm, amount: e.target.value })}
+      />
+    </div>
+
+    {/* קטגוריה */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">קטגוריה</label>
+      <select
+        className="w-full border p-2 rounded"
+        value={recurringForm.categoryId}
+        onChange={(e) => setRecurringForm({ ...recurringForm, categoryId: e.target.value })}
+      >
+        <option value="">בחר קטגוריה</option>
+        {displayCategories.map(category => (
+          <option key={category.id} value={String(category.id)}>
+            {category.icon} {category.name}
+          </option>
+        ))}
+      </select>
+    </div>
+
+    {/* יום בחודש */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">יום בחודש (1–28)</label>
+      <input
+        type="number"
+        min={1}
+        max={28}
+        className="w-full border p-2 rounded"
+        value={recurringForm.dayOfMonth}
+        onChange={(e) => setRecurringForm({ ...recurringForm, dayOfMonth: Number(e.target.value) })}
+      />
+    </div>
+
+    {/* תאריך התחלה */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">תאריך התחלה</label>
+      <input
+        type="date"
+        className="w-full border p-2 rounded"
+        value={recurringForm.startDate}
+        onChange={(e) => setRecurringForm({ ...recurringForm, startDate: e.target.value })}
+      />
+    </div>
+
+    {/* תאריך סיום */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">תאריך סיום (לא חובה)</label>
+      <input
+        type="date"
+        className="w-full border p-2 rounded"
+        value={recurringForm.endDate}
+        onChange={(e) => setRecurringForm({ ...recurringForm, endDate: e.target.value })}
+      />
+    </div>
+
+    {/* כפתור */}
+    <button
+      className="bg-blue-600 text-white px-4 py-2 rounded col-span-2 hover:bg-blue-700"
+      onClick={handleAddRecurring}
+    >
+      שמור הוראת קבע
+    </button>
+  </div>
+)}
+
+
+                  {/* רשימת הוראות קבע קיימות */}
+                  <div className="mt-6">
+                    {recurringExpenses.length === 0 ? (
+                      <p className="text-gray-500">אין הוראות קבע</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {recurringExpenses.map(re => (
+                          <li key={re.id} className="flex justify-between items-center border p-3 rounded">
+                            <div>
+                              <div className="font-medium">{re.description}</div>
+                              <div className="text-sm text-gray-500">
+                                ₪{re.amount} | כל חודש ב־{re.dayOfMonth} לחודש | מ־{re.startDate}
+                              </div>
+                            </div>
+                            <button
+                              className="text-red-600 hover:text-red-800 text-sm"
+                              onClick={() => handleDeleteRecurring(re.id)}
+                            >
+                              מחק
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
               </div>
               
               {/* Expense List */}

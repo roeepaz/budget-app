@@ -103,3 +103,12 @@ export interface BudgetResult {
 export interface BudgetAdvisorPageProps {
   user: { uid: string } | null;
 }
+export interface RecurringExpense {
+  id: string;
+  amount: number;
+  description: string;
+  categoryId: string | number;
+  startDate: string;  // "YYYY-MM-DD"
+  endDate?: string;   // optional
+  dayOfMonth: number; // 1–31
+}
