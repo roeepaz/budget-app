@@ -373,19 +373,13 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
             className={`px-4 py-3 font-medium text-sm flex items-center ${activeTab === 'dashboard' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
             onClick={() => setActiveTab('dashboard')}
           >
-            <BarChart3 className="ml-2 w-4 h-4" /> לוח מחוונים
+            <BarChart3 className="ml-2 w-4 h-4" /> לוח נתונים
           </button>
           <button 
             className={`px-4 py-3 font-medium text-sm flex items-center ${activeTab === 'expenses' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
             onClick={() => setActiveTab('expenses')}
           >
             <Plus className="ml-2 w-4 h-4" /> הוסף הוצאה
-          </button>
-          <button 
-            className={`px-4 py-3 font-medium text-sm flex items-center ${activeTab === 'categories' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('categories')}
-          >
-            <PieChartIcon className="ml-2 w-4 h-4" /> קטגוריות
           </button>
         </div>
       </nav>
@@ -714,178 +708,6 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
             </div>
           )}
           
-         {/* Categories Tab */}
-        {activeTab === 'categories' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Add / Edit Category Form */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">
-                {selectedCategoryId ? 'Edit Category' : 'Add New Category'}
-              </h2>
-
-              <div className="space-y-4">
-                {/* Category Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category Name</label>
-                  <input
-                    type="text"
-                    className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                    value={newCategory.name}
-                    onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                    placeholder="e.g. Groceries, Rent, etc."
-                  />
-                </div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">תיוג (מה מייצג הכסף שהולך לקטגוריה זו)</label>
-                  <select
-                    value={newCategory.tag}
-                    onChange={e => setNewCategory({
-                      ...newCategory,
-                      tag: e.target.value as CategoryTag
-                    })}
-                  >
-                    <option value="need">Needs (בסיסי)</option>
-                    <option value="want">Wants (מותרות)</option>
-                    <option value="emergency">Emergency (חירום)</option>
-                    <option value="savings">savings (חיסכון)</option>
-                  </select>
-
-                {/* Color */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                  <input
-                    type="color"
-                    className="w-full p-1 h-10 border rounded focus:ring-blue-500 focus:border-blue-500"
-                    value={newCategory.color}
-                    onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
-                  />
-                </div>
-
-                {/* Icon */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Icon (Emoji)</label>
-                  <select
-                    className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                    value={newCategory.icon}
-                    onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
-                  >
-                    <option value="🍔">🍔 אוכל</option>
-                    <option value="🏠">🏠 דיור</option>
-                    <option value="🚗">🚗 תחבורה</option>
-                    <option value="💡">💡 שירותים (חשמל, מים וכו')</option>
-                    <option value="🎬">🎬 בידור</option>
-                    <option value="💊">💊 בריאות</option>
-                    <option value="👕">👕 ביגוד</option>
-                    <option value="📚">📚 חינוך</option>
-                    <option value="💰">💰 חיסכון</option>
-                    <option value="🧒">🧒 ילדים</option>
-                    <option value="📊">📊 אחר</option>
-                  </select>
-                </div>
-
-                {/* Edit Dropdown */}
-                <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Optional: edit Existing Category (adds new if none selected)
-            </label>
-            <select
-              className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-              value={selectedCategoryId.toString()}
-              onChange={e => {
-                const val = e.target.value;
-                setSelectedCategoryId(val);
-                const selectedId = parseInt(val, 10);
-                const selected = categories.find(cat => cat.id === selectedId);
-                if (selected) {
-                  setNewCategory({
-                    name: selected.name,
-                    color: selected.color,
-                    icon: selected.icon,
-                    tag: selected.tag
-                  });
-                } else {
-                  setNewCategory({ name: '', color: '#000000', icon: '', tag: 'need' });
-                }
-              }}
-            >
-              <option value="">בחר קטגוריה לעריכה</option>
-              {categories.map(category => (
-                <option key={category.id} value={category.id}>
-                  {category.icon} {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-                {/* Add/Update Button */}
-                <button
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 flex items-center justify-center"
-                  onClick={() => {
-                    if (selectedCategoryId) {
-                        const selectedId = parseInt(selectedCategoryId);
-                      // הסר את הקטגוריה שנבחרה
-                      const filteredCategories = categories.filter((cat) => cat.id !== selectedId);
-
-                      // צור קטגוריה חדשה עם אותו ID או חדש – תלוי בצורך
-                      const original = categories.find(c => c.id === selectedId);
-                        const updatedCategory = {
-                          ...newCategory,
-                          id: selectedId,
-                          ...(original?.currentAmount !== undefined && { currentAmount: original.currentAmount })
-                        };
-
-                      // setNewCategory({ ...newCategory, id: selectedId })
-                      // עדכן את הרשימה
-                      setCategories([...filteredCategories, updatedCategory]);
-
-                      // איפוס
-                      setSelectedCategoryId('');
-                    }
-                     else {
-                      // Add new category
-                      handleAddCategory();
-                    }
-
-                    // Clear form
-                    setNewCategory({ name: '', color: '#000000', icon: '', tag: 'need' });
-                  }}
-                >
-                  <Plus className="mr-2 w-4 h-4" />
-                  {selectedCategoryId ? 'Update Category' : 'Add Category'}
-                </button>
-              </div>
-            </div>
-                   
-              {/* Categories List */}
-              <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
-                <h2 className="text-xl font-semibold mb-4">All Categories</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {categories.map(category => {
-                    const categoryExpenses = expenses.filter(expense => expense.categoryId === category.id);
-                    const totalAmount = categoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-                    
-                    return (
-                      <div 
-                        key={category.id} 
-                        className="border rounded-lg p-4 flex flex-col"
-                        style={{borderLeftColor: category.color, borderLeftWidth: '4px'}}
-                      >
-                        <div className="flex items-center mb-2">
-                          <span className="text-2xl mr-2">{category.icon}</span>
-                          <span className="font-medium">{category.name}</span>
-                        </div>
-                        <div className="text-sm text-gray-500 mb-2">
-                          {categoryExpenses.length} transactions
-                        </div>
-                        <div className="mt-auto font-medium">
-                          ₪{totalAmount.toFixed(2)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </main>
     </div>
