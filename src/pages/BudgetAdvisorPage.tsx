@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { useBudgetModel} from '../hooks/useBudgetModel';
 import { DollarSign, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
+import {  Calculator, Shield, Wallet, PiggyBank, CreditCard } from 'lucide-react';
 import { db } from '../firebaseConfig.js';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import AdvisorBudgetBuilder from '../components/AdvisorBudgetBuilder';
@@ -13,6 +14,7 @@ import {BudgetInputs,BudgetAdvisorPageProps, Debt, SavingsGoal,Category} from '.
 type FormState = Omit<BudgetInputs, 'debts' | 'savingsGoals'>;
 
 export default function BudgetAdvisorPage({ user }: BudgetAdvisorPageProps) {
+  
   const navigate = useNavigate();
 
 const [showAdvisorBudget, setShowAdvisorBudget] = useState(false);
@@ -269,374 +271,332 @@ const generalSavings = result?.allocations?.generalSavings ?? 0;
 const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
 
   return (
-      <div className={`min-h-screen transition-colors duration-300 ${
-            darkMode 
-              ? 'bg-gray-900 text-white' 
-              : 'bg-gray-50 text-gray-900'
-          }`}>
-        <div className="p-6 max-w-6xl mx-auto" dir="rtl">
-        {/* Header with Dark Mode Toggle */}
-        <div className="flex justify-between items-center mb-4">
-           <h1 className={`text-3xl font-bold flex items-center gap-2 ${
-            darkMode ? 'text-blue-400' : 'text-blue-700'
-          }`}>
-            <span role="img" aria-label="brain">🧠</span>
-            יועץ תקציבי חכם
-          </h1>
+       <div className={`min-h-screen transition-all duration-500 ${
+      darkMode 
+        ? 'bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 text-white' 
+        : 'bg-gradient-to-br from-blue-50 via-indigo-50/30 to-slate-50 text-slate-900'
+    }`}>
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${darkMode ? 'white' : 'rgb(59, 130, 246)'} 1px, transparent 0)`,
+          backgroundSize: '40px 40px'
+        }}></div>
+      </div>
+
+      <div className="relative p-6 max-w-7xl mx-auto" dir="rtl">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8 relative">
+          <div className={`group relative ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+            <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                <div className="relative text-3xl bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
+                  🧠
+                </div>
+              </div>
+              <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent">
+                יועץ תקציבי חכם
+              </span>
+            </h1>
+            <div className="absolute -bottom-2 left-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full w-0 group-hover:w-full transition-all duration-700"></div>
+          </div>
+          
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className={`p-2 rounded-lg transition-colors ${
+            className={`group relative p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${
               darkMode 
-                ? 'bg-gray-800 hover:bg-gray-700 text-yellow-500' 
-                : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                ? 'bg-slate-800/50 hover:bg-slate-700/50 text-amber-400 border border-slate-700' 
+                : 'bg-white/80 hover:bg-white text-slate-600 border border-slate-200 shadow-lg backdrop-blur-sm'
             }`}
-            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-400/20 to-orange-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            {darkMode ? (
+              <Sun className="w-6 h-6 relative z-10 group-hover:rotate-180 transition-transform duration-500" />
+            ) : (
+              <Moon className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+            )}
           </button>
         </div>
         
-        <p className={`text-sm mb-6 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-          מלא את הנתונים הכספיים שלך ותקבל ניתוח חכם עם המלצות אישיות לשיפור המצב הכלכלי.
+        <p className={`text-lg mb-8 leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
+          מלא את הנתונים הכספיים שלך ותקבל ניתוח מקצועי עם המלצות מותאמות אישית לשיפור המצב הכלכלי שלך.
         </p>
 
-        {/* Basic Budget Inputs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 text-sm">
-          <div className="flex flex-col">
-            <label className={`font-medium mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>הכנסה חודשית נטו</label>
-            <input
-              type="number"
-              placeholder="לדוג׳: 10000"
-              title="סך כל ההכנסות החודשיות לאחר ניכויים"
-              className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}             
-               value={form.income}
-              onChange={(e) => setForm({ ...form, income: Number(e.target.value) })}
-            />
-          </div>
+        {/* Basic Inputs Section */}
+        <div className={`p-8 rounded-3xl shadow-xl mb-8 backdrop-blur-sm border relative overflow-hidden ${
+          darkMode 
+            ? 'bg-slate-800/40 border-slate-700/50' 
+            : 'bg-white/60 border-white/20 shadow-blue-100/50'
+        }`}>
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+          
+          <h2 className={`text-2xl font-bold mb-6 flex items-center gap-3 ${
+            darkMode ? 'text-slate-100' : 'text-slate-800'
+          }`}>
+            <Calculator className="w-7 h-7 text-blue-500" />
+            נתונים בסיסיים
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+  { key: 'income', label: 'הכנסה חודשית נטו', icon: Wallet, placeholder: '10,000', color: 'green' },
+  { key: 'needs', label: 'הוצאות קבועות', icon: Shield, placeholder: '4,000', color: 'orange' },
+  { key: 'emergencyTargetMonths', label: 'יעד חירום (חודשים)', icon: Shield, placeholder: '3', color: 'blue' },
+  { key: 'currentSavings', label: 'חיסכון חודשי קבוע', icon: PiggyBank, placeholder: '500', color: 'purple' }
+].map(({ key, label, icon: Icon, placeholder, color }) => {
+  const typedKey = key as keyof typeof form;
 
-          <div className="flex flex-col">
-            <label className={`font-medium mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>הוצאות קבועות (צרכים)</label>
-            <input
-              type="number"
-              placeholder="לדוג׳: 4000"
-              title="הוצאות הכרחיות כמו שכירות, חשמל, מזון, תחבורה"
-              className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}  
-              value={form.needs}
-              onChange={(e) => setForm({ ...form, needs: Number(e.target.value) })}
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className={`font-medium mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>יעד חירום (חודשים)</label>
-            <input
-              type="number"
-              placeholder="לדוג׳: 3"
-              title="לכמה חודשי קיום תרצה שהחיסכון יכסה (מומלץ: 3-6 חודשים)"
-              className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}  
-              value={form.emergencyTargetMonths}
-              onChange={(e) => setForm({ ...form, emergencyTargetMonths: Number(e.target.value) })}
-            />
-          </div>
-
-          <div className="flex flex-col">
-            <label className={`font-medium mb-1 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>חיסכון חודשי קבוע</label>
-            <input
-              type="number"
-              placeholder="לדוג׳: 500"
-              title="כמה כסף אתה חוסך בכל חודש בצורה קבועה"
-              className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 transition-colors ${
-                darkMode 
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' 
-                  : 'bg-white border-gray-300 text-gray-900'
-              }`}  
-              value={form.currentSavings}
-              onChange={(e) => setForm({ ...form, currentSavings: Number(e.target.value) })}
-            />
+  return (
+    <div key={key} className="group relative">
+      <label className={`block text-sm font-semibold mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+        <Icon className={`inline w-4 h-4 mr-2 text-${color}-500`} />
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          type="number"
+          placeholder={placeholder}
+          className={`w-full p-4 rounded-2xl border-2 transition-all duration-300 focus:scale-105 ${
+            darkMode 
+              ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700/70' 
+              : 'bg-white/80 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-400 focus:bg-white backdrop-blur-sm'
+          } focus:ring-4 focus:ring-blue-400/20 focus:outline-none group-hover:border-blue-300`}
+          value={form[typedKey] || ''}
+          onChange={(e) => setForm({ ...form, [typedKey]: Number(e.target.value) })}
+        />
+        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-${color}-400/10 to-${color}-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`}></div>
+      </div>
+    </div>
+  );
+})
+}
           </div>
         </div>
 
-        {/* Savings Goals Section */}
-        <div className={`p-4 rounded shadow mb-6 ${
-          darkMode ? 'bg-blue-900/30' : 'bg-blue-50'
+        {/* Goals Section */}
+        <div className={`p-8 rounded-3xl shadow-xl mb-8 backdrop-blur-sm border relative overflow-hidden ${
+          darkMode 
+            ? 'bg-gradient-to-br from-blue-900/30 to-indigo-900/30 border-blue-800/50' 
+            : 'bg-gradient-to-br from-blue-50/80 to-indigo-50/80 border-blue-200/50'
         }`}>
-          <h2 className={`text-lg font-semibold mb-3 flex items-center gap-2 ${
-            darkMode ? 'text-gray-100' : 'text-gray-900'
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-cyan-400"></div>
+          
+          <h2 className={`text-2xl font-bold mb-6 flex items-center gap-3 ${
+            darkMode ? 'text-blue-300' : 'text-blue-700'
           }`}>
-            <Target className="w-5 h-5" />
+            <Target className="w-7 h-7" />
             🎯 מטרות חסכון
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm items-end">
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>שם מטרה (למשל: חופשה)</label>
-              <input
-                type="text"
-                placeholder="שם מטרה"
-                className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newGoal.name || ''}
-                onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>סכום יעד</label>
-              <input
-                type="number"
-                placeholder="סכום יעד"
-                className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newGoal.targetAmount ?? ''}
-                onChange={(e) => setNewGoal({ ...newGoal, targetAmount: Number(e.target.value) })}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>סכום נוכחי (כמה כבר חסכת למטרה)</label>
-              <input
-                type="number"
-                placeholder="סכום נוכחי"
-                className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newGoal.currentAmount ?? ''}
-                onChange={(e) => setNewGoal({ ...newGoal, currentAmount: Number(e.target.value) })}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>תאריך יעד, מחושב עם הפקדה בתחילת כל חודש</label>
-              <input
-                type="date"
-                className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newGoal.targetDate || ''}
-                min={today}
-                onChange={(e) => setNewGoal({ ...newGoal, targetDate: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>עדיפות (כמה המטרה דחופה לך)</label>
-              <select
-                className={`p-2 border rounded focus:ring-2 focus:ring-blue-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newGoal.priority ?? ''}
-                onChange={(e) => setNewGoal({ ...newGoal, priority: Number(e.target.value) })}
-              >
-                <option value={1}>עדיפות נמוכה</option>
-                <option value={2}>עדיפות בינונית</option>
-                <option value={3}>עדיפות בינונית-גבוהה</option>
-                <option value={4}>עדיפות גבוהה</option>
-                <option value={5}>עדיפות דחופה</option>
-              </select>
-            </div>
-          </div>
-          <button
-            className={`mt-3 py-2 px-4 rounded text-sm transition-colors ${
-              darkMode 
-                ? 'bg-blue-700 text-white hover:bg-blue-600'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-            onClick={addGoal}
-            disabled={!newGoal.name || !newGoal.targetAmount || !newGoal.targetDate}
-          >
-             {editingGoalId ? 'שמור שינויים' : 'הוסף מטרה'}
-          </button>
 
-          {/* Display existing goals */}
-         {/* Display existing goals */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <input
+              type="text"
+              placeholder="שם מטרה"
+              className={`p-3 rounded-xl border-2 transition-all ${
+                darkMode 
+                  ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 focus:border-blue-400 backdrop-blur-sm'
+              }`}
+              value={newGoal.name || ''}
+              onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder="סכום יעד"
+              className={`p-3 rounded-xl border-2 transition-all ${
+                darkMode 
+                  ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 focus:border-blue-400 backdrop-blur-sm'
+              }`}
+              value={newGoal.targetAmount || ''}
+              onChange={(e) => setNewGoal({ ...newGoal, targetAmount: Number(e.target.value) })}
+            />
+            <input
+              type="number"
+              placeholder="סכום נוכחי"
+              className={`p-3 rounded-xl border-2 transition-all ${
+                darkMode 
+                  ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 focus:border-blue-400 backdrop-blur-sm'
+              }`}
+              value={newGoal.currentAmount || ''}
+              onChange={(e) => setNewGoal({ ...newGoal, currentAmount: Number(e.target.value) })}
+            />
+            <input
+              type="date"
+              className={`p-3 rounded-xl border-2 transition-all ${
+                darkMode 
+                  ? 'bg-slate-700/50 border-slate-600 text-white focus:border-blue-400' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 focus:border-blue-400 backdrop-blur-sm'
+              }`}
+              value={newGoal.targetDate || ''}
+              onChange={(e) => setNewGoal({ ...newGoal, targetDate: e.target.value })}
+            />
+            <button
+              onClick={addGoal}
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-3 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 hover:scale-105 font-semibold shadow-lg"
+            >
+              ➕ הוסף מטרה
+            </button>
+          </div>
+
           {goals.length > 0 && (
-            <div className="mt-4">
-              <h3 className={`font-medium mb-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>מטרות קיימות:</h3>
-              <div className="space-y-2">
-                {goals.map((goal) => (
-                  <div key={goal.id}
-                      className={`flex justify-between items-center p-2 rounded border ${
-                        darkMode
-                          ? 'bg-gray-800 border-gray-600'
-                          : 'bg-white border-gray-300'
-                      }`}>
-                    <span className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                      🎯 {goal.name} – {formatCurrency(goal.currentAmount || 0)} / {formatCurrency(goal.targetAmount)}
-                      (עד {goal.targetDate.toDate().toLocaleDateString('he-IL')})
-                    </span>
-                    <div className="flex gap-2">
-                      <button
-                        className={`text-xs hover:underline ${darkMode ? 'text-blue-400' : 'text-blue-500'}`}
-                        onClick={() => startEditGoal(goal)}
-                      >
-                        ערוך
-                      </button>
-                      <button
-                        className={`text-xs hover:underline ${darkMode ? 'text-red-400' : 'text-red-500'}`}
-                        onClick={() => removeGoal(goal.id)}
-                      >
-                        הסר
-                      </button>
+            <div className="space-y-3">
+              {goals.map((goal) => (
+                <div key={goal.id} className={`flex justify-between items-center p-4 rounded-2xl border transition-all hover:scale-102 ${
+                  darkMode 
+                    ? 'bg-slate-800/60 border-slate-700' 
+                    : 'bg-white/80 border-slate-200 backdrop-blur-sm'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 flex items-center justify-center text-white font-bold">
+                      🎯
+                    </div>
+                    <div>
+                      <div className={`font-semibold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                        {goal.name}
+                      </div>
+                      <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+{formatCurrency(goal.currentAmount ?? 0)} / {formatCurrency(goal.targetAmount ?? 0)}
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <button
+                    onClick={() => removeGoal(goal.id)}
+                    className={`text-sm px-3 py-1 rounded-lg hover:bg-red-500 hover:text-white transition-all ${
+                      darkMode ? 'text-red-400 hover:bg-red-500' : 'text-red-500'
+                    }`}
+                  >
+                    הסר
+                  </button>
+                </div>
+              ))}
             </div>
           )}
-
         </div>
 
         {/* Debts Section */}
-        <div className={`p-4 rounded shadow mb-6 ${
-          darkMode ? 'bg-red-900/30' : 'bg-red-50'
+        <div className={`p-8 rounded-3xl shadow-xl mb-8 backdrop-blur-sm border relative overflow-hidden ${
+          darkMode 
+            ? 'bg-gradient-to-br from-red-900/30 to-pink-900/30 border-red-800/50' 
+            : 'bg-gradient-to-br from-red-50/80 to-pink-50/80 border-red-200/50'
         }`}>
-          <h2 className={`text-lg font-semibold mb-3 flex items-center gap-2 ${
-            darkMode ? 'text-red-400' : 'text-red-700'
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-400 to-pink-400"></div>
+          
+          <h2 className={`text-2xl font-bold mb-6 flex items-center gap-3 ${
+            darkMode ? 'text-red-300' : 'text-red-700'
           }`}>
-            <DollarSign className="w-5 h-5" />
+            <CreditCard className="w-7 h-7" />
             💳 הלוואות קיימות
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm items-end">
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>שם ההלוואה (למשל: משכנתא, רכב)</label>
-              <input
-                type="text"
-                placeholder="שם ההלוואה"
-                className={`p-2 border rounded focus:ring-2 focus:ring-red-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newDebt.name || ''}
-                onChange={(e) => setNewDebt({ ...newDebt, name: e.target.value })}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>סכום קרן (היתרה הנוכחית להחזר)</label>
-              <input
-                type="number"
-                placeholder="סכום קרן"
-                className={`p-2 border rounded focus:ring-2 focus:ring-red-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newDebt.principal ?? ''}
-                onChange={(e) => setNewDebt({ ...newDebt, principal: Number(e.target.value) })}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>ריבית שנתית באחוזים</label>
-              <input
-                type="number"
-                placeholder="ריבית %"
-                className={`p-2 border rounded focus:ring-2 focus:ring-red-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newDebt.annualRate !== undefined ? newDebt.annualRate * 100 : ''}
-                onChange={(e) => setNewDebt({ ...newDebt, annualRate: Number(e.target.value) / 100 })}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>מספר חודשי תשלום שנותרו</label>
-              <input
-                type="number"
-                placeholder="חודשים"
-                className={`p-2 border rounded focus:ring-2 focus:ring-red-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newDebt.termMonths ?? ''}
-                onChange={(e) => setNewDebt({ ...newDebt, termMonths: Number(e.target.value) })}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className={`text-xs mb-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>תשלום חודשי מינימלי</label>
-              <input
-                type="number"
-                placeholder="תשלום מינימלי"
-                className={`p-2 border rounded focus:ring-2 focus:ring-red-500 ${
-                  darkMode 
-                    ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400'
-                    : 'bg-white border-gray-300 text-gray-900'
-                }`}
-                value={newDebt.minPayment ?? ''}
-                onChange={(e) => setNewDebt({ ...newDebt, minPayment: Number(e.target.value) })}
-              />
-            </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <input
+              type="text"
+              placeholder="שם ההלוואה"
+              className={`p-3 rounded-xl border-2 transition-all ${
+                darkMode 
+                  ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-red-400' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 focus:border-red-400 backdrop-blur-sm'
+              }`}
+              value={newDebt.name || ''}
+              onChange={(e) => setNewDebt({ ...newDebt, name: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder="סכום קרן"
+              className={`p-3 rounded-xl border-2 transition-all ${
+                darkMode 
+                  ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-red-400' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 focus:border-red-400 backdrop-blur-sm'
+              }`}
+              value={newDebt.principal || ''}
+              onChange={(e) => setNewDebt({ ...newDebt, principal: Number(e.target.value) })}
+            />
+            <input
+              type="number"
+              placeholder="ריבית %"
+              className={`p-3 rounded-xl border-2 transition-all ${
+                darkMode 
+                  ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-red-400' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 focus:border-red-400 backdrop-blur-sm'
+              }`}
+              value={newDebt.annualRate ? newDebt.annualRate * 100 : ''}
+              onChange={(e) => setNewDebt({ ...newDebt, annualRate: Number(e.target.value) / 100 })}
+            />
+            <input
+              type="number"
+              placeholder="תשלום חודשי"
+              className={`p-3 rounded-xl border-2 transition-all ${
+                darkMode 
+                  ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-red-400' 
+                  : 'bg-white/80 border-slate-200 text-slate-900 focus:border-red-400 backdrop-blur-sm'
+              }`}
+              value={newDebt.minPayment || ''}
+              onChange={(e) => setNewDebt({ ...newDebt, minPayment: Number(e.target.value) })}
+            />
+            <button
+              onClick={addDebt}
+              className="bg-gradient-to-r from-red-500 to-pink-600 text-white p-3 rounded-xl hover:from-red-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 font-semibold shadow-lg"
+            >
+              ➕ הוסף הלוואה
+            </button>
           </div>
 
-          <button
-            className={`mt-3 py-2 px-4 rounded text-sm transition-colors ${
-              darkMode 
-                ? 'bg-red-700 text-white hover:bg-red-600'
-                : 'bg-red-600 text-white hover:bg-red-700'
-            }`}
-            onClick={addDebt}
-            disabled={!newDebt.name || newDebt.principal <= 0 || newDebt.minPayment <= 0}
-          >
-            ➕ הוסף הלוואה
-          </button>
-          {/* Display existing debts */}
           {debts.length > 0 && (
-            <div className="mt-4">
-              <h3 className={`font-medium mb-2 ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>הלוואות קיימות:</h3>
-              <div className="space-y-2">
-                {debts.map((debt) => (
-                  <div key={debt.id} className={`flex justify-between items-center p-2 rounded border ${
-                    darkMode 
-                      ? 'bg-gray-800 border-gray-600' 
-                      : 'bg-white border-gray-300'
-                  }`}>
-                    <span className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                      🏦 {debt.name} - קרן: {formatCurrency(debt.principal)} | 
-                      ריבית: {(debt.annualRate * 100).toFixed(1)}% | 
-                      תשלום: {formatCurrency(debt.minPayment)}
-                    </span>
-                    <button
-                      className={`text-xs hover:underline ${darkMode ? 'text-red-400' : 'text-red-500'}`}
-                      onClick={() => removeDebt(debt.id)}
-                    >
-                      הסר
-                    </button>
+            <div className="space-y-3">
+              {debts.map((debt) => (
+                <div key={debt.id} className={`flex justify-between items-center p-4 rounded-2xl border transition-all hover:scale-102 ${
+                  darkMode 
+                    ? 'bg-slate-800/60 border-slate-700' 
+                    : 'bg-white/80 border-slate-200 backdrop-blur-sm'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-red-400 to-pink-400 flex items-center justify-center text-white font-bold">
+                      🏦
+                    </div>
+                    <div>
+                      <div className={`font-semibold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                        {debt.name}
+                      </div>
+                      <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                        קרן: {formatCurrency(debt.principal)} | תשלום: {formatCurrency(debt.minPayment)}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <button
+                    onClick={() => removeDebt(debt.id)}
+                    className={`text-sm px-3 py-1 rounded-lg hover:bg-red-500 hover:text-white transition-all ${
+                      darkMode ? 'text-red-400 hover:bg-red-500' : 'text-red-500'
+                    }`}
+                  >
+                    הסר
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          className={`py-3 px-6 rounded transition-colors font-medium ${
-            darkMode 
-              ? 'bg-blue-700 text-white hover:bg-blue-600'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-        >
-          הרץ ניתוח 🔍
-        </button>
+        {/* Analyze Button */}
+        <div className="text-center mb-8">
+          <button
+            onClick={handleSubmit}
+            className={`group relative px-12 py-6 text-xl font-bold rounded-3xl transition-all duration-500 transform hover:scale-110 shadow-2xl ${
+              darkMode
+                ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white hover:from-blue-500 hover:via-indigo-500 hover:to-purple-500'
+                : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white hover:from-blue-400 hover:via-indigo-400 hover:to-purple-400'
+            }`}
+          >
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-blue-400/30 via-indigo-400/30 to-purple-400/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"></div>
+            <div className="relative flex items-center gap-4">
+              <TrendingUp className="w-8 h-8 group-hover:rotate-12 transition-transform duration-300" />
+              <span>הרץ ניתוח מקצועי</span>
+              <div className="text-2xl group-hover:animate-bounce">🔍</div>
+            </div>
+          </button>
+        </div>
 
         {/* Results Section */}
         {result && (

@@ -17,7 +17,8 @@ import {
   Wallet,
   Target,
   CreditCard,
-  AlertCircle
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
