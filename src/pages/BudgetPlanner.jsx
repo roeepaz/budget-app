@@ -1,48 +1,111 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ChevronLeft, PlusCircle, TrendingUp, AlertCircle, ArrowUpCircle, ArrowDownCircle, DollarSign, Percent } from 'lucide-react';
+import { 
+  Home, 
+  PieChart as PieIcon, 
+  Calculator,
+  LogOut,
+  Wallet,
+} from 'lucide-react';
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-
+import Sidebar from '../components/Sidebar'; // הנתיב לפי מיקום הקובץ
+import { useUserData } from '../hooks/useUserData';
 export default function BudgetPlanner({ user }) {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Sample data - in a real app, this would come from your backend
-  const [categories, setCategories] = useState([]);
+  const [trueCategories, setTrueCategories] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [activeTab, setActiveTab] = useState('summary');
   const [editingId, setEditingId] = useState(null);
+  const [editingType, setEditingType] = useState(null);
   const [editBudget, setEditBudget] = useState('');
+  const [debts, setDebts] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [loadError, setLoadError] = useState(false);
+const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Calculate total budget and spending
-  const totalBudget = categories.reduce((sum, cat) => sum + cat.budget, 0);
-  const totalSpent = categories.reduce((sum, cat) => sum + cat.spent, 0);
+  const displayItems = useMemo(() => {
+    const goalItems = goals.map(g => ({
+      id: `goal-${g.id}`,
+      originalId: g.id,
+      name: g.name,
+      icon: '🎯',
+      tag: 'goal',
+      type: 'goal',
+      budget: g.budget || 0,
+      spent: expenses.filter(e => e.categoryId === `goal-${g.id}`).reduce((sum, e) => sum + e.amount, 0)
+    }));
+    const debtItems = debts.map(d => ({
+      id: `debt-${d.id}`,
+      originalId: d.id,
+      name: d.name,
+      icon: '💳',
+      tag: 'debt',
+      type: 'debt',
+      budget: d.budget || 0,
+      spent: expenses.filter(e => e.categoryId === `debt-${d.id}`).reduce((sum, e) => sum + e.amount, 0)
+    }));
+    const processedTrueCategories = trueCategories.map(cat => ({
+      ...cat,
+      type: 'category'
+    }));
+    return [...processedTrueCategories, ...goalItems, ...debtItems];
+  }, [trueCategories, goals, debts, expenses]);
+
+  const totalBudget = displayItems.reduce((sum, item) => sum + item.budget, 0);
+  const totalSpent = displayItems.reduce((sum, item) => sum + item.spent, 0);
   const totalRemaining = totalBudget - totalSpent;
+
   const now = new Date();
-const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-const monthProgress = Math.floor((now.getDate() / daysInMonth) * 100);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const monthProgress = Math.floor((now.getDate() / daysInMonth) * 100);
 
   const userId = user?.uid;
-const [loading, setLoading] = useState(true);
-const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
+  const [loading, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-useEffect(() => {
-  if (!userId) return;
+  const {
+    categories,
+    addExpenseToDB
+  } = useUserData(user?.uid);
+  useEffect(() => {
+    if (!userId) return;
 
-  const loadUserData = async () => {
-    const docRef = doc(db, 'users', userId);
-    try {
-      const snapshot = await getDoc(docRef);
-      if (snapshot.exists()) {
-        const data = snapshot.data();
-        const loadedExpenses = data.expenses || [];
-        const loadedCategories = data.categories || [];
+    const loadUserData = async () => {
+      try {
+        const userRef = doc(db, 'users', userId);
+        const finRef = doc(db, 'financial_data', userId);
 
-        // חישוב הוצאות לחודש הנוכחי לפי קטגוריה
+        const [userSnap, finSnap] = await Promise.all([
+          getDoc(userRef),
+          getDoc(finRef)
+        ]);
+
+        let loadedExpenses = [];
+        let loadedCategoriesData = [];
+        let loadedDebtsData = [];
+        let loadedGoalsData = [];
+
+        if (userSnap.exists()) {
+          const d = userSnap.data();
+          loadedExpenses = d.expenses || [];
+          loadedCategoriesData = d.categories || [];
+        }
+
+        if (finSnap.exists()) {
+          const d = finSnap.data();
+          loadedDebtsData = d.debts || [];
+          loadedGoalsData = d.goals || [];
+        }
+
         const currentMonth = new Date().getMonth();
         const currentYear = new Date().getFullYear();
-
         const expensesByCategory = {};
+
         for (const exp of loadedExpenses) {
           const date = new Date(exp.date);
           if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
@@ -51,44 +114,65 @@ useEffect(() => {
           }
         }
 
-        // עדכון spent לכל קטגוריה
-        const updatedCategories = loadedCategories.map(cat => ({
+        const processedCategories = loadedCategoriesData.map(cat => ({
           ...cat,
-          budget: cat.budget || 0,
           spent: expensesByCategory[cat.id] || 0,
+          budget: cat.budget || 0,
         }));
 
         setExpenses(loadedExpenses);
-        setCategories(updatedCategories);
+        setDebts(loadedDebtsData);
+        setGoals(loadedGoalsData);
+        setTrueCategories(processedCategories);
+      } catch (error) {
+        console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+        setLoadError(true);
+      } finally {
+        setHasLoaded(true);
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-    }
-    setHasLoaded(true);
-    setLoading(false);
-  };
+    };
 
-  loadUserData();
-}, [userId]);
+    loadUserData();
+  }, [userId]);
 
-  
   useEffect(() => {
-    if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
-  
-    const timeout = setTimeout(() => {
-      setDoc(doc(db, 'users', userId), {
-        expenses,
-        categories
-      });
-    }, 800); // שמירה אחרי 800ms של שקט
-  
+    if (!userId || !hasLoaded) return;
+
+    const userDocData = {
+      expenses,
+      categories: trueCategories
+    };
+
+    const financialDocData = {
+      goals,
+      debts
+    };
+
+    const timeout = setTimeout(async () => {
+      try {
+        await setDoc(doc(db, 'users', userId), userDocData);
+        await setDoc(doc(db, 'financial_data', userId), financialDocData, { merge: true });
+      } catch (error) {
+        console.error("⚠️ שגיאה בשמירת הנתונים:", error);
+      }
+    }, 800);
+
     return () => clearTimeout(timeout);
-  }, [expenses, categories, userId, hasLoaded]);
+  }, [expenses, trueCategories, goals, debts, userId, hasLoaded]);
+
 if (loading) {
   return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
 }
   if (!user) {
   return <div>Loading or not authenticated...</div>;
+}
+if (loadError) {
+  return (
+    <div className="p-6 text-center text-red-600" dir="rtl">
+      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
+    </div>
+  );
 }
 const formatCategoryCount = (count) => {
   if (count === 1) return 'קטגוריה אחת';
@@ -100,30 +184,29 @@ const formatCategoryCount = (count) => {
   if (totalBudget === 0) return [];
 
   const insights = [];
-
-  const overBudgetCategories = categories.filter(cat => cat.spent > cat.budget);
-  const closeToLimitCategories = categories.filter(
-    cat => cat.spent >= cat.budget * 0.8 && cat.spent < cat.budget
+  // The insights generation will need to use displayItems or re-calculate based on combined data.
+  const overBudgetItems = displayItems.filter(item => item.budget > 0 && item.spent > item.budget);
+  const closeToLimitItems = displayItems.filter(
+    item => item.budget > 0 && item.spent >= item.budget * 0.8 && item.spent < item.budget
   );
 
-  if (overBudgetCategories.length > 0) {
-  const names = overBudgetCategories.slice(0, 3).map(c => c.name).join(', ');
-  const countText = formatCategoryCount(overBudgetCategories.length, 'קטגורי');
+  if (overBudgetItems.length > 0) {
+  const names = overBudgetItems.slice(0, 3).map(c => c.name).join(', ');
+  const countText = formatCategoryCount(overBudgetItems.length, 'פריטי תקציב'); // Changed from 'קטגורי'
   insights.push({
     type: 'warning',
     icon: <AlertCircle className="text-red-500" />,
-    text: `${countText} חרגו מהתקציב: ${names}${overBudgetCategories.length > 3 ? ' ועוד' : ''}`,
+    text: `${countText} חרגו מהתקציב: ${names}${overBudgetItems.length > 3 ? ' ועוד' : ''}`,
   });
 }
 
-
- if (closeToLimitCategories.length > 0) {
-  const names = closeToLimitCategories.slice(0, 3).map(c => c.name).join(', ');
-  const countText = formatCategoryCount(closeToLimitCategories.length, 'קטגורי');
+if (closeToLimitItems.length > 0) {
+  const names = closeToLimitItems.slice(0, 3).map(c => c.name).join(', ');
+  const countText = formatCategoryCount(closeToLimitItems.length, 'פריטי תקציב'); // Changed from 'קטגורי'
   insights.push({
     type: 'alert',
     icon: <AlertCircle className="text-amber-500" />,
-    text: `${countText} מתקרבות למגבלת התקציב: ${names}${closeToLimitCategories.length > 3 ? ' ועוד' : ''}`,
+    text: `${countText} מתקרבות למגבלת התקציב: ${names}${closeToLimitItems.length > 3 ? ' ועוד' : ''}`,
   });
 }
 
@@ -191,30 +274,95 @@ const comparison = generateMonthlyComparison();
 
 
   // Handle editing a budget
-  const startEdit = (id, currentBudget) => {
+  const startEdit = (id, currentBudget, type) => {
     setEditingId(id);
     setEditBudget(currentBudget.toString());
+    setEditingType(type); // Set the type of item being edited
   };
 
-  const saveEdit = () => {
-    const budget = parseFloat(editBudget);
-    if (!isNaN(budget)) {
-      setCategories(categories.map(cat => 
-        cat.id === editingId ? {...cat, budget: budget} : cat
+ const saveEdit = () => {
+  const budget = parseFloat(editBudget);
+  if (isNaN(budget)) return;
+
+  if (editingType === 'category') {
+    setTrueCategories(trueCategories.map(cat => 
+      cat.id === editingId ? { ...cat, budget } : cat
+    ));
+  } else if (editingType === 'goal') {
+    const itemToEdit = displayItems.find(item => item.id === editingId);
+    if (itemToEdit && itemToEdit.originalId) {
+      setGoals(goals.map(goal => 
+        goal.id === itemToEdit.originalId ? { ...goal, budget } : goal
       ));
-      setEditingId(null);
     }
-  };
+  } else if (editingType === 'debt') {
+    const itemToEdit = displayItems.find(item => item.id === editingId);
+    if (itemToEdit && itemToEdit.originalId) {
+      setDebts(debts.map(debt =>
+        debt.id === itemToEdit.originalId ? { ...debt, budget } : debt
+      ));
+    }
+  }
+
+  setEditingId(null);
+  setEditingType(null);
+};
+
 const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
   year: 'numeric',
   month: 'long'
 });
+  const tagColors = {
+    need: '#3B82F6',
+    want: '#10B981',
+    debt: '#F59E0B',
+    emergency: '#FF6384',
+    goal: '#8B5CF6',
+    savings: '#36A2EB'
+  };
+const menuItems = [
+  { icon: Home, label: 'דף הבית', path: '/' },
+  { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
+  { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
+  { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
+  { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
+].map(item => ({
+  ...item,
+  current: location.pathname === item.path
+}));
 
+  const displayCategories = [
+    ...categories,
+    ...debts.map(d => ({
+      id: `debt-${d.id}`,
+      name: d.name,
+      color: tagColors.debt,
+      icon: '💳',
+      tag: 'debt'
+    })),
+    ...goals.map(g => ({
+      id: `goal-${g.id}`,
+      name: g.name,
+      color: tagColors.goal,
+      icon: '🎯',
+      tag: 'goal'
+    }))
+  ];
+  
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mx-auto" dir="rtl">
+      <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50" dir="rtl">
+      <Sidebar
+        user={user}
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        menuItems={menuItems}
+        displayCategories={displayCategories}
+        addExpenseToDB={addExpenseToDB}
+      />
+       <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
        <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
-         🎯 <span className="text-yellow-500">מתכנן התקציב החכם</span>
+         🎯 <span className="text-yellow-500">מנהל התקציב</span>
         </h1>
 
             <button 
@@ -327,16 +475,24 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
           </div>
           
           
-          {/* Categories List */}
+          {/* Categories List - Now iterates over displayItems */}
           <div className="space-y-4">
-            {categories.map((category) => (
-              <div key={category.id} className="border border-gray-200 rounded-lg p-4">
+            {displayItems.map((item) => ( 
+              <div key={item.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-center mb-2">
                   <div className="flex items-center">
-                    <span className="text-xl mr-2">{category.icon}</span>
-                    <span className="font-medium">{category.name}</span>
+                    <span className="text-xl mr-2">{item.icon}</span>
+                    <span className="font-medium">{item.name}</span>
+                     {item.tag && (
+                      <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
+                        item.tag === 'goal' ? 'bg-green-100 text-green-700' :
+                        item.tag === 'debt' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'}`}>
+                        {item.tag === 'goal' ? 'מטרה' : item.tag === 'debt' ? 'חוב' : ''}
+                      </span>
+                    )}
                   </div>
-                  {editingId === category.id ? (
+                  {editingId === item.id ? (
                     <div className="flex items-center">
                       <input 
                         type="number" 
@@ -346,7 +502,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                       />
                       <button 
                         className="text-blue-600 text-sm"
-                        onClick={saveEdit}
+                        onClick={saveEdit} 
                       >
                         שמור
                       </button>
@@ -354,7 +510,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                   ) : (
                     <button 
                       className="text-sm text-gray-500"
-                      onClick={() => startEdit(category.id, category.budget)}
+                      onClick={() => startEdit(item.id, item.budget, item.type)} 
                     >
                       עריכה
                     </button>
@@ -362,10 +518,10 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                 </div>
                 
                <div className="flex justify-between text-sm text-gray-500 mb-1">
-                <div>₪{category.spent.toFixed(2)} / ₪{category.budget.toFixed(2)}</div>
+                <div>₪{item.spent.toFixed(2)} / ₪{item.budget.toFixed(2)}</div>
                 <div>
-                    {category.budget > 0 
-                    ? `${Math.round((category.spent / category.budget) * 100)}%`
+                    {item.budget > 0 
+                    ? `${Math.round((item.spent / item.budget) * 100)}%`
                     : '—'}
                 </div>
                 </div>
@@ -373,17 +529,17 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
                         className={`h-2 rounded-full ${
-                        category.spent > category.budget
+                        item.spent > item.budget
                             ? 'bg-red-600'
-                            : category.spent > category.budget * 0.8
+                            : item.spent > item.budget * 0.8
                             ? 'bg-yellow-500'
                             : 'bg-green-500'
                         }`}
                         style={{
-                        width: category.budget > 0 
-                            ? `${Math.min((category.spent / category.budget) * 100, 100)}%` 
+                        width: item.budget > 0 
+                            ? `${Math.min((item.spent / item.budget) * 100, 100)}%` 
                             : '0%',
-                        minWidth: category.spent > 0 ? '4px' : '0px'
+                        minWidth: item.spent > 0 ? '4px' : '0px'
                         }}
                     ></div>
                 </div>
@@ -391,7 +547,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
                 
                 <div className="mt-2 text-sm">
                   <span className="font-medium">
-                    נותר: ₪{(category.budget - category.spent).toFixed(2)}
+                    נותר: ₪{(item.budget - item.spent).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -458,6 +614,7 @@ const hebrewMonthYear = new Date().toLocaleDateString('he-IL', {
           </div>
         </div>
       )}
+      </main>
     </div>
   );
 }

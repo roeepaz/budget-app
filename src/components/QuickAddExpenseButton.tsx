@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
+import {Expense,Category} from '../type/appTypes'
 
-export default function QuickAddExpenseButton({ onAddExpense, categories }) {
+type QuickAddExpenseButtonProps = {
+  onAddExpense: (expense: Expense) => void;
+  categories: Category[];
+    className?: string; // הוספת תמיכה ב־className
+};
+
+export default function QuickAddExpenseButton({ onAddExpense, categories }: QuickAddExpenseButtonProps) {
   const [showModal, setShowModal] = useState(false);
   const [quickExpense, setQuickExpense] = useState({
     amount: '',
@@ -8,17 +15,23 @@ export default function QuickAddExpenseButton({ onAddExpense, categories }) {
     categoryId: '',
     date: new Date().toISOString().split('T')[0],
   });
+const visibleCategories = categories.filter(c => !c.hidden);
 
   const handleSubmit = () => {
     if (!quickExpense.amount || !quickExpense.categoryId) return;
 
-    const expense = {
-      ...quickExpense,
+    const cat = categories.find(c => String(c.id) === quickExpense.categoryId);
+    if (!cat) return;
+
+    const expense: Expense = {
       id: Math.floor(Math.random() * 1000000),
       amount: parseFloat(quickExpense.amount),
+      description: quickExpense.description,
+      categoryId: cat.id,
+      date: quickExpense.date,
     };
-
-    onAddExpense(expense); // רק מחזיר את ההוצאה
+    
+    onAddExpense(expense);
     setQuickExpense({
       amount: '',
       description: '',
@@ -52,11 +65,11 @@ export default function QuickAddExpenseButton({ onAddExpense, categories }) {
               <select
                 className="w-full p-2 border rounded"
                 value={quickExpense.categoryId}
-                onChange={(e) => setQuickExpense({ ...quickExpense, categoryId: parseFloat(e.target.value) })}
+                onChange={(e) => setQuickExpense({ ...quickExpense, categoryId: e.target.value })}
               >
                 <option value="">בחר קטגוריה</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
+                {visibleCategories.map((cat) => (
+                  <option key={String(cat.id)} value={String(cat.id)}>
                     {cat.icon} {cat.name}
                   </option>
                 ))}

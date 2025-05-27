@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import BudgetApp from './pages/BudgetApp';
+import SavingsPage from './pages/SavingsPage';
 import ExpenseTracker from './pages/ExpenseTracker';
 import HomePage from './pages/HomePage';
 import Login from './Login';
 import { auth } from './firebase'; 
 import BudgetPlanner from './pages/BudgetPlanner'
 import BudgetAdvisorPage from './pages/BudgetAdvisorPage'
+import CategoryManager from './pages/CategoryManager'
+import SmartBudgetLanding from './components/SmartBudgetLanding'
+import MonthlyBudgetUpdate from './components/MonthlyBudgetUpdate'
+
 import { onAuthStateChanged } from 'firebase/auth';
 
 const container = document.getElementById('root');
+if (!container) throw new Error('Could not find root element');
 const root = createRoot(container);
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -33,11 +39,13 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<HomePage user={user} />} />
-        <Route path="/budget" element={<BudgetApp user={user} />} />
+        <Route path="/budget" element={<SavingsPage user={user} />} />
         <Route path="/expense" element={<ExpenseTracker user={user} />} />
         <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
         <Route path="/advisor" element={<BudgetAdvisorPage user={user}/>} />
-
+        <Route path="/categoryManager" element={<CategoryManager user={user}/>} />
+        <Route path="/landing" element={<SmartBudgetLanding />} />
+        <Route path="/monthlyIncome" element={<MonthlyBudgetUpdate />} />
       </Routes>
     </BrowserRouter>
   );
