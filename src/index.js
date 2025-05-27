@@ -9,6 +9,8 @@ import { auth } from './firebase';
 import BudgetPlanner from './pages/BudgetPlanner'
 import BudgetAdvisorPage from './pages/BudgetAdvisorPage'
 import CategoryManager from './pages/CategoryManager'
+import SmartBudgetLanding from './components/SmartBudgetLanding'
+
 import { onAuthStateChanged } from 'firebase/auth';
 
 const container = document.getElementById('root');
@@ -41,6 +43,7 @@ function App() {
         <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
         <Route path="/advisor" element={<BudgetAdvisorPage user={user}/>} />
         <Route path="/categoryManager" element={<CategoryManager user={user}/>} />
+        <Route path="/landing" element={<SmartBudgetLanding />} />
       </Routes>
     </BrowserRouter>
   );

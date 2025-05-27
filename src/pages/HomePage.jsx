@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
 import QuickAddExpenseButton from '../components/QuickAddExpenseButton';
@@ -34,6 +34,12 @@ export default function HomePage({ user }) {
     addExpenseToDB
   } = useUserData(user?.uid);
 
+  useEffect(() => {
+    if (!loading && categories.length === 0) {
+      navigate('/landing');
+    }
+  }, [loading, categories, navigate]);
+  
   const handleLogout = () => {
     signOut(auth)
       .then(() => navigate('/'))
