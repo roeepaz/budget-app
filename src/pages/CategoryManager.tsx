@@ -78,8 +78,9 @@ const {
       tag: newCategory.tag,
       ...(isSavingType && { currentAmount: 0 })
     };
-
     setCategories(prev => [...prev, cat]);
+    saveCategoriesToDB(userId!, [...categories, cat]);
+
     resetCategoryForm();
   };
 
@@ -92,9 +93,13 @@ const {
       currentAmount: ['savings', 'emergency'].includes(newCategory.tag) ? 0 : undefined
     };
 
-    setCategories(prev =>
-      prev.map(cat => cat.id === selectedCategoryId ? updatedCategory : cat)
-    );
+    const updatedList = categories.map(cat =>
+  cat.id === selectedCategoryId ? updatedCategory : cat
+);
+
+setCategories(updatedList);
+saveCategoriesToDB(userId!, updatedList);
+
 
     resetCategoryForm();
   };
@@ -105,9 +110,12 @@ const {
 
     if (!confirm(confirmMsg)) return;
 
-    setCategories(prev => prev.map(cat =>
+    const updated = categories.map(cat =>
       cat.id === categoryId ? { ...cat, hidden: true } : cat
-    ));
+    );
+    setCategories(updated);
+    saveCategoriesToDB(userId!, updated);
+
   };
 
   const handleEditCategory = (category: Category) => {
@@ -137,6 +145,23 @@ const handleCancelEdit = () => {
     icon: '📊',
     tag: 'need',
   });
+};
+const saveCategoriesToDB = async (userId: string, categories: Category[]) => {
+  if (!userId) return;
+
+  const cleaned = categories.map(cat => {
+    const c = { ...cat };
+    Object.keys(c).forEach(k => {
+      if (c[k as keyof Category] === undefined) {
+        delete c[k as keyof Category];
+      }
+    });
+    return c;
+  });
+
+  await setDoc(doc(db, 'users', userId), {
+    categories: cleaned
+  }, { merge: true });
 };
 
 const tags: CategoryTag[] = ['need', 'want', 'debt', 'emergency', 'goal', 'savings'];
