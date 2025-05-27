@@ -458,7 +458,28 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
                           <Cell key={i} fill={tagColors[entry.tag]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={v => `₪${v}`} />
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length > 0) {
+                            const data = payload[0].payload;
+                            const tagNames: Record<CategoryTag, string> = {
+                              need: 'צרכים',
+                              want: 'רצונות',
+                              debt: 'חובות',
+                              emergency: 'קרן חירום',
+                              goal: 'מטרות',
+                              savings: 'חסכונות'
+                            };
+                            return (
+                              <div className="bg-white border rounded shadow-md px-3 py-2 text-sm text-gray-800">
+                                <div className="font-medium">{tagNames[data.tag as CategoryTag]}</div>
+                                <div>₪{data.sum.toFixed(2)}</div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -529,52 +550,53 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
               </div>
               
               {/* Recent Transactions */}
-              <div className="bg-white p-6 rounded-lg shadow-md md:col-span-2">
+              <div className="bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-xl font-semibold mb-4">הוצאות לחודש הנוכחי</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">קטגוריה</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תיאור</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">סכום</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {expenses
-                        .filter(expense => {
-                          const date = new Date(expense.date);
-                          return (
-                            date.getMonth() === selectedMonth &&
-                            date.getFullYear() === selectedYear
-                          );
-                        })
-                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .map(expense => {
-                          // Find matching category
-                          const category = displayCategoriesWithTheHidden.find(c => String(c.id) === String(expense.categoryId));
-                          
-                          return (
-                            <tr key={expense.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.date}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <span className="ml-2" style={{ color: category?.color }}>
-                                    {category?.icon}
-                                  </span>
-                                  <span className="text-sm font-medium">{category?.name}</span>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.description}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">₪{expense.amount.toFixed(2)}</td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                <div className="h-64 overflow-y-auto">
+                  <div className="min-h-full flex flex-col">
+                    <table className="min-w-full divide-y divide-gray-200 flex-grow">
+                      <thead className="bg-gray-50 sticky top-0 z-10">
+                        <tr>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">קטגוריה</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תיאור</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">סכום</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {expenses
+                          .filter(expense => {
+                            const date = new Date(expense.date);
+                            return (
+                              date.getMonth() === selectedMonth &&
+                              date.getFullYear() === selectedYear
+                            );
+                          })
+                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          .map(expense => {
+                            const category = displayCategoriesWithTheHidden.find(c => String(c.id) === String(expense.categoryId));
+                            return (
+                              <tr key={expense.id}>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.date}</td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <span className="ml-2" style={{ color: category?.color }}>
+                                      {category?.icon}
+                                    </span>
+                                    <span className="text-sm font-medium">{category?.name}</span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.description}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">₪{expense.amount.toFixed(2)}</td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
+
             </div>
           )}
           
