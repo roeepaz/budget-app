@@ -19,18 +19,19 @@ export default function BudgetAdvisorPage({ user }: BudgetAdvisorPageProps) {
 
 const [showAdvisorBudget, setShowAdvisorBudget] = useState(false);
 
-  const [inputs, setInputs] = useState<BudgetInputs | null>(null);
-  const [darkMode, setDarkMode] = useState(false);
+const [inputs, setInputs] = useState<BudgetInputs | null>(null);
+const [darkMode, setDarkMode] = useState(false);
 
-  const [form, setForm] = useState<FormState>({
-    income: 10000,
-    needs: 4000,
-    wants: 2000,
-    emergencyFund: 0,
-    emergencyTargetMonths: 3,
-    currentSavings: 500,
-    currency: '₪'
-  });
+const [form, setForm] = useState<FormState>({
+  income: 10000,
+  needs: 4000,
+  wants: 2000,
+  emergencyFund: 0,
+  emergencyTargetMonths: 3,
+  currentSavings: 500,
+  currency: '₪'
+});
+
 const today = new Date().toISOString().split('T')[0];
 
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -68,40 +69,85 @@ useEffect(() => {
   const loadUserData = async () => {
   try {
     const docRef = doc(db, 'financial_data', userId);
-    const snapshot = await getDoc(docRef);
-
     const catRef = doc(db, 'users', userId);
-    const catSnap = await getDoc(catRef);
 
-    if (snapshot.exists() && catSnap.exists()) {
-      // Load financial data
-      const data = snapshot.data() as { form: FormState; debts: Debt[]; goals: SavingsGoal[] };
-      const goals = data.goals.map(g => ({
-        ...g,
-        targetDate: g.targetDate as Timestamp
-      }));
+    const [snapshot, catSnap] = await Promise.all([
+      getDoc(docRef),
+      getDoc(catRef)
+    ]);
 
-      setForm(data.form);
-      setDebts(data.debts);
-      setGoals(goals);
+    // ערכים ריקים כגיבוי
+    const defaultForm: FormState = {
+      income: 0,
+      needs: 0,
+      wants: 0,
+      emergencyFund: 0,
+      emergencyTargetMonths: 3,
+      currentSavings: 0,
+      currency: '₪'
+    };
 
-      // Load categories
-      setCategories(catSnap.data().categories || []);
-      
-      // ✅ טוענים רק אם הכול הצליח
-      setHasLoaded(true);
-    } else {
-      throw new Error("מסמך לא נמצא");
+    const defaultCategories: Category[] = [];
+
+    if (!snapshot.exists()) {
+      await setDoc(docRef, {
+        form: defaultForm,
+        debts: [],
+        goals: []
+      });
     }
 
+    if (!catSnap.exists()) {
+      await setDoc(catRef, {
+        categories: defaultCategories
+      });
+    }
+
+    // טען מחדש אחרי יצירה אם צריך
+    const updatedSnap = snapshot.exists() ? snapshot : await getDoc(docRef);
+    const updatedCatSnap = catSnap.exists() ? catSnap : await getDoc(catRef);
+
+    const data = updatedSnap.data() as {
+      form: Partial<FormState>;
+      debts: Debt[];
+      goals: SavingsGoal[];
+    };
+
+    const goals = (data.goals || []).map(g => ({
+      ...g,
+      targetDate: g.targetDate as Timestamp
+    }));
+
+   function sanitizeForm(form: Partial<FormState> | undefined): FormState {
+  return {
+    income: form?.income ?? 0,
+    needs: form?.needs ?? 0,
+    wants: form?.wants ?? 0,
+    emergencyFund: form?.emergencyFund ?? 0,
+    emergencyTargetMonths: form?.emergencyTargetMonths ?? 3,
+    currentSavings: form?.currentSavings ?? 0,
+    currency: form?.currency ?? '₪',
+  };
+}
+
+// שימוש:
+setForm(sanitizeForm(data.form));
+
+    setDebts(data.debts || []);
+    setGoals(goals);
+
+    setCategories(updatedCatSnap.data()?.categories || []);
+
+    setHasLoaded(true);
   } catch (error) {
-    //console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+    console.error("⚠️ שגיאה בטעינת הנתונים:", error);
     setLoadError(true);
-    setHasLoaded(false); // ❌ אל תאפשר שמירה
+    setHasLoaded(false);
   } finally {
     setLoading(false);
   }
 };
+
 
   loadUserData();
 }, [userId]);
