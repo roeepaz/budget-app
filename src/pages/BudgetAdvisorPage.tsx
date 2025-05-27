@@ -253,12 +253,6 @@ const startEditGoal = (g: SavingsGoal) => {
   const wantsAmt = result?.allocations.discretionarySpending ?? 0;
   const emergencyAmt = result?.allocations.emergencyFundMonthly ?? 0;
   const generalSavAmt = result?.allocations.generalSavings ?? 0;
-  const budgetDistribution = [
-    `הכנס סכום ${formatCurrency(needsAmt)} לקטגוריות מוצרים בסיסיים: ${needsList}`,
-    `הקצה סכום ${formatCurrency(wantsAmt)} לקטגוריות מותרות: ${wantsList}`,
-    `הכנס סכום ${formatCurrency(emergencyAmt)} לקרן החירום`,
-    `הכנס סכום ${formatCurrency(generalSavAmt)} לחיסכון כללי`
-  ];
 
   const totalDebt = result?.allocations?.debtAllocations?.reduce(
   (sum, d) => sum + (d.totalPayment ?? 0),
@@ -768,23 +762,6 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
                 )}
               </div>
             </div>
-
-          {/* New distribution section */}
-          <div className="bg-indigo-50 dark:bg-indigo-900/30 border p-4 rounded mb-6">
-            <h3 className="font-bold mb-4 text-lg">תזרים חודשי מומלץ</h3>
-            {/* Tabs-style pills */}
-            <div className="flex flex-wrap gap-2">
-              {budgetDistribution.map((line, idx) => (
-                <div
-                  key={idx}
-                  className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 text-indigo-900 dark:text-indigo-100 rounded-full text-sm shadow-sm hover:bg-indigo-200 dark:hover:bg-indigo-700 transition cursor-pointer"
-                >
-                  {line}
-                </div>
-              ))}
-            </div>
-          </div>
-
             {/* Savings Goals */}
             {result.allocations.goalAllocations.length > 0 && (
               <div className="bg-blue-50 dark:bg-blue-900/30 p-6 rounded-lg shadow">
@@ -836,7 +813,7 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
                 <div className="text-2xl animate-bounce">🤖</div>
                 <div className="flex flex-col items-start">
                   <span className="text-xl font-extrabold tracking-wide">
-                    בנה תקציב חכם
+                    בנה תקציב בקלות!
                   </span>
                   <span className="text-sm opacity-90 font-normal">
                     עם המלצות היועץ הפיננסי שלך
@@ -884,61 +861,61 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
               
             )}
  
-{showAdvisorBudget && result && (
-  <AdvisorBudgetBuilder
-      allocations={{
-        ...result.allocations,
-        emergencyFundMonthly,
-        generalSavings,
-        discretionarySpending,
-        debtAllocations: result.allocations.debtAllocations ?? [],
-        goalAllocations: result.allocations.goalAllocations ?? [],
-      }}
-      totalDebt={totalDebt}
-      totalGoals={totalGoals}
-      totalSavings={generalSavings}
-      totalEmergency={emergencyFundMonthly}
-      totalWants={discretionarySpending}
-      totalNeeds={form.needs}
-      categories={categories}
-      goals={goals.map(g => ({
-        ...g,
-        budget: result.allocations.goalAllocations.find(ga => ga.id === g.id)?.allocatedMonthly ?? g.budget ?? 0,
-      }))}
-      debts={debts.map(d => ({
-        ...d,
-        budget: result.allocations.debtAllocations.find(da => da.id === d.id)?.totalPayment ?? d.budget ?? 0,
-      }))}
-     onClose={() => {
-        setShowAdvisorBudget(false);
-        //navigate('/BudgetPlanner'); 
-      }}
+          {showAdvisorBudget && result && (
+            <AdvisorBudgetBuilder
+                allocations={{
+                  ...result.allocations,
+                  emergencyFundMonthly,
+                  generalSavings,
+                  discretionarySpending,
+                  debtAllocations: result.allocations.debtAllocations ?? [],
+                  goalAllocations: result.allocations.goalAllocations ?? [],
+                }}
+                totalDebt={totalDebt}
+                totalGoals={totalGoals}
+                totalSavings={generalSavings}
+                totalEmergency={emergencyFundMonthly}
+                totalWants={discretionarySpending}
+                totalNeeds={form.needs}
+                categories={categories.filter((cat: any) => !cat.hidden)}
+                goals={goals.map(g => ({
+                  ...g,
+                  budget: result.allocations.goalAllocations.find(ga => ga.id === g.id)?.allocatedMonthly ?? g.budget ?? 0,
+                }))}
+                debts={debts.map(d => ({
+                  ...d,
+                  budget: result.allocations.debtAllocations.find(da => da.id === d.id)?.totalPayment ?? d.budget ?? 0,
+                }))}
+              onClose={() => {
+                  setShowAdvisorBudget(false);
+                  //navigate('/BudgetPlanner'); 
+                }}
 
-      onUpdate={async (updatedCategories, updatedGoals, updatedDebts) => {
-        const userDoc = doc(db, 'users', user.uid);
-        const financialDoc = doc(db, 'financial_data', user.uid);
+                onUpdate={async (updatedCategories, updatedGoals, updatedDebts) => {
+                  const userDoc = doc(db, 'users', user.uid);
+                  const financialDoc = doc(db, 'financial_data', user.uid);
 
-        // 1. עדכון סטייט מקומי
-        setCategories(updatedCategories.filter(cat =>
-          !['goal', 'debt'].includes(cat.tag)
-        ));
+                  // 1. עדכון סטייט מקומי
+                  setCategories(updatedCategories.filter(cat =>
+                    !['goal', 'debt'].includes(cat.tag)
+                  ));
 
-        setGoals(updatedGoals);
-        setDebts(updatedDebts);
+                  setGoals(updatedGoals);
+                  setDebts(updatedDebts);
 
-        // 2. שמירה ל־Firestore
-        await setDoc(userDoc, { categories: updatedCategories }, { merge: true });
-        await setDoc(financialDoc, {
-          form,
-          goals: updatedGoals,
-          debts: updatedDebts,
-        }, { merge: true });
+                  // 2. שמירה ל־Firestore
+                  await setDoc(userDoc, { categories: updatedCategories }, { merge: true });
+                  await setDoc(financialDoc, {
+                    form,
+                    goals: updatedGoals,
+                    debts: updatedDebts,
+                  }, { merge: true });
 
-        // 3. מעבר בטוח לעמוד הבא
-        navigate('/BudgetPlanner');
-      }}
-      />
-      )}
+                  // 3. מעבר בטוח לעמוד הבא
+                  navigate('/BudgetPlanner');
+                }}
+                />
+                )}
             <div className="text-center">
               <div className="text-green-600 dark:text-green-400 text-sm font-medium flex items-center justify-center gap-2">
                 <CheckCircle className="w-5 h-5" />
