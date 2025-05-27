@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "parcel src/index.html",
-    "build": "parcel build src/index.html",
+    "build": "parcel build src/index.html && copy public\\preview.png dist\\",
     "postbuild": "cp public/_redirects dist/_redirects",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
