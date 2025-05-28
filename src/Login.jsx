@@ -22,11 +22,6 @@ export default function Login({ onLogin }) {
     }
   };
 
-  useEffect(() => {
-    document.title = 'התחברות - ניהול כלכלי';
-    document.dir = 'rtl';
-  }, []);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center p-4 font-sans">
       {/* Animated background elements */}
@@ -41,7 +36,7 @@ export default function Login({ onLogin }) {
         {showWelcome && (
           <div className="mb-8 text-center transform transition-all duration-1000 ease-out">
             <h1 className="text-5xl font-bold text-green-900 mb-3 bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent">
-              ברוך הבא ל-Kesify
+              ברוך הבא ל-Kesefy
             </h1> 
             <h2 className="text-lg text-green-900 font-medium">
             (נו כולנו שומעים מוזיקה ב-ספוטיפיי, בטח שאפשר להגיד כסיפיי)
@@ -61,7 +56,7 @@ export default function Login({ onLogin }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-green-500 mb-2">Kesify</h2>
+            <h2 className="text-3xl font-bold text-green-500 mb-2">Kesefy</h2>
              <p className="text-text-green-500 text-sm">
               התחבר לחשבון הניהול הפיננסי שלך
             </p>

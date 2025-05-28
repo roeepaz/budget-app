@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
-
 export default function HomePage({ user }) {
   const navigate = useNavigate();
   const auth = getAuth();
@@ -283,6 +282,15 @@ const categoriesWithExpenses = displayCategories.map(category => {
         <div className="p-4 lg:p-8 pt-20 lg:pt-8">
           {/* כותרת עיקרית */}
           <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+  <img
+    //src={logo} // if you used import
+     src="/logo.png" // if placed in public folder
+    alt="Kesefy Logo"
+    className="w-32 h-auto rounded-xl shadow-md"
+  />
+</div>
+
             <h1 className="text-3xl lg:text-5xl font-extrabold text-gray-800 mb-2">
               לוח הבקרה שלך
             </h1>
