@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, use } from 'react';
-import { Plus, Trash2, Edit3 } from 'lucide-react';
+import { Plus, Trash2, Edit3,Wallet, Menu } from 'lucide-react';
 import { db, auth } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -232,204 +232,255 @@ if (loading || !user) {
     );
   }
   return (
-    <div className="min-h-screen bg-gray-50 p-4" dir="rtl">
-      <Sidebar
-        user={{
-    uid: user.uid,
-    displayName: user.displayName ?? undefined,
-    email: user.email ?? undefined
-  }}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        displayCategories={displayCategories}
-        addExpenseToDB={addExpenseToDB}
-      />
-
-      {/* Header */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">ניהול קטגוריות</h1>
-        <p className="text-gray-600 mt-2">הוסף, ערוך ומחק קטגוריות להוצאות שלך</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Add / Edit Category Form */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">
-            {selectedCategoryId ? 'עריכת קטגוריה' : 'הוספת קטגוריה חדשה'}
-          </h2>
-
-          <div className="space-y-4">
-            {/* Category Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">שם הקטגוריה</label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                value={newCategory.name}
-                onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                placeholder="למשל: מכולת, שכירות וכו'"
-              />
-            </div>
-
-            {/* Tag */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                תיוג (מה מייצג הכסף שהולך לקטגוריה זו)
-                <br></br>
-                *מטרות וחובות עדכן בדף היועץ
-              </label>
-              <select
-                className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                value={newCategory.tag}
-                onChange={(e) => setNewCategory({
-                  ...newCategory,
-                  tag: e.target.value as CategoryTag
-                })}
-              >
-                <option value="need">צרכים (בסיסיים)</option>
-                <option value="want">רצונות (מותרות)</option>
-                <option value="emergency">קרן חירום</option>
-                <option value="savings">חיסכון כללי</option>
-              </select>
-            </div>
-
-            {/* Color */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">צבע</label>
-              <input
-                type="color"
-                className="w-full p-1 h-10 border rounded focus:ring-blue-500 focus:border-blue-500"
-                value={newCategory.color}
-                onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
-              />
-            </div>
-
-            {/* Icon */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">אייקון</label>
-              <select
-                className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                value={newCategory.icon}
-                onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
-              >
-                {iconOptions.map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-
-            {/* Action Buttons */}
-            <div className="flex gap-2">
-              <button
-                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 flex items-center justify-center disabled:bg-gray-400"
-                onClick={selectedCategoryId ? handleUpdateCategory : handleAddCategory}
-                disabled={!newCategory.name.trim()}
-              >
-                <Plus className="ml-2 w-4 h-4" />
-                {selectedCategoryId ? 'עדכן קטגוריה' : 'הוסף קטגוריה'}
-              </button>
-              
-              {selectedCategoryId && (
-                <button
-                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
-                  onClick={handleCancelEdit}
-                >
-                  ביטול
-                </button>
-              )}
-            </div>
-          </div>
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4" dir="rtl">
+    
+    {/* Header */}
+    <div className="flex justify-between items-center mb-8" dir="rtl">
+      {/* Logo + Title */}
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+          <Wallet className="w-6 h-6 text-white" />
         </div>
-
-        {/* Categories List */}
-        <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
-          <h2 className="text-xl font-semibold mb-4">כל הקטגוריות</h2>
-          
-          {/* Categories by Tag */}
-          {tags.map(tag => {
-            const tagCategories = visibleCategories.filter(cat => cat.tag === tag);
-            if (tagCategories.length === 0) return null;
-
-            return (
-              <div key={tag} className={`mb-6 p-4 rounded-lg border-2 ${tagBackgroundColors[tag]}`}>
-                <h3 className={`text-lg font-medium mb-3 pb-2 border-b-2 ${tagHeaderColors[tag]}`}>
-                  {tagNames[tag]}
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  
-                  {tagCategories.map(category => {
-                    const categoryExpenses = expenses.filter(expense => expense.categoryId === category.id);
-                    const totalAmount = categoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-                    
-                    return (
-                      <div 
-                        key={category.id} 
-                        className="bg-white border rounded-lg p-4 flex flex-col relative group hover:shadow-md transition-shadow"
-                        style={{borderRightColor: category.color, borderRightWidth: '4px'}}
-                      >
-                        {/* Action Buttons */}
-                        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                          <button
-                            className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                            onClick={() => handleEditCategory(category)}
-                            title="עריכה"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                          </button>
-                          <button
-                            className="p-1 bg-red-500 text-white rounded hover:bg-red-600"
-                            onClick={() => handleDeleteCategory(category.id)}
-                            title="מחיקה"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-
-                        <div className="flex items-center mb-2">
-                          <span className="text-2xl ml-2">{category.icon}</span>
-                          <span className="font-medium">{category.name}</span>
-                        </div>
-                        
-                        <div className="text-sm text-gray-500 mb-2">
-                          {categoryExpenses.length} הוצאות
-                        </div>
-                        
-                        {/* Show current amount for savings/emergency categories */}
-                        {(category.tag === 'savings' || category.tag === 'emergency') && (
-                          <div className="text-sm text-green-600 mb-2">
-                            יתרה נוכחית: ₪{(category.currentAmount || 0).toFixed(2)}
-                          </div>
-                        )}
-                        
-                        <div className="mt-auto font-medium">
-                          סה"כ הוצאות: ₪{totalAmount.toFixed(2)}
-                        </div>
-                        
-                        {/* Budget information if exists */}
-                        {category.budget && (
-                          <div className="text-xs text-gray-400 mt-1">
-                            תקציב: ₪{category.budget.toFixed(2)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-
-          {categories.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <Plus className="mx-auto w-12 h-12 mb-2 opacity-50" />
-              <p>אין עדיין קטגוריות. הוסף קטגוריה ראשונה!</p>
-            </div>
-          )}
+        <div className="text-right">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+            kesefy
+          </h1>
+          <p className="text-sm text-gray-600 font-medium">מנהל הכספים האישיים שלך</p>
         </div>
       </div>
     </div>
-  );
+    
+    <Sidebar
+      user={{
+        uid: user.uid,
+        displayName: user.displayName ?? undefined,
+        email: user.email ?? undefined
+      }}
+      sidebarOpen={sidebarOpen}
+      setSidebarOpen={setSidebarOpen}
+      displayCategories={displayCategories}
+      addExpenseToDB={addExpenseToDB}
+    />
+    
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Add / Edit Category Form */}
+      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-white/20">
+        <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+          <div className="w-2 h-6 bg-gradient-to-b from-blue-500 to-purple-600 rounded-full"></div>
+          {selectedCategoryId ? 'עריכת קטגוריה' : 'הוספת קטגוריה חדשה'}
+        </h2>
+
+        <div className="space-y-5">
+          {/* Category Name */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">שם הקטגוריה</label>
+            <input
+              type="text"
+              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white/50"
+              value={newCategory.name}
+              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+              placeholder="למשל: מכולת, שכירות וכו'"
+            />
+          </div>
+
+          {/* Tag */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              תיוג (מה מייצג הכסף שהולך לקטגוריה זו)
+              <span className="block text-xs text-amber-600 mt-1 font-normal">
+                *מטרות וחובות עדכן בדף היועץ
+              </span>
+            </label>
+            <select
+              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white/50"
+              value={newCategory.tag}
+              onChange={(e) => setNewCategory({
+                ...newCategory,
+                tag: e.target.value as CategoryTag
+              })}
+            >
+              <option value="need">🏠 צרכים (בסיסיים)</option>
+              <option value="want">✨ רצונות (מותרות)</option>
+              <option value="emergency">🚨 קרן חירום</option>
+              <option value="savings">💰 חיסכון כללי</option>
+            </select>
+          </div>
+
+          {/* Color */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">צבע</label>
+            <input
+              type="color"
+              className="w-full p-2 h-12 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 cursor-pointer"
+              value={newCategory.color}
+              onChange={(e) => setNewCategory({ ...newCategory, color: e.target.value })}
+            />
+          </div>
+
+          {/* Icon */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">אייקון</label>
+            <select
+              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white/50"
+              value={newCategory.icon}
+              onChange={(e) => setNewCategory({ ...newCategory, icon: e.target.value })}
+            >
+              {iconOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <button
+              className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-xl hover:from-blue-600 hover:to-purple-700 flex items-center justify-center disabled:from-gray-400 disabled:to-gray-500 transition-all duration-200 shadow-lg font-medium"
+              onClick={selectedCategoryId ? handleUpdateCategory : handleAddCategory}
+              disabled={!newCategory.name.trim()}
+            >
+              <Plus className="ml-2 w-4 h-4" />
+              {selectedCategoryId ? 'עדכן קטגוריה' : 'הוסף קטגוריה'}
+            </button>
+            
+            {selectedCategoryId && (
+              <button
+                className="px-6 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-medium"
+                onClick={handleCancelEdit}
+              >
+                ביטול
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Categories List */}
+      <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-white/20 lg:col-span-2">
+        <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
+          <div className="w-2 h-6 bg-gradient-to-b from-green-500 to-blue-600 rounded-full"></div>
+          כל הקטגוריות
+        </h2>
+        
+        {/* Categories by Tag */}
+        {tags.map(tag => {
+          const tagCategories = visibleCategories.filter(cat => cat.tag === tag);
+          if (tagCategories.length === 0) return null;
+
+          const tagStyles = {
+            need: {
+              background: 'bg-gradient-to-r from-blue-50 to-indigo-50',
+              border: 'border-blue-200',
+              header: 'text-blue-800 border-blue-200',
+              icon: '🏠'
+            },
+            want: {
+              background: 'bg-gradient-to-r from-purple-50 to-pink-50',
+              border: 'border-purple-200',
+              header: 'text-purple-800 border-purple-200',
+              icon: '✨'
+            },
+            emergency: {
+              background: 'bg-gradient-to-r from-red-50 to-orange-50',
+              border: 'border-red-200',
+              header: 'text-red-800 border-red-200',
+              icon: '🚨'
+            },
+            savings: {
+              background: 'bg-gradient-to-r from-green-50 to-emerald-50',
+              border: 'border-green-200',
+              header: 'text-green-800 border-green-200',
+              icon: '💰'
+            },
+             debt: { background: '...', border: '...', header: '...', icon: '...' },
+              goal: { background: '...', border: '...', header: '...', icon: '...' }
+          };
+
+          const style = tagStyles[tag];
+
+          return (
+            <div key={tag} className={`mb-8 p-6 rounded-2xl border-2 ${style.background} ${style.border} shadow-sm`}>
+              <h3 className={`text-lg font-bold mb-4 pb-3 border-b-2 ${style.header} flex items-center gap-2`}>
+                <span className="text-xl">{style.icon}</span>
+                {tagNames[tag]}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                
+                {tagCategories.map(category => {
+                  const categoryExpenses = expenses.filter(expense => expense.categoryId === category.id);
+                  const totalAmount = categoryExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+                  
+                  return (
+                    <div 
+                      key={category.id} 
+                      className="bg-white/70 backdrop-blur-sm border-2 border-white/50 rounded-xl p-4 flex flex-col relative group hover:shadow-lg hover:bg-white/90 transition-all duration-300"
+                      style={{borderRightColor: category.color, borderRightWidth: '4px'}}
+                    >
+                      {/* Action Buttons */}
+                      <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-200 flex gap-2">
+                        <button
+                          className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 shadow-md transition-all duration-200"
+                          onClick={() => handleEditCategory(category)}
+                          title="עריכה"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </button>
+                        <button
+                          className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 shadow-md transition-all duration-200"
+                          onClick={() => handleDeleteCategory(category.id)}
+                          title="מחיקה"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center mb-3">
+                        <span className="text-2xl ml-3">{category.icon}</span>
+                        <span className="font-semibold text-gray-800">{category.name}</span>
+                      </div>
+                      
+                      <div className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        {categoryExpenses.length} הוצאות
+                      </div>
+                      
+                      {/* Show current amount for savings/emergency categories */}
+                      {(category.tag === 'savings' || category.tag === 'emergency') && (
+                        <div className="text-sm text-green-700 mb-2 bg-green-100 px-2 py-1 rounded-lg">
+                          יתרה נוכחית: ₪{(category.currentAmount || 0).toFixed(2)}
+                        </div>
+                      )}
+                      
+                      <div className="mt-auto font-bold text-gray-800 bg-gray-100 px-2 py-1 rounded-lg">
+                        סה"כ הוצאות: ₪{totalAmount.toFixed(2)}
+                      </div>
+                      
+                      {/* Budget information if exists */}
+                      {category.budget && (
+                        <div className="text-xs text-gray-500 mt-2 bg-yellow-50 px-2 py-1 rounded-lg">
+                          תקציב: ₪{category.budget.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+
+        {categories.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            <div className="bg-gradient-to-r from-blue-100 to-purple-100 rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+              <Plus className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-lg font-medium">אין עדיין קטגוריות</p>
+            <p className="text-sm">הוסף קטגוריה ראשונה כדי להתחיל!</p>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+);
 }
