@@ -234,7 +234,7 @@ const categoriesWithExpenses = displayCategories.map(category => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
@@ -244,7 +244,7 @@ const categoriesWithExpenses = displayCategories.map(category => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 relative">
+    <div className="flex min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 from-blue-50 to-purple-50 relative">
       {/* כפתור תפריט במובייל */}
       <button
         onClick={() => setSidebarOpen(true)}
@@ -273,9 +273,9 @@ const categoriesWithExpenses = displayCategories.map(category => {
           {/* כותרת עיקרית */}
           <div className="text-center mb-8">
             <h1 className="text-3xl lg:text-5xl font-extrabold text-gray-800 mb-2">
-              לוח הבקרה הכלכלי שלך
+              לוח הבקרה שלך
             </h1>
-            <p className="text-gray-600 text-base lg:text-lg">מאת רועי פז המוכשר 🎓</p>
+            <p className="text-gray-600 text-base lg:text-lg">באהבה מרועי פז 🎓</p>
           </div>
 
           {/* כרטיסי סיכום */}

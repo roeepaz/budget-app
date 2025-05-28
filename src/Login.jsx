@@ -42,7 +42,10 @@ export default function Login({ onLogin }) {
           <div className="mb-8 text-center transform transition-all duration-1000 ease-out">
             <h1 className="text-5xl font-bold text-green-900 mb-3 bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent">
               ברוך הבא ל-Kesify
-            </h1>
+            </h1> 
+            <h2 className="text-lg text-green-900 font-medium">
+            (נו כולנו שומעים מוזיקה ב-ספוטיפיי, בטח שאפשר להגיד כסיפיי)
+            </h2>
             <p className="text-lg text-green-900 font-medium">
               ניהול פיננסי חכם ופשוט
             </p>
