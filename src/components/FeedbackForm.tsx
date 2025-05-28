@@ -8,6 +8,7 @@ const PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY!;
 
 
 export default function FeedbackForm() {
+const [lastSentTime, setLastSentTime] = useState<number | null>(null);
 
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,18 +30,15 @@ const name = user.displayName || user.email.split('@')[0];
   const handleSend = async () => {
     if (!message.trim()) return;
 
+    
+    const now = Date.now();
+    
+    if (lastSentTime && now - lastSentTime < 60000) {
+        alert('ניתן לשלוח משוב רק פעם בדקה 🙏');
+        return;
+    }
     setLoading(true);
 
-    console.log('Sending with:', {
-      service: SERVICE_ID,
-      template: TEMPLATE_ID,
-      publicKey: PUBLIC_KEY,
-      payload: {
-        name: name,
-        user_email: user.email,
-        message: message,
-      },
-    });
     try {
       await emailjs.send(
         SERVICE_ID,
@@ -55,6 +53,7 @@ const name = user.displayName || user.email.split('@')[0];
 
       setSubmitted(true);
       setMessage('');
+setLastSentTime(Date.now());
 
       // Reset status after 3 seconds
       setTimeout(() => setSubmitted(false), 3000);
