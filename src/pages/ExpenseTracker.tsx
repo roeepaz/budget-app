@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home, Calendar, Target, CreditCard, TrendingUp, Filter, Search } from 'lucide-react';
 import { db } from '../firebaseConfig';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection,getDocs  } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import {Category,Expense,CategoryTag,ExpenseTrackerProps,Debt, SavingsGoal, RecurringExpense} from '../type/appTypes'
 
@@ -36,6 +36,7 @@ const [recurringForm, setRecurringForm] = useState({
   const [debts, setDebts] = useState<Debt[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loadError, setLoadError] = useState<boolean>(false);
+const [monthlyIncomeData, setMonthlyIncomeData] = useState<Record<string, number>>({});
 
   // Form state
   const [newExpense, setNewExpense] = useState({
@@ -88,7 +89,21 @@ const tagColors: Record<CategoryTag, string> = {
   // Load user data from Firebase
   useEffect(() => {
     if (!userId) return;
-    (async () => {
+(async () => {
+    const colRef = collection(db, 'financial_data', userId, 'monthly_income');
+    const snapshot = await getDocs(colRef);
+    const incomeMap: Record<string, number> = {};
+
+    snapshot.forEach(docSnap => {
+      const month = docSnap.id; // example: "2025-05"
+      const total = docSnap.data().total;
+      if (typeof total === 'number') {
+        incomeMap[month] = total;
+      }
+    });
+
+    setMonthlyIncomeData(incomeMap);
+
       try {
         // Load categories & expenses from users/{uid}
         const userSnap = await getDoc(doc(db, 'users', userId));
@@ -330,12 +345,20 @@ const filteredExpenses = expenses.filter(exp => {
 
   // Prepare monthly data for chart
   const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const monthlyData = monthNames.map((m, idx) => ({ 
-    month: m, 
-    amount: expenses
-      .filter(e => new Date(e.date).getMonth() === idx)
-      .reduce((s, e) => s + e.amount, 0) 
-  }));
+  const monthlyData = monthNames.map((m, idx) => {
+  const monthId = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
+  return {
+    month: m,
+    expenses: expenses
+      .filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === idx && d.getFullYear() === selectedYear;
+      })
+      .reduce((sum, e) => sum + e.amount, 0),
+    income: monthlyIncomeData[monthId] || 0
+  };
+});
+
 
   // Compute expenses by tag
   const byTag: { tag: CategoryTag; sum: number }[] = tags.map(tag => {
@@ -692,49 +715,78 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyData}>
-                      <XAxis 
-                        dataKey="month" 
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: '#6B7280' }}
-                      />
-                      <YAxis 
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fill: '#6B7280' }}
-                      />
-                      <Tooltip 
-                        formatter={(value: any) => [`₪${value}`, 'סכום']}
-                        contentStyle={{
-                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                          border: 'none',
-                          borderRadius: '12px',
-                          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)'
-                        }}
-                      />
-                      <Bar
-                        dataKey="amount"
-                        radius={[6, 6, 0, 0]}
-                        onClick={(data) => {
-                          const clickedIndex = monthNames.findIndex(m => m === data.month);
-                          if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
-                        }}
-                      >
-                        {monthlyData.map((entry, index) => (
-                          <Cell
-                            key={`bar-${index}`}
-                            fill={index === selectedMonth ? '#1D4ED8' : 'url(#colorGradient)'}
-                            cursor="pointer"
-                          />
-                        ))}
-                      </Bar>
-                      <defs>
-                        <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.9}/>
-                          <stop offset="95%" stopColor="#1E40AF" stopOpacity={0.7}/>
-                        </linearGradient>
-                      </defs>
-                    </BarChart>
+  <XAxis 
+    dataKey="month" 
+    axisLine={false}
+    tickLine={false}
+    tick={{ fontSize: 12, fill: '#6B7280' }}
+  />
+  <YAxis 
+    axisLine={false}
+    tickLine={false}
+    tick={{ fontSize: 12, fill: '#6B7280' }}
+  />
+ <Tooltip
+  content={({ active, payload, label }) => {
+    if (!active || !payload || !payload.length) return null;
+
+    const expenses = payload.find(p => p.dataKey === 'expenses');
+    const income = payload.find(p => p.dataKey === 'income');
+
+    return (
+      <div style={{
+        background: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+        padding: '10px 16px',
+        direction: 'rtl',
+        fontFamily: 'inherit'
+      }}>
+        <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '8px' }}>{label}</div>
+        {expenses && (
+          <div style={{ color: '#EF4444', fontSize: '14px' }}>
+            הוצאות: ₪{expenses.value?.toLocaleString()}
+          </div>
+        )}
+        {income && (
+          <div style={{ color: '#10B981', fontSize: '14px' }}>
+            הכנסות: ₪{income.value?.toLocaleString()}
+          </div>
+        )}
+      </div>
+    );
+  }}
+/>
+
+  <Legend 
+    formatter={(value: string) => (value === 'expenses' ? 'הוצאות' : 'הכנסות')}
+  />
+  
+  <Bar
+    dataKey="expenses"
+    name="הוצאות"
+    radius={[6, 6, 0, 0]}
+    barSize={30}
+    fill="#EF4444"
+    onClick={(data) => {
+      const clickedIndex = monthNames.findIndex(m => m === data.month);
+      if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
+    }}
+  />
+  
+  <Bar
+    dataKey="income"
+    name="הכנסות"
+    radius={[6, 6, 0, 0]}
+    barSize={20}
+    fill="#10B981"
+    onClick={(data) => {
+      const clickedIndex = monthNames.findIndex(m => m === data.month);
+      if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
+    }}
+  />
+</BarChart>
+
                   </ResponsiveContainer>
                 </div>
               </div>
