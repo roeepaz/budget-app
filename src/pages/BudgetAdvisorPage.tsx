@@ -61,65 +61,20 @@ const [newDebt, setNewDebt] = useState({
 const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 // Only calculate result if inputs are set
 const result =  useBudgetModel(inputs) 
-
+const getCurrentMonthId = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
 
 useEffect(() => {
   if (!userId) return;
 
-  const loadUserData = async () => {
-  try {
-    const docRef = doc(db, 'financial_data', userId);
-    const catRef = doc(db, 'users', userId);
+  const getCurrentMonthId = (): string => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
 
-    const [snapshot, catSnap] = await Promise.all([
-      getDoc(docRef),
-      getDoc(catRef)
-    ]);
-
-    // ערכים ריקים כגיבוי
-    const defaultForm: FormState = {
-      income: 0,
-      needs: 0,
-      wants: 0,
-      emergencyFund: 0,
-      emergencyTargetMonths: 3,
-      currentSavings: 0,
-      currency: '₪'
-    };
-
-    const defaultCategories: Category[] = [];
-
-    if (!snapshot.exists()) {
-      await setDoc(docRef, {
-        form: defaultForm,
-        debts: [],
-        goals: []
-      });
-    }
-
-    if (!catSnap.exists()) {
-      await setDoc(catRef, {
-        categories: defaultCategories
-      });
-    }
-
-    // טען מחדש אחרי יצירה אם צריך
-    const updatedSnap = snapshot.exists() ? snapshot : await getDoc(docRef);
-    const updatedCatSnap = catSnap.exists() ? catSnap : await getDoc(catRef);
-
-    const data = updatedSnap.data() as {
-      form: Partial<FormState>;
-      debts: Debt[];
-      goals: SavingsGoal[];
-    };
-
-    const goals = (data.goals || []).map(g => ({
-      ...g,
-      targetDate: g.targetDate as Timestamp
-    }));
-
-   function sanitizeForm(form: Partial<FormState> | undefined): FormState {
-  return {
+  const sanitizeForm = (form: Partial<FormState> | undefined): FormState => ({
     income: form?.income ?? 0,
     needs: form?.needs ?? 0,
     wants: form?.wants ?? 0,
@@ -127,31 +82,102 @@ useEffect(() => {
     emergencyTargetMonths: form?.emergencyTargetMonths ?? 3,
     currentSavings: form?.currentSavings ?? 0,
     currency: form?.currency ?? '₪',
+  });
+
+  const loadUserData = async () => {
+    setLoading(true);
+
+    try {
+      const docRef = doc(db, 'financial_data', userId);
+      const catRef = doc(db, 'users', userId);
+
+      const [snapshot, catSnap] = await Promise.all([
+        getDoc(docRef),
+        getDoc(catRef)
+      ]);
+
+      // ערכים ריקים אם אין
+      const defaultForm: FormState = {
+        income: 0,
+        needs: 0,
+        wants: 0,
+        emergencyFund: 0,
+        emergencyTargetMonths: 3,
+        currentSavings: 0,
+        currency: '₪'
+      };
+
+      const defaultCategories: Category[] = [];
+
+      if (!snapshot.exists()) {
+        await setDoc(docRef, {
+          form: defaultForm,
+          debts: [],
+          goals: []
+        });
+      }
+
+      if (!catSnap.exists()) {
+        await setDoc(catRef, {
+          categories: defaultCategories
+        });
+      }
+
+      const updatedSnap = snapshot.exists() ? snapshot : await getDoc(docRef);
+      const updatedCatSnap = catSnap.exists() ? catSnap : await getDoc(catRef);
+
+      const data = updatedSnap.data() as {
+        form: Partial<FormState>;
+        debts: Debt[];
+        goals: SavingsGoal[];
+      };
+
+      const goals = (data.goals || []).map(g => ({
+        ...g,
+        targetDate: g.targetDate as Timestamp
+      }));
+
+      // טען הכנסה לפי חודש
+      const monthId = getCurrentMonthId();
+      const incomeDocRef = doc(db, 'financial_data', userId, 'monthly_income', monthId);
+      const incomeDoc = await getDoc(incomeDocRef);
+console.log("📂 data:", snapshot.exists() ? snapshot.data() : null);
+console.log("📂 income for month:", monthId);
+      if (incomeDoc.exists()) {
+        const monthlyIncome = incomeDoc.data();
+        setForm(sanitizeForm({
+          ...data.form,
+          income: monthlyIncome.total || 0
+        }));
+      } else {
+        // אין הכנסה לחודש הזה – שלח להזין
+        navigate('/monthlyIncome', { state: { isNewUser: true } });
+        return;
+      }
+
+      setDebts(data.debts || []);
+      setGoals(goals);
+      setCategories(updatedCatSnap.data()?.categories || []);
+      setHasLoaded(true);
+
+    } catch (error) {
+console.error("⚠️ שגיאה בטעינת הנתונים:", {
+  name: (error as any)?.name,
+  message: (error as any)?.message,
+  stack: (error as any)?.stack,
+  full: error
+});
+      setLoadError(true);
+      setHasLoaded(false);
+    } finally {
+      setLoading(false);
+    }
   };
-}
-
-// שימוש:
-setForm(sanitizeForm(data.form));
-
-    setDebts(data.debts || []);
-    setGoals(goals);
-
-    setCategories(updatedCatSnap.data()?.categories || []);
-
-    setHasLoaded(true);
-  } catch (error) {
-    console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-    setLoadError(true);
-    setHasLoaded(false);
-  } finally {
-    setLoading(false);
-  }
-};
-
 
   loadUserData();
 }, [userId]);
-  
+
+
   useEffect(() => {
     if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
   
