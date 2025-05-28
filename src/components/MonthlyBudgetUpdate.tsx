@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronRight, TrendingUp, Calculator, DollarSign, User, Calendar } from 'lucide-react';
-import { doc, setDoc, updateDoc,getDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc,getDoc,collection } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useLocation } from 'react-router-dom';
 import { db } from '../firebaseConfig'; // ודא שהנתיב נכון בהתאם למבנה שלך
@@ -51,23 +51,35 @@ const [currentStep, setCurrentStep] = useState<Step>(
     }).format(value || 0);
   };
 
-  const calculateTotalIncome = (): number => {
-    return (
-      (parseFloat(incomeData.salary) || 0) +
-      (parseFloat(incomeData.freelance) || 0) +
-      (parseFloat(incomeData.passive) || 0) +
-      (parseFloat(incomeData.other) || 0)
-    );
-  };
+  const parseNumber = (val: string): number => parseFloat(val.replace(/,/g, '') || '0');
 
-  const handleIncomeChange = (field: keyof IncomeData, value: string): void => {
-    // Allow only numbers
-    const numericValue = value.replace(/[^\d]/g, '');
-    setIncomeData(prev => ({
-      ...prev,
-      [field]: numericValue
-    }));
-  };
+const calculateTotalIncome = (): number => {
+  return (
+    parseNumber(incomeData.salary) +
+    parseNumber(incomeData.freelance) +
+    parseNumber(incomeData.passive) +
+    parseNumber(incomeData.other)
+  );
+};
+
+
+  const handleIncomeChange = (field: keyof IncomeData, rawValue: string): void => {
+  // מסנן תווים לא מספריים
+  const numericOnly = rawValue.replace(/[^\d]/g, '');
+
+  // מוסיף פסיקים
+  const formatted = new Intl.NumberFormat('he-IL').format(Number(numericOnly));
+
+  setIncomeData(prev => ({
+    ...prev,
+    [field]: numericOnly ? formatted : ''
+  }));
+};
+const getCurrentMonthId = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
+
 const auth = getAuth();
 
 const goToAdvisor = async (): Promise<void> => {
@@ -89,23 +101,19 @@ const goToAdvisor = async (): Promise<void> => {
       onboardingStep: 'done',
       lastIncomeMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
     }, { merge: true });
-    const formRef = doc(db, 'financial_data', userId);
+    const monthId = getCurrentMonthId();
 
-    const formSnap = await getDoc(formRef);
-    if (formSnap.exists()) {
-      await updateDoc(formRef, {
-        'form.income': totalIncome
-      });
-    } else {
-      await setDoc(formRef, {
-        form: {
-          'form.income': totalIncome
-        }
-      }, { merge: true });
-    }
+    const incomeEntryRef = doc(db, 'financial_data', userId, 'monthly_income', monthId);
+    await setDoc(incomeEntryRef, {
+      salary: parseNumber(incomeData.salary),
+      freelance: parseNumber(incomeData.freelance),
+      passive: parseNumber(incomeData.passive),
+      other: parseNumber(incomeData.other),
+      total: totalIncome,
+      timestamp: new Date()
+    });
 
     navigate('/advisor');
-
   };
 if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
 
@@ -191,7 +199,7 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                 <DollarSign className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
-                בואו נדבר על ההכנסות שלך
+                בואו נדבר על ההכנסות שלך החודש
               </h2>
               <p className="text-gray-600">
                 {isNewUser ? 'ספר לנו על מקורות ההכנסה שלך' : `איך היו ההכנסות בחודש ${getCurrentMonth()}?`}

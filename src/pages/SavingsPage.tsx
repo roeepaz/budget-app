@@ -8,7 +8,8 @@ import {
   BarChart,
   TrendingUp,
   Layers,
-  RefreshCw
+  RefreshCw,
+  Menu
 } from 'lucide-react';
 import {
   PieChart,
@@ -21,6 +22,7 @@ import {
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc,updateDoc } from 'firebase/firestore';
 import {SavingsGoal, Expense} from '../type/appTypes'
+import SidebarWrapper from '../components/SidebarWrapper';
 
 const DARK_MODE_KEY = 'budget-app-dark-mode';
 
@@ -53,6 +55,7 @@ export default function SavingsPage({ user }: { user: { uid: string } }) {
   // --- states for התקציב הרגיל ---
   const [loading, setLoading] = useState(true);
 const [loadError, setLoadError] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [isDarkMode, setIsDarkMode] = useState(() => 
     JSON.parse(localStorage.getItem(DARK_MODE_KEY) || 'false')
@@ -178,18 +181,17 @@ const handleWithdraw = async () => {
   setShowWithdrawModal(false);
 };
 
-
-  // --- חישוב סיכום חסכונות ל־Pie ---
-  if (loading || summaryLoading) {
+if (loading || summaryLoading) {
     return (
-      <div className={`min-h-screen flex justify-center items-center ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
-        <div className="flex flex-col items-center gap-3">
-          <RefreshCw className="animate-spin" size={32} />
-          <p className="text-lg font-medium">טוען נתונים...</p>
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
         </div>
       </div>
     );
   }
+  
 if (loadError) {
   return (
     <div className="p-6 text-center text-red-600" dir="rtl">
@@ -376,20 +378,30 @@ const totalPerCat = displayCats.map(c => {
 
   return (
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`} dir="rtl">
-      <header className={`py-4 px-6 ${isDarkMode ? 'bg-indigo-900' : 'bg-indigo-600'} text-white shadow-lg`}>
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-full ${isDarkMode ? 'bg-indigo-800' : 'bg-indigo-500'}`}>
-              <Wallet size={24}/>
-            </div>
-            <h1 className="text-xl font-bold">ניהול חסכונות</h1>
-          </div>
-          <button onClick={() => setIsDarkMode((prev: boolean) => !prev)}>
-  {isDarkMode ? '☀' : '🌙'}
-</button>
+      <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      
+     <header className={`py-4 px-6 ${isDarkMode ? 'bg-indigo-900' : 'bg-indigo-600'} text-white shadow-lg`}>
+  <div className="flex justify-between items-center">
+    <div className="flex items-center gap-3">
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow"
+        >
+          <Menu className="w-5 h-5 text-gray-700" />
+        </button>
+      )}
+      <div className={`p-2 rounded-full ${isDarkMode ? 'bg-indigo-800' : 'bg-indigo-500'}`}>
+        <Wallet size={24} />
+      </div>
+      <h1 className="text-xl font-bold">ניהול חסכונות</h1>
+    </div>
 
-        </div>
-      </header>
+    <button onClick={() => setIsDarkMode((prev: boolean) => !prev)}>
+      {isDarkMode ? '☀' : '🌙'}
+    </button>
+  </div>
+</header>
 
       <main className="container mx-auto p-6">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-6">

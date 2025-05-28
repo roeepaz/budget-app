@@ -27,7 +27,12 @@ export default function HomePage({ user }) {
   const navigate = useNavigate();
   const auth = getAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  
+  
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
   const {
     categories,
     expenses,
@@ -36,6 +41,12 @@ export default function HomePage({ user }) {
     loading,
     addExpenseToDB
   } = useUserData(user?.uid);
+  
+    const currentMonthExpenses = expenses.filter(exp => {
+      const d = new Date(exp.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+const totalExpensesThisMonth = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   useEffect(() => {
     if (!loading && categories.length === 0) {
@@ -96,19 +107,21 @@ useEffect(() => {
       name: d.name,
       color: tagColors.debt,
       icon: '💳',
-      tag: 'debt'
+      tag: 'debt',
+      budget: d.budget ?? 0
     })),
     ...goals.map(g => ({
       id: `goal-${g.id}`,
       name: g.name,
       color: tagColors.goal,
       icon: '🎯',
-      tag: 'goal'
+      tag: 'goal',
+      budget: g.budget ?? 0
     }))
   ];
 
   // חישוב סטטיסטיקות
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+const totalExpenses = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const monthlyExpenses = expenses.filter(exp => {
     const expDate = new Date(exp.date);
     const now = new Date();
@@ -127,30 +140,32 @@ const totalBudget = totalCategoryBudget + totalGoalBudget + totalDebtBudget;
 const totalSpent = monthlyExpenses;
 const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
-  const generateQuickInsights = () => {
-  if (!categories || !expenses) return [];
 
+const generateQuickInsights = () => {
+  if (!categories || !expenses) return [];
+  
   const now = new Date();
   const month = now.getMonth();
   const year = now.getFullYear();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const day = now.getDate();
   const monthProgress = Math.floor((day / daysInMonth) * 100);
-
+  
   const totalBudget = [...categories, ...debts, ...goals].reduce(
     (sum, item) => sum + (item.budget || 0), 0
   );
   const totalSpent = expenses
-    .filter(exp => {
-      const d = new Date(exp.date);
-      return d.getMonth() === month && d.getFullYear() === year;
-    })
-    .reduce((sum, e) => sum + e.amount, 0);
-
+  .filter(exp => {
+    const d = new Date(exp.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  })
+  .reduce((sum, e) => sum + e.amount, 0);
+  
   const percentUsed = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  
 
   const insights = [];
-
+  
   if (percentUsed > 100) {
     insights.push({
       icon: <AlertCircle className="text-red-500" />,
@@ -172,7 +187,7 @@ const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBud
       text: 'התקציב שלך מאוזן נכון לעכשיו.'
     });
   }
-
+  
   return insights;
 };
 const getCategoryBudgetAlerts = () => {
@@ -180,26 +195,26 @@ const getCategoryBudgetAlerts = () => {
     ...categories.map(c => ({
       name: c.name,
       spent: expenses
-        .filter(e => String(e.categoryId) === String(c.id))
-        .reduce((sum, e) => sum + e.amount, 0),
+      .filter(e => String(e.categoryId) === String(c.id))
+      .reduce((sum, e) => sum + e.amount, 0),
       budget: c.budget || 0,
     })),
     ...goals.map(g => ({
       name: g.name,
       spent: expenses
-        .filter(e => String(e.categoryId) === `goal-${g.id}`)
-        .reduce((sum, e) => sum + e.amount, 0),
+      .filter(e => String(e.categoryId) === `goal-${g.id}`)
+      .reduce((sum, e) => sum + e.amount, 0),
       budget: g.budget || 0,
     })),
     ...debts.map(d => ({
       name: d.name,
       spent: expenses
-        .filter(e => String(e.categoryId) === `debt-${d.id}`)
-        .reduce((sum, e) => sum + e.amount, 0),
+      .filter(e => String(e.categoryId) === `debt-${d.id}`)
+      .reduce((sum, e) => sum + e.amount, 0),
       budget: d.budget || 0,
     })),
   ];
-
+  
   const overLimit = items.filter(i => i.budget > 0 && i.spent > i.budget);
   const nearLimit = items.filter(
     i => i.budget > 0 && i.spent >= 0.8 * i.budget && i.spent <= i.budget
@@ -207,10 +222,30 @@ const getCategoryBudgetAlerts = () => {
 
   return { overLimit, nearLimit };
 };
+const categoriesWithExpenses = displayCategories.map(category => {
+  const categoryExpenses = currentMonthExpenses
+    .filter(exp => String(exp.categoryId) === String(category.id))
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
+  const categoryBudget = category.budget ?? 0;
+  const remaining = categoryBudget - categoryExpenses;
+  const overBudget = remaining < 0;
+
+  return {
+    ...category,
+    total: categoryExpenses,
+    percentage: totalExpensesThisMonth
+      ? (categoryExpenses / totalExpensesThisMonth) * 100
+      : 0,
+    remaining,
+    overBudget
+  };
+}).sort((a, b) => b.total - a.total);
+
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
@@ -220,7 +255,7 @@ const getCategoryBudgetAlerts = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 relative">
+    <div className="flex min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 from-blue-50 to-purple-50 relative">
       {/* כפתור תפריט במובייל */}
       <button
         onClick={() => setSidebarOpen(true)}
@@ -249,9 +284,9 @@ const getCategoryBudgetAlerts = () => {
           {/* כותרת עיקרית */}
           <div className="text-center mb-8">
             <h1 className="text-3xl lg:text-5xl font-extrabold text-gray-800 mb-2">
-              לוח הבקרה הכלכלי שלך
+              לוח הבקרה שלך
             </h1>
-            <p className="text-gray-600 text-base lg:text-lg">מאת רועי פז המוכשר 🎓</p>
+            <p className="text-gray-600 text-base lg:text-lg">באהבה מרועי פז 🎓</p>
           </div>
 
           {/* כרטיסי סיכום */}
@@ -269,28 +304,25 @@ const getCategoryBudgetAlerts = () => {
               </div>
             </div>
 
-{/* ניצול תקציב */}
-<div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-green-500">
-  <div className="flex items-center justify-between">
-    <div>
-      <p className="text-gray-600 text-sm font-medium">ניצול תקציב</p>
-      <p className="text-xl lg:text-2xl font-bold text-gray-800">
-        {budgetUsedPercentage}%
-      </p>
-      <p className={`text-xs mt-1 ${totalSpent > totalBudget ? 'text-red-600' : 'text-gray-500'}`}>
-        {totalSpent > totalBudget
-          ? `חריגה של ₪${(totalSpent - totalBudget).toFixed(2)}`
-          : `נותרו ₪${(totalBudget - totalSpent).toFixed(2)} לניצול`}
-      </p>
-    </div>
-    <div className="p-2 lg:p-3 bg-green-100 rounded-lg">
-      <Wallet className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
-    </div>
-  </div>
-</div>
-
-
-
+            {/* ניצול תקציב */}
+            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-green-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">ניצול תקציב</p>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-800">
+                    {budgetUsedPercentage}%
+                  </p>
+                  <p className={`text-xs mt-1 ${totalSpent > totalBudget ? 'text-red-600' : 'text-gray-500'}`}>
+                    {totalSpent > totalBudget
+                      ? `חריגה של ₪${(totalSpent - totalBudget).toFixed(2)}`
+                      : `נותרו ₪${(totalBudget - totalSpent).toFixed(2)} לניצול`}
+                  </p>
+                </div>
+                <div className="p-2 lg:p-3 bg-green-100 rounded-lg">
+                  <Wallet className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
+                </div>
+              </div>
+            </div>
 
             {/* חובות */}
             <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-orange-500">
@@ -312,41 +344,52 @@ const getCategoryBudgetAlerts = () => {
           {/* תרשימים ונתונים נוספים */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* הוצאות לפי קטגוריות */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <PieIcon className="w-6 h-6 text-blue-600" />
-                הוצאות לפי קטגוריות
-              </h3>
-              {categories.length > 0 ? (
-                <div className="space-y-3">
-                  {categories.slice(0, 5).map((category) => {
-                    const categoryExpenses = expenses
-                      .filter(exp => String(exp.categoryId) === String(category.id))
-                      .reduce((sum, exp) => sum + exp.amount, 0);
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <PieIcon className="w-6 h-6 text-blue-600" />
+              הוצאות לפי קטגוריות
+            </h3>
+            {displayCategories.length > 0 ? (
+              <div className="space-y-3">
+                {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map(category => (
+                  <div key={category.id} className="flex items-center justify-between flex-col sm:flex-row gap-1 sm:gap-0">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }} />
+                      <span className="text-gray-700 font-medium text-sm lg:text-base">
+                        {category.name}
+                      </span>
+                    </div>
 
-                    const percentage = totalExpenses ? (categoryExpenses / totalExpenses) * 100 : 0;
-                    
-                    return (
-                      <div key={category.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <span className="text-gray-700 font-medium text-sm lg:text-base">{category.name}</span>
-                        </div>
-                        <div className="text-left">
-                          <span className="text-gray-800 font-bold text-sm lg:text-base">₪{categoryExpenses.toLocaleString()}</span>
-                          <span className="text-gray-500 text-xs lg:text-sm mr-2">({percentage.toFixed(1)}%)</span>
-                        </div>
+                    <div className="text-left">
+                      <div className="text-sm lg:text-base font-bold text-gray-800">
+                        ₪{category.total.toLocaleString()} <span className="text-xs text-gray-500">({category.percentage.toFixed(1)}%)</span>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו קטגוריות</p>
-              )}
-            </div>
+
+                      {category.budget !== undefined && typeof category.remaining === 'number' && (
+                        <div className={`text-xs lg:text-sm mt-1 ${category.overBudget ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+                          {category.overBudget
+                            ? `חריגה של ₪${Math.abs(category.remaining).toLocaleString()} מהתקציב`
+                            : `נותרו ₪${category.remaining.toLocaleString()} בתקציב`}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {categoriesWithExpenses.length > 5 && (
+                  <button
+                    className="text-sm text-blue-600 hover:underline mt-2"
+                    onClick={() => setShowAllCategories(prev => !prev)}
+                  >
+                    {showAllCategories ? 'הצג פחות' : 'הצג עוד'}
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו קטגוריות</p>
+            )}
+
+          </div>
 
             {/* יעדים פעילים */}
             <div className="bg-white rounded-xl shadow-lg p-6">

@@ -11,6 +11,8 @@ import BudgetAdvisorPage from './pages/BudgetAdvisorPage'
 import CategoryManager from './pages/CategoryManager'
 import SmartBudgetLanding from './components/SmartBudgetLanding'
 import MonthlyBudgetUpdate from './components/MonthlyBudgetUpdate'
+import PrivacyPolicy from './policy/PrivacyPolicy';
+import TermsOfService from './policy/TermsOfService';
 
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -31,7 +33,16 @@ function App() {
     return () => unsubscribe(); // ניקוי מאזין כשמרנדרים מחדש
   }, []);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 text-lg">🚀 בודק מי אתה</p>
+          </div>
+        </div>
+      );
+    }
 
   if (!user) return <Login onLogin={setUser} />;
 
@@ -46,6 +57,9 @@ function App() {
         <Route path="/categoryManager" element={<CategoryManager user={user}/>} />
         <Route path="/landing" element={<SmartBudgetLanding />} />
         <Route path="/monthlyIncome" element={<MonthlyBudgetUpdate />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+
       </Routes>
     </BrowserRouter>
   );

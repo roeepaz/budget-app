@@ -2,12 +2,13 @@ import { Timestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { useBudgetModel} from '../hooks/useBudgetModel';
-import { DollarSign, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
+import { Menu, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
 import {  Calculator, Shield, Wallet, PiggyBank, CreditCard } from 'lucide-react';
 import { db } from '../firebaseConfig.js';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import AdvisorBudgetBuilder from '../components/AdvisorBudgetBuilder';
 import {BudgetInputs,BudgetAdvisorPageProps, Debt, SavingsGoal,Category} from '../type/appTypes'
+import SidebarWrapper from '../components/SidebarWrapper';
 
 
 // 2. Extract form-only fields from BudgetInputs
@@ -21,6 +22,7 @@ const [showAdvisorBudget, setShowAdvisorBudget] = useState(false);
 
 const [inputs, setInputs] = useState<BudgetInputs | null>(null);
 const [darkMode, setDarkMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
 const [form, setForm] = useState<FormState>({
   income: 10000,
@@ -61,65 +63,20 @@ const [newDebt, setNewDebt] = useState({
 const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 // Only calculate result if inputs are set
 const result =  useBudgetModel(inputs) 
-
+const getCurrentMonthId = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
 
 useEffect(() => {
   if (!userId) return;
 
-  const loadUserData = async () => {
-  try {
-    const docRef = doc(db, 'financial_data', userId);
-    const catRef = doc(db, 'users', userId);
+  const getCurrentMonthId = (): string => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
 
-    const [snapshot, catSnap] = await Promise.all([
-      getDoc(docRef),
-      getDoc(catRef)
-    ]);
-
-    // ערכים ריקים כגיבוי
-    const defaultForm: FormState = {
-      income: 0,
-      needs: 0,
-      wants: 0,
-      emergencyFund: 0,
-      emergencyTargetMonths: 3,
-      currentSavings: 0,
-      currency: '₪'
-    };
-
-    const defaultCategories: Category[] = [];
-
-    if (!snapshot.exists()) {
-      await setDoc(docRef, {
-        form: defaultForm,
-        debts: [],
-        goals: []
-      });
-    }
-
-    if (!catSnap.exists()) {
-      await setDoc(catRef, {
-        categories: defaultCategories
-      });
-    }
-
-    // טען מחדש אחרי יצירה אם צריך
-    const updatedSnap = snapshot.exists() ? snapshot : await getDoc(docRef);
-    const updatedCatSnap = catSnap.exists() ? catSnap : await getDoc(catRef);
-
-    const data = updatedSnap.data() as {
-      form: Partial<FormState>;
-      debts: Debt[];
-      goals: SavingsGoal[];
-    };
-
-    const goals = (data.goals || []).map(g => ({
-      ...g,
-      targetDate: g.targetDate as Timestamp
-    }));
-
-   function sanitizeForm(form: Partial<FormState> | undefined): FormState {
-  return {
+  const sanitizeForm = (form: Partial<FormState> | undefined): FormState => ({
     income: form?.income ?? 0,
     needs: form?.needs ?? 0,
     wants: form?.wants ?? 0,
@@ -127,31 +84,102 @@ useEffect(() => {
     emergencyTargetMonths: form?.emergencyTargetMonths ?? 3,
     currentSavings: form?.currentSavings ?? 0,
     currency: form?.currency ?? '₪',
+  });
+
+  const loadUserData = async () => {
+    setLoading(true);
+
+    try {
+      const docRef = doc(db, 'financial_data', userId);
+      const catRef = doc(db, 'users', userId);
+
+      const [snapshot, catSnap] = await Promise.all([
+        getDoc(docRef),
+        getDoc(catRef)
+      ]);
+
+      // ערכים ריקים אם אין
+      const defaultForm: FormState = {
+        income: 0,
+        needs: 0,
+        wants: 0,
+        emergencyFund: 0,
+        emergencyTargetMonths: 3,
+        currentSavings: 0,
+        currency: '₪'
+      };
+
+      const defaultCategories: Category[] = [];
+
+      if (!snapshot.exists()) {
+        await setDoc(docRef, {
+          form: defaultForm,
+          debts: [],
+          goals: []
+        });
+      }
+
+      if (!catSnap.exists()) {
+        await setDoc(catRef, {
+          categories: defaultCategories
+        });
+      }
+
+      const updatedSnap = snapshot.exists() ? snapshot : await getDoc(docRef);
+      const updatedCatSnap = catSnap.exists() ? catSnap : await getDoc(catRef);
+
+      const data = updatedSnap.data() as {
+        form: Partial<FormState>;
+        debts: Debt[];
+        goals: SavingsGoal[];
+      };
+
+      const goals = (data.goals || []).map(g => ({
+        ...g,
+        targetDate: g.targetDate as Timestamp
+      }));
+
+      // טען הכנסה לפי חודש
+      const monthId = getCurrentMonthId();
+      const incomeDocRef = doc(db, 'financial_data', userId, 'monthly_income', monthId);
+      const incomeDoc = await getDoc(incomeDocRef);
+console.log("📂 data:", snapshot.exists() ? snapshot.data() : null);
+console.log("📂 income for month:", monthId);
+      if (incomeDoc.exists()) {
+        const monthlyIncome = incomeDoc.data();
+        setForm(sanitizeForm({
+          ...data.form,
+          income: monthlyIncome.total || 0
+        }));
+      } else {
+        // אין הכנסה לחודש הזה – שלח להזין
+        navigate('/monthlyIncome', { state: { isNewUser: true } });
+        return;
+      }
+
+      setDebts(data.debts || []);
+      setGoals(goals);
+      setCategories(updatedCatSnap.data()?.categories || []);
+      setHasLoaded(true);
+
+    } catch (error) {
+console.error("⚠️ שגיאה בטעינת הנתונים:", {
+  name: (error as any)?.name,
+  message: (error as any)?.message,
+  stack: (error as any)?.stack,
+  full: error
+});
+      setLoadError(true);
+      setHasLoaded(false);
+    } finally {
+      setLoading(false);
+    }
   };
-}
-
-// שימוש:
-setForm(sanitizeForm(data.form));
-
-    setDebts(data.debts || []);
-    setGoals(goals);
-
-    setCategories(updatedCatSnap.data()?.categories || []);
-
-    setHasLoaded(true);
-  } catch (error) {
-    console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-    setLoadError(true);
-    setHasLoaded(false);
-  } finally {
-    setLoading(false);
-  }
-};
-
 
   loadUserData();
 }, [userId]);
-  
+
+
   useEffect(() => {
     if (!userId || !hasLoaded) return; // מונע שמירה לפני טעינה
   
@@ -179,8 +207,15 @@ setForm(sanitizeForm(data.form));
 }, [categories, userId, hasLoaded]);
 
 if (loading) {
-  return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
-}
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
+        </div>
+      </div>
+    );
+  }
   if (!user) {
   return <div>Loading or not authenticated...</div>;
 }
@@ -268,7 +303,7 @@ const startEditGoal = (g: SavingsGoal) => {
       ...debts,
       {
         id: Date.now().toString(),
-        name: newDebt.name,
+        name: newDebt.name + ' ' +'(הלוואה)',
         principal: newDebt.principal,
         annualRate: newDebt.annualRate,
         termMonths: newDebt.termMonths,
@@ -317,11 +352,11 @@ const generalSavings = result?.allocations?.generalSavings ?? 0;
 const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
 
   return (
-       <div className={`min-h-screen transition-all duration-500 ${
+    <div className={`min-h-screen transition-all duration-500 ${
       darkMode 
         ? 'bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 text-white' 
         : 'bg-gradient-to-br from-blue-50 via-indigo-50/30 to-slate-50 text-slate-900'
-    }`}>
+      }`}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
@@ -329,6 +364,7 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
           backgroundSize: '40px 40px'
         }}></div>
       </div>
+      <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="relative p-6 max-w-7xl mx-auto" dir="rtl">
         {/* Header */}
@@ -337,6 +373,14 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
             <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                {!sidebarOpen && (
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                  >
+                    <Menu className="w-6 h-6 text-gray-700" />
+                  </button>
+                )}
                 <div className="relative text-3xl bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
                   🧠
                 </div>
@@ -347,22 +391,23 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
             </h1>
             <div className="absolute -bottom-2 left-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full w-0 group-hover:w-full transition-all duration-700"></div>
           </div>
-          
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`group relative p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${
-              darkMode 
-                ? 'bg-slate-800/50 hover:bg-slate-700/50 text-amber-400 border border-slate-700' 
-                : 'bg-white/80 hover:bg-white text-slate-600 border border-slate-200 shadow-lg backdrop-blur-sm'
-            }`}
-          >
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-400/20 to-orange-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            {darkMode ? (
-              <Sun className="w-6 h-6 relative z-10 group-hover:rotate-180 transition-transform duration-500" />
-            ) : (
-              <Moon className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
-            )}
-          </button>
+          {/*
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`group relative p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${
+                darkMode 
+                  ? 'bg-slate-800/50 hover:bg-slate-700/50 text-amber-400 border border-slate-700' 
+                  : 'bg-white/80 hover:bg-white text-slate-600 border border-slate-200 shadow-lg backdrop-blur-sm'
+              }`}
+            >
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-400/20 to-orange-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              {darkMode ? (
+                <Sun className="w-6 h-6 relative z-10 group-hover:rotate-180 transition-transform duration-500" />
+              ) : (
+                <Moon className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+              )}
+            </button>
+          */}
         </div>
         
         <p className={`text-lg mb-8 leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>

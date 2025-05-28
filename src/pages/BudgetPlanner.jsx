@@ -162,8 +162,15 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
   }, [expenses, trueCategories, goals, debts, userId, hasLoaded]);
 
 if (loading) {
-  return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
-}
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
+        </div>
+      </div>
+    );
+  }
   if (!user) {
   return <div>Loading or not authenticated...</div>;
 }
