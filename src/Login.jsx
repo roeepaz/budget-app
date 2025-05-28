@@ -109,6 +109,10 @@ export default function Login({ onLogin }) {
             <p className="text-green-900 text-sm leading-relaxed">
               התחברות מאובטחת ומהירה ללא צורך לזכור סיסמאות נוספות. כל המידע הפיננסי שלך מוגן ומוצפן.
             </p>
+            <br></br>
+            <p className="text-green-900 text-sm leading-relaxed">
+            חלון Google יופיע בשם firebase – זה תקני ומאובטח, אנחנו משתמשים ב־Google Login כדי להגן עליכם
+            </p>
           </div>
 
           {/* Features list */}
