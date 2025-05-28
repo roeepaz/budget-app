@@ -2,12 +2,13 @@ import { Timestamp } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { useBudgetModel} from '../hooks/useBudgetModel';
-import { DollarSign, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
+import { Menu, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
 import {  Calculator, Shield, Wallet, PiggyBank, CreditCard } from 'lucide-react';
 import { db } from '../firebaseConfig.js';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import AdvisorBudgetBuilder from '../components/AdvisorBudgetBuilder';
 import {BudgetInputs,BudgetAdvisorPageProps, Debt, SavingsGoal,Category} from '../type/appTypes'
+import SidebarWrapper from '../components/SidebarWrapper';
 
 
 // 2. Extract form-only fields from BudgetInputs
@@ -21,6 +22,7 @@ const [showAdvisorBudget, setShowAdvisorBudget] = useState(false);
 
 const [inputs, setInputs] = useState<BudgetInputs | null>(null);
 const [darkMode, setDarkMode] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
 const [form, setForm] = useState<FormState>({
   income: 10000,
@@ -205,8 +207,15 @@ console.error("⚠️ שגיאה בטעינת הנתונים:", {
 }, [categories, userId, hasLoaded]);
 
 if (loading) {
-  return <div className="text-center p-8 text-lg">🚀 טוען נתונים...</div>;
-}
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
+        </div>
+      </div>
+    );
+  }
   if (!user) {
   return <div>Loading or not authenticated...</div>;
 }
@@ -343,11 +352,11 @@ const generalSavings = result?.allocations?.generalSavings ?? 0;
 const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
 
   return (
-       <div className={`min-h-screen transition-all duration-500 ${
+    <div className={`min-h-screen transition-all duration-500 ${
       darkMode 
         ? 'bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 text-white' 
         : 'bg-gradient-to-br from-blue-50 via-indigo-50/30 to-slate-50 text-slate-900'
-    }`}>
+      }`}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
@@ -355,6 +364,7 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
           backgroundSize: '40px 40px'
         }}></div>
       </div>
+      <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="relative p-6 max-w-7xl mx-auto" dir="rtl">
         {/* Header */}
@@ -363,6 +373,14 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
             <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                {!sidebarOpen && (
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                  >
+                    <Menu className="w-6 h-6 text-gray-700" />
+                  </button>
+                )}
                 <div className="relative text-3xl bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
                   🧠
                 </div>

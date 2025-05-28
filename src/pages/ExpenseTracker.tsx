@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home, Calendar, Target, CreditCard, TrendingUp, Filter, Search } from 'lucide-react';
+import { Menu,Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home, Calendar, Target, CreditCard, TrendingUp, Filter, Search } from 'lucide-react';
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc, collection,getDocs  } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import {Category,Expense,CategoryTag,ExpenseTrackerProps,Debt, SavingsGoal, RecurringExpense} from '../type/appTypes'
+import SidebarWrapper from '../components/SidebarWrapper';
 
 export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   // Default categories
@@ -37,6 +38,7 @@ const [recurringForm, setRecurringForm] = useState({
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loadError, setLoadError] = useState<boolean>(false);
 const [monthlyIncomeData, setMonthlyIncomeData] = useState<Record<string, number>>({});
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Form state
   const [newExpense, setNewExpense] = useState({
@@ -177,57 +179,70 @@ const tagColors: Record<CategoryTag, string> = {
     }, 800);
     return () => clearTimeout(timeout);
   }, [categories, expenses, debts, goals, userId, hasLoaded]);
- const [generatedThisMonth, setGeneratedThisMonth] = useState<Set<string>>(new Set());
+  const [generatedThisMonth, setGeneratedThisMonth] = useState<Set<string>>(new Set());
 
 
-useEffect(() => {
-  if (!hasLoaded || !userId) return;
+  useEffect(() => {
+    if (!hasLoaded || !userId) return;
 
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
 
-  const keyForRecurring = (r: RecurringExpense) =>
-    `${r.id}_${year}_${month}`;
+    const keyForRecurring = (r: RecurringExpense) =>
+      `${r.id}_${year}_${month}`;
 
-  const generated: Expense[] = [];
-  const newKeys: string[] = [];
+    const generated: Expense[] = [];
+    const newKeys: string[] = [];
 
-  for (const r of recurringExpenses) {
-    const key = keyForRecurring(r);
+    for (const r of recurringExpenses) {
+      const key = keyForRecurring(r);
 
-    // אם כבר נוצרה החודש — מדלג
-    if (generatedThisMonth.has(key)) continue;
+      // אם כבר נוצרה החודש — מדלג
+      if (generatedThisMonth.has(key)) continue;
 
-    const start = new Date(r.startDate);
-    const end = r.endDate ? new Date(r.endDate) : null;
-    const valid = start <= today && (!end || today <= end);
-    if (!valid) continue;
+      const start = new Date(r.startDate);
+      const end = r.endDate ? new Date(r.endDate) : null;
+      const valid = start <= today && (!end || today <= end);
+      if (!valid) continue;
 
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const safeDay = Math.min(r.dayOfMonth, lastDay);
-    const date = new Date(year, month, safeDay);
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      const safeDay = Math.min(r.dayOfMonth, lastDay);
+      const date = new Date(year, month, safeDay);
 
-    generated.push({
-      id: Date.now() + Math.random(),
-      amount: r.amount,
-      description: r.description,
-      categoryId: r.categoryId,
-      date: date.toISOString().split('T')[0]
-    });
+      generated.push({
+        id: Date.now() + Math.random(),
+        amount: r.amount,
+        description: r.description,
+        categoryId: r.categoryId,
+        date: date.toISOString().split('T')[0]
+      });
 
-    newKeys.push(key);
-  }
+      newKeys.push(key);
+    }
 
-  if (generated.length > 0) {
-    setExpenses(prev => [...prev, ...generated]);
-    setGeneratedThisMonth(prev => {
-      const updated = new Set(prev);
-      newKeys.forEach(k => updated.add(k));
-      return updated;
-    });
-  }
-}, [recurringExpenses, hasLoaded, userId]);
+    if (generated.length > 0) {
+      setExpenses(prev => [...prev, ...generated]);
+      setGeneratedThisMonth(prev => {
+        const updated = new Set(prev);
+        newKeys.forEach(k => updated.add(k));
+        return updated;
+      });
+    }
+  }, [recurringExpenses, hasLoaded, userId]);
+  const currentMonthId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+  const previousMonthId = selectedMonth === 0
+    ? `${selectedYear - 1}-12`
+    : `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+
+  const currentIncome = monthlyIncomeData?.[currentMonthId];
+  const previousIncome = monthlyIncomeData?.[previousMonthId];
+
+
+  const incomeChangePct = previousIncome
+    ? (((currentIncome - previousIncome) / previousIncome) * 100).toFixed(1)
+    : '0.0';
+  const incomeChangePctNum = parseFloat(incomeChangePct);
 
   // Create dynamic categories from debts and goals
   const dynamicCats: Category[] = [
@@ -460,13 +475,17 @@ const handleDeleteRecurring = (id: string) => {
         : '0'
     }));
 
-  if (loading) {
-    return <div className="text-center p-8 text-lg" dir="rtl">🚀 טוען נתונים...</div>;
+if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
+        </div>
+      </div>
+    );
   }
   
-  if (!user) {
-    return <div dir="rtl">המשתמש לא מחובר...</div>;
-  }
   if (loadError) {
   return (
     <div className="p-6 text-center text-red-600" dir="rtl">
@@ -501,6 +520,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
 
    return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" dir="rtl">
+      
       {/* Modern Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
@@ -510,6 +530,12 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                 <Home className="w-5 h-5 text-white" />
               </div>
               <div>
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <Menu className="w-6 h-6 text-gray-700" />
+                </button>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                   יועץ תקציבי חכם
                 </h1>
@@ -546,6 +572,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
           </div>
         </div>
       </header>
+      <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* Modern Navigation */}
       <nav className="bg-white/70 backdrop-blur-sm border-b border-white/30">
@@ -584,13 +611,14 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">הכנסות החודש</p>
-                    <p className="text-2xl font-bold text-gray-900">להכין</p>
-                    <p className="text-xs text-emerald-600 flex items-center mt-2">
-                      <TrendingUp className="w-3 h-3 ml-1" />
-                      +12% מהחודש שעבר נתון שקר
-                    </p>
-                  </div>
+  <p className="text-sm text-gray-500 mb-1">הכנסות החודש</p>
+  <p className="text-2xl font-bold text-gray-900">₪{currentIncome.toLocaleString()}</p>
+  <p className={`text-xs flex items-center mt-2 ${incomeChangePctNum  >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+    <TrendingUp className="w-3 h-3 ml-1" />
+    {incomeChangePctNum  >= 0 ? '+' : ''}{incomeChangePct}% לעומת החודש הקודם
+  </p>
+</div>
+
                   <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-white" />
                   </div>
