@@ -268,7 +268,7 @@ const startEditGoal = (g: SavingsGoal) => {
       ...debts,
       {
         id: Date.now().toString(),
-        name: newDebt.name,
+        name: newDebt.name + ' ' +'(הלוואה)',
         principal: newDebt.principal,
         annualRate: newDebt.annualRate,
         termMonths: newDebt.termMonths,
@@ -347,22 +347,23 @@ const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
             </h1>
             <div className="absolute -bottom-2 left-0 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full w-0 group-hover:w-full transition-all duration-700"></div>
           </div>
-          
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className={`group relative p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${
-              darkMode 
-                ? 'bg-slate-800/50 hover:bg-slate-700/50 text-amber-400 border border-slate-700' 
-                : 'bg-white/80 hover:bg-white text-slate-600 border border-slate-200 shadow-lg backdrop-blur-sm'
-            }`}
-          >
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-400/20 to-orange-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-            {darkMode ? (
-              <Sun className="w-6 h-6 relative z-10 group-hover:rotate-180 transition-transform duration-500" />
-            ) : (
-              <Moon className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
-            )}
-          </button>
+          {/*
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className={`group relative p-3 rounded-2xl transition-all duration-300 hover:scale-110 ${
+                darkMode 
+                  ? 'bg-slate-800/50 hover:bg-slate-700/50 text-amber-400 border border-slate-700' 
+                  : 'bg-white/80 hover:bg-white text-slate-600 border border-slate-200 shadow-lg backdrop-blur-sm'
+              }`}
+            >
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-amber-400/20 to-orange-400/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              {darkMode ? (
+                <Sun className="w-6 h-6 relative z-10 group-hover:rotate-180 transition-transform duration-500" />
+              ) : (
+                <Moon className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
+              )}
+            </button>
+          */}
         </div>
         
         <p className={`text-lg mb-8 leading-relaxed ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
