@@ -519,8 +519,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
 
 
    return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" dir="rtl">
-      
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-emerald-100 from-slate-50 via-blue-50 to-indigo-100" dir="rtl">   
       {/* Modern Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
@@ -537,7 +536,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                   <Menu className="w-6 h-6 text-gray-700" />
                 </button>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                  יועץ תקציבי חכם
+                  kesefy
                 </h1>
                 <p className="text-sm text-gray-500">מנהל הכספים האישיים שלך</p>
               </div>
@@ -611,13 +610,13 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div>
-  <p className="text-sm text-gray-500 mb-1">הכנסות החודש</p>
-  <p className="text-2xl font-bold text-gray-900">₪{currentIncome.toLocaleString()}</p>
-  <p className={`text-xs flex items-center mt-2 ${incomeChangePctNum  >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-    <TrendingUp className="w-3 h-3 ml-1" />
-    {incomeChangePctNum  >= 0 ? '+' : ''}{incomeChangePct}% לעומת החודש הקודם
-  </p>
-</div>
+                    <p className="text-sm text-gray-500 mb-1">הכנסות החודש</p>
+                    <p className="text-2xl font-bold text-gray-900">₪{currentIncome.toLocaleString()}</p>
+                    <p className={`text-xs flex items-center mt-2 ${incomeChangePctNum  >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <TrendingUp className="w-3 h-3 ml-1" />
+                      {incomeChangePctNum  >= 0 ? '+' : ''}{incomeChangePct}% לעומת החודש הקודם
+                    </p>
+                  </div>
 
                   <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-white" />
@@ -680,6 +679,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                     <PieChartIcon className="w-4 h-4 text-white" />
                   </div>
                 </div>
+
               </div>
                 <div className="h-64 mb-6">
                   <ResponsiveContainer width="100%" height="100%">
@@ -934,7 +934,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                     onClick={() => setShowRecurringForm(!showRecurringForm)}
                   >
                     {showRecurringForm ? 'בטל' : '➕ הוסף הוראת קבע'}
-</button>
+                  </button>
                 </div>
 
                 {showRecurringForm && (
