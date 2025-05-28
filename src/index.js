@@ -13,9 +13,9 @@ import SmartBudgetLanding from './components/SmartBudgetLanding'
 import MonthlyBudgetUpdate from './components/MonthlyBudgetUpdate'
 import PrivacyPolicy from './policy/PrivacyPolicy';
 import TermsOfService from './policy/TermsOfService';
-
+import FeedbackPage from './pages/FeedbackPage';
 import { onAuthStateChanged } from 'firebase/auth';
-
+import { ToastContainer } from 'react-toastify';
 const container = document.getElementById('root');
 if (!container) throw new Error('Could not find root element');
 const root = createRoot(container);
@@ -47,21 +47,24 @@ function App() {
   if (!user) return <Login onLogin={setUser} />;
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage user={user} />} />
-        <Route path="/budget" element={<SavingsPage user={user} />} />
-        <Route path="/expense" element={<ExpenseTracker user={user} />} />
-        <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
-        <Route path="/advisor" element={<BudgetAdvisorPage user={user}/>} />
-        <Route path="/categoryManager" element={<CategoryManager user={user}/>} />
-        <Route path="/landing" element={<SmartBudgetLanding />} />
-        <Route path="/monthlyIncome" element={<MonthlyBudgetUpdate />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/terms-of-service" element={<TermsOfService />} />
-
-      </Routes>
-    </BrowserRouter>
+    <>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<HomePage user={user} />} />
+          <Route path="/budget" element={<SavingsPage user={user} />} />
+          <Route path="/expense" element={<ExpenseTracker user={user} />} />
+          <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
+          <Route path="/advisor" element={<BudgetAdvisorPage user={user}/>} />
+          <Route path="/categoryManager" element={<CategoryManager user={user}/>} />
+          <Route path="/landing" element={<SmartBudgetLanding />} />
+          <Route path="/monthlyIncome" element={<MonthlyBudgetUpdate />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
+        </Routes>
+      </BrowserRouter>
+      <ToastContainer position="top-center" />
+  </>
   );
 }
 
