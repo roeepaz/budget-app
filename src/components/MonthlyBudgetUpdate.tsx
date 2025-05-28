@@ -51,23 +51,31 @@ const [currentStep, setCurrentStep] = useState<Step>(
     }).format(value || 0);
   };
 
-  const calculateTotalIncome = (): number => {
-    return (
-      (parseFloat(incomeData.salary) || 0) +
-      (parseFloat(incomeData.freelance) || 0) +
-      (parseFloat(incomeData.passive) || 0) +
-      (parseFloat(incomeData.other) || 0)
-    );
-  };
+  const parseNumber = (val: string): number => parseFloat(val.replace(/,/g, '') || '0');
 
-  const handleIncomeChange = (field: keyof IncomeData, value: string): void => {
-    // Allow only numbers
-    const numericValue = value.replace(/[^\d]/g, '');
-    setIncomeData(prev => ({
-      ...prev,
-      [field]: numericValue
-    }));
-  };
+const calculateTotalIncome = (): number => {
+  return (
+    parseNumber(incomeData.salary) +
+    parseNumber(incomeData.freelance) +
+    parseNumber(incomeData.passive) +
+    parseNumber(incomeData.other)
+  );
+};
+
+
+  const handleIncomeChange = (field: keyof IncomeData, rawValue: string): void => {
+  // מסנן תווים לא מספריים
+  const numericOnly = rawValue.replace(/[^\d]/g, '');
+
+  // מוסיף פסיקים
+  const formatted = new Intl.NumberFormat('he-IL').format(Number(numericOnly));
+
+  setIncomeData(prev => ({
+    ...prev,
+    [field]: numericOnly ? formatted : ''
+  }));
+};
+
 const auth = getAuth();
 
 const goToAdvisor = async (): Promise<void> => {
