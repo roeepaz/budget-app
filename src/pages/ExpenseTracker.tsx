@@ -743,78 +743,74 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyData}>
-  <XAxis 
-    dataKey="month" 
-    axisLine={false}
-    tickLine={false}
-    tick={{ fontSize: 12, fill: '#6B7280' }}
-  />
-  <YAxis 
-    axisLine={false}
-    tickLine={false}
-    tick={{ fontSize: 12, fill: '#6B7280' }}
-  />
- <Tooltip
-  content={({ active, payload, label }) => {
-    if (!active || !payload || !payload.length) return null;
+                      <XAxis 
+                        dataKey="month" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || !payload.length) return null;
 
-    const expenses = payload.find(p => p.dataKey === 'expenses');
-    const income = payload.find(p => p.dataKey === 'income');
+                        const expenses = payload.find(p => p.dataKey === 'expenses');
+                        const income = payload.find(p => p.dataKey === 'income');
 
-    return (
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-        padding: '10px 16px',
-        direction: 'rtl',
-        fontFamily: 'inherit'
-      }}>
-        <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '8px' }}>{label}</div>
-        {expenses && (
-          <div style={{ color: '#EF4444', fontSize: '14px' }}>
-            הוצאות: ₪{expenses.value?.toLocaleString()}
-          </div>
-        )}
-        {income && (
-          <div style={{ color: '#10B981', fontSize: '14px' }}>
-            הכנסות: ₪{income.value?.toLocaleString()}
-          </div>
-        )}
-      </div>
-    );
-  }}
-/>
+                        return (
+                          <div style={{
+                            background: 'white',
+                            borderRadius: '12px',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+                            padding: '10px 16px',
+                            direction: 'rtl',
+                            fontFamily: 'inherit'
+                          }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '8px' }}>{label}</div>
+                            {expenses && (
+                              <div style={{ color: '#EF4444', fontSize: '14px' }}>
+                                הוצאות: ₪{expenses.value?.toLocaleString()}
+                              </div>
+                            )}
+                            {income && (
+                              <div style={{ color: '#10B981', fontSize: '14px' }}>
+                                הכנסות: ₪{income.value?.toLocaleString()}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }}
+                    />
+                      <Bar
+                      dataKey="expenses"
+                      radius={[6, 6, 0, 0]}
+                      barSize={30}
+                      fill="#EF4444"
+                      onClick={(data) => {
+                        const clickedIndex = monthNames.findIndex(m => m === data.month);
+                        if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
+                      }}
+                    />
+                    <Bar
+                      dataKey="income"
+                      radius={[6, 6, 0, 0]}
+                      barSize={20}
+                      fill="#10B981"
+                      onClick={(data) => {
+                        const clickedIndex = monthNames.findIndex(m => m === data.month);
+                        if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
+                      }}
+                    />
 
-  <Legend 
-    formatter={(value: string) => (value === 'expenses' ? 'הוצאות' : 'הכנסות')}
-  />
-  
-  <Bar
-    dataKey="expenses"
-    name="הוצאות"
-    radius={[6, 6, 0, 0]}
-    barSize={30}
-    fill="#EF4444"
-    onClick={(data) => {
-      const clickedIndex = monthNames.findIndex(m => m === data.month);
-      if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
-    }}
-  />
-  
-  <Bar
-    dataKey="income"
-    name="הכנסות"
-    radius={[6, 6, 0, 0]}
-    barSize={20}
-    fill="#10B981"
-    onClick={(data) => {
-      const clickedIndex = monthNames.findIndex(m => m === data.month);
-      if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
-    }}
-  />
-</BarChart>
+                    <Legend 
+                      formatter={(value: string) => value === 'expenses' ? 'הוצאות' : 'הכנסות'}
+                    />
 
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
