@@ -27,7 +27,12 @@ export default function HomePage({ user }) {
   const navigate = useNavigate();
   const auth = getAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+const [showAllCategories, setShowAllCategories] = useState(false);
 
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
   const {
     categories,
     expenses,
@@ -36,6 +41,12 @@ export default function HomePage({ user }) {
     loading,
     addExpenseToDB
   } = useUserData(user?.uid);
+  
+    const currentMonthExpenses = expenses.filter(exp => {
+      const d = new Date(exp.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+const totalExpensesThisMonth = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   useEffect(() => {
     if (!loading && categories.length === 0) {
@@ -108,7 +119,7 @@ useEffect(() => {
   ];
 
   // חישוב סטטיסטיקות
-  const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+const totalExpenses = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const monthlyExpenses = expenses.filter(exp => {
     const expDate = new Date(exp.date);
     const now = new Date();
@@ -207,6 +218,19 @@ const getCategoryBudgetAlerts = () => {
 
   return { overLimit, nearLimit };
 };
+const categoriesWithExpenses = displayCategories.map(category => {
+  const categoryExpenses = currentMonthExpenses
+    .filter(exp => String(exp.categoryId) === String(category.id))
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
+  return {
+    ...category,
+    total: categoryExpenses,
+    percentage: totalExpensesThisMonth
+      ? (categoryExpenses / totalExpensesThisMonth) * 100
+      : 0
+  };
+}).sort((a, b) => b.total - a.total); // סדר יורד לפי סכום
 
   if (loading) {
     return (
@@ -269,28 +293,25 @@ const getCategoryBudgetAlerts = () => {
               </div>
             </div>
 
-{/* ניצול תקציב */}
-<div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-green-500">
-  <div className="flex items-center justify-between">
-    <div>
-      <p className="text-gray-600 text-sm font-medium">ניצול תקציב</p>
-      <p className="text-xl lg:text-2xl font-bold text-gray-800">
-        {budgetUsedPercentage}%
-      </p>
-      <p className={`text-xs mt-1 ${totalSpent > totalBudget ? 'text-red-600' : 'text-gray-500'}`}>
-        {totalSpent > totalBudget
-          ? `חריגה של ₪${(totalSpent - totalBudget).toFixed(2)}`
-          : `נותרו ₪${(totalBudget - totalSpent).toFixed(2)} לניצול`}
-      </p>
-    </div>
-    <div className="p-2 lg:p-3 bg-green-100 rounded-lg">
-      <Wallet className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
-    </div>
-  </div>
-</div>
-
-
-
+            {/* ניצול תקציב */}
+            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-green-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-600 text-sm font-medium">ניצול תקציב</p>
+                  <p className="text-xl lg:text-2xl font-bold text-gray-800">
+                    {budgetUsedPercentage}%
+                  </p>
+                  <p className={`text-xs mt-1 ${totalSpent > totalBudget ? 'text-red-600' : 'text-gray-500'}`}>
+                    {totalSpent > totalBudget
+                      ? `חריגה של ₪${(totalSpent - totalBudget).toFixed(2)}`
+                      : `נותרו ₪${(totalBudget - totalSpent).toFixed(2)} לניצול`}
+                  </p>
+                </div>
+                <div className="p-2 lg:p-3 bg-green-100 rounded-lg">
+                  <Wallet className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
+                </div>
+              </div>
+            </div>
 
             {/* חובות */}
             <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-orange-500">
@@ -312,41 +333,73 @@ const getCategoryBudgetAlerts = () => {
           {/* תרשימים ונתונים נוספים */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* הוצאות לפי קטגוריות */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <PieIcon className="w-6 h-6 text-blue-600" />
-                הוצאות לפי קטגוריות
-              </h3>
-              {categories.length > 0 ? (
-                <div className="space-y-3">
-                  {categories.slice(0, 5).map((category) => {
-                    const categoryExpenses = expenses
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <PieIcon className="w-6 h-6 text-blue-600" />
+              הוצאות לפי קטגוריות
+            </h3>
+
+            {displayCategories.length > 0 ? (
+              <>
+                {(() => {
+                  const categoriesWithExpenses = displayCategories.map(category => {
+                    const categoryExpenses = currentMonthExpenses
                       .filter(exp => String(exp.categoryId) === String(category.id))
                       .reduce((sum, exp) => sum + exp.amount, 0);
 
-                    const percentage = totalExpenses ? (categoryExpenses / totalExpenses) * 100 : 0;
-                    
-                    return (
-                      <div key={category.id} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: category.color }}
-                          />
-                          <span className="text-gray-700 font-medium text-sm lg:text-base">{category.name}</span>
+                    return {
+                      ...category,
+                      total: categoryExpenses,
+                      percentage: totalExpensesThisMonth
+                        ? (categoryExpenses / totalExpensesThisMonth) * 100
+                        : 0
+                    };
+                  }).sort((a, b) => b.total - a.total); // מיון יורד
+
+                  const visibleCategories = showAllCategories
+                    ? categoriesWithExpenses
+                    : categoriesWithExpenses.slice(0, 5);
+
+                  return (
+                    <div className="space-y-3">
+                      {visibleCategories.map(category => (
+                        <div key={category.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-4 h-4 rounded-full"
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span className="text-gray-700 font-medium text-sm lg:text-base">
+                              {category.name}
+                            </span>
+                          </div>
+                          <div className="text-left">
+                            <span className="text-gray-800 font-bold text-sm lg:text-base">
+                              ₪{category.total.toLocaleString()}
+                            </span>
+                            <span className="text-gray-500 text-xs lg:text-sm mr-2">
+                              ({category.percentage.toFixed(1)}%)
+                            </span>
+                          </div>
                         </div>
-                        <div className="text-left">
-                          <span className="text-gray-800 font-bold text-sm lg:text-base">₪{categoryExpenses.toLocaleString()}</span>
-                          <span className="text-gray-500 text-xs lg:text-sm mr-2">({percentage.toFixed(1)}%)</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו קטגוריות</p>
-              )}
-            </div>
+                      ))}
+
+                      {categoriesWithExpenses.length > 5 && (
+                        <button
+                          className="text-sm text-blue-600 hover:underline mt-2"
+                          onClick={() => setShowAllCategories(prev => !prev)}
+                        >
+                          {showAllCategories ? 'הצג פחות' : 'הצג עוד'}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
+              </>
+            ) : (
+              <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו קטגוריות</p>
+            )}
+          </div>
 
             {/* יעדים פעילים */}
             <div className="bg-white rounded-xl shadow-lg p-6">
