@@ -22,12 +22,17 @@ import {
 } from 'lucide-react';
 import { AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
+import { Dialog } from '@headlessui/react';
+import FeedbackForm from '../components/FeedbackForm';
+import { MessageSquare } from 'lucide-react';
+
 export default function HomePage({ user }) {
   const navigate = useNavigate();
   const auth = getAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
-  
+    const [isOpen, setIsOpen] = useState(false);
+
   
   const now = new Date();
   const currentMonth = now.getMonth();
@@ -286,6 +291,35 @@ const categoriesWithExpenses = displayCategories.map(category => {
               לוח הבקרה שלך
             </h1>
             <p className="text-gray-600 text-base lg:text-lg">באהבה מרועי פז 🎓</p>
+             <button
+              onClick={() => setIsOpen(true)}
+              className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2"
+            >
+              <MessageSquare className="w-5 h-5" />
+              משוב
+            </button>
+
+     {/* מודל המשוב */}
+    <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed z-50 inset-0">
+      {/* הצללה אחורית */}
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" />
+
+      {/* תוכן המודל במרכז המסך */}
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <Dialog.Panel className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden z-10">
+          <div className="p-4 flex justify-between items-center border-b">
+            <h3 className="text-lg font-bold">משוב למערכת</h3>
+            <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-red-500 text-sm">
+              ✖ סגור
+            </button>
+          </div>
+          <div className="p-6">
+            <FeedbackForm />
+          </div>
+        </Dialog.Panel>
+      </div>
+    </Dialog>
+
           </div>
 
           {/* כרטיסי סיכום */}
