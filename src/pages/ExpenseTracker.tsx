@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home, Calendar, Target, CreditCard, TrendingUp, Filter, Search } from 'lucide-react';
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
@@ -26,7 +26,9 @@ const [recurringForm, setRecurringForm] = useState({
   // State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'categories'>('dashboard');
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
-  const selectedYear = 2025;
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: currentYear - 2020 + 1 }, (_, i) => 2020 + i);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [categories, setCategories] = useState<Category[]>(defaultCategories);
@@ -34,6 +36,7 @@ const [recurringForm, setRecurringForm] = useState({
   const [debts, setDebts] = useState<Debt[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loadError, setLoadError] = useState<boolean>(false);
+
   // Form state
   const [newExpense, setNewExpense] = useState({
     amount: '',         // Use empty string for form input
@@ -52,14 +55,15 @@ const [recurringForm, setRecurringForm] = useState({
   // All possible tags - FIXED: include 'savings'
   const tags: CategoryTag[] = ['need', 'want', 'debt', 'emergency', 'goal', 'savings'];
   
-  const tagColors: Record<CategoryTag, string> = {
-    need:      '#3B82F6', // blue
-    want:      '#10B981', // green
-    debt:      '#F59E0B', // yellow
-    emergency: '#FF6384', // red
-    goal:      '#8B5CF6', // purple
-    savings:   '#36A2EB'  // light blue
-  };
+const tagColors: Record<CategoryTag, string> = {
+  need:      '#3B82F6', // כחול
+  want:      '#EF4444', // אדום
+  debt:      '#F59E0B', // צהוב
+  emergency: '#10B981', // ירוק
+  goal:      '#8B5CF6', // סגול
+  savings:   '#6366F1'  // כחול-סגול שונה מ־need
+};
+;
 
   const userId = user?.uid;
   const [loading, setLoading] = useState<boolean>(true);
@@ -105,6 +109,7 @@ const [recurringForm, setRecurringForm] = useState({
 
 
           setExpenses(data.expenses || []);
+          setRecurringExpenses(data.recurringExpenses || [])
         }
         // Load debts & goals from financial_data/{uid}
         const finSnap = await getDoc(doc(db, 'financial_data', userId));
@@ -230,9 +235,14 @@ useEffect(() => {
 
   const displayCategories = [...visibleCategories, ...dynamicCats];
   const displayCategoriesWithTheHidden = [...categories, ...dynamicCats];
+  
+const [showByTag, setShowByTag] = useState(false);
 
   // Filter expenses for current month
-  const filteredExpenses = expenses.filter(exp => new Date(exp.date).getMonth() === selectedMonth);
+const filteredExpenses = expenses.filter(exp => {
+  const date = new Date(exp.date);
+  return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+});
 
   // Add expense handler - also updates debts/goals if needed
   const handleAddExpense = () => {
@@ -294,7 +304,7 @@ useEffect(() => {
   };
 
   // Filter and sort expenses
-  const filtered = expenses
+  const filtered = filteredExpenses
     .filter(e => new Date(e.date).getMonth() === selectedMonth)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -302,8 +312,8 @@ useEffect(() => {
   const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
   
   // Compute expenses by category
-  const expensesByCategory = displayCategories.map(cat => {
-    const total = filtered
+  const expensesByCategory = displayCategoriesWithTheHidden.map(cat => {
+    const total = filteredExpenses
       .filter(e => String(e.categoryId) === String(cat.id)) // Convert both to string for comparison
       .reduce((sum, e) => sum + e.amount, 0);
     
@@ -409,7 +419,7 @@ const handleDeleteRecurring = (id: string) => {
   type TagSum = { tag: CategoryTag; sum: number };
 
   // 1. בונים מפה של סכומים לפי tag  
-  const tagMap = displayCategories.reduce<Record<CategoryTag, number>>((acc, cat) => {
+  const tagMap = displayCategoriesWithTheHidden.reduce<Record<CategoryTag, number>>((acc, cat) => {
     const catData = expensesByCategory.find(c => c.name === cat.name);
     if (catData && catData.value > 0) {
       acc[cat.tag] = (acc[cat.tag] || 0) + catData.value;
@@ -441,491 +451,631 @@ const handleDeleteRecurring = (id: string) => {
     </div>
   );
 }
-  return (
-    <div className="flex flex-col h-screen bg-gray-50" dir="rtl">
-      {/* Header */}
-      <header className="bg-blue-600 text-white p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold flex items-center">
-            <Home className="ml-2" /> מנהל הוצאות
-          </h1>
-          <div className="text-sm bg-blue-700 px-3 py-1 rounded-lg">
-            <h2 className="text-xl font-semibold mb-4">סיכום הוצאות עבור {monthNames[selectedMonth]}</h2>
-            סך הכל: ₪{totalExpenses.toFixed(2)}
+const tagIcons: Record<CategoryTag, string> = {
+  need: '🛒',
+  want: '🎉',
+  debt: '💳',
+  emergency: '🛡️',
+  goal: '🎯',
+  savings: '💰'
+};
+const tagLabels: Record<CategoryTag, string> = {
+  need: 'הוצאות בסיס',
+  want: 'רצונות',
+  savings: 'חיסכון',
+  emergency: 'חירום',
+  goal: 'מטרה',
+  debt: 'חוב'
+};
+const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
+  name: tagLabels[tag],
+  icon: tagIcons[tag],
+  color: tagColors[tag],
+  value: sum,
+  percentage: pct
+}));
+
+
+   return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" dir="rtl">
+      {/* Modern Header */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4 space-x-reverse">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <Home className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                  יועץ תקציבי חכם
+                </h1>
+                <p className="text-sm text-gray-500">מנהל הכספים האישיים שלך</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-4 space-x-reverse">
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-2xl shadow-lg">
+                <div className="text-center text-black">
+                <div className="text-sm opacity-90">סה"כ החודש</div>
+                <div className="text-xl font-bold">₪{totalExpenses.toLocaleString()}</div>
+              </div>
+              </div>
+              <select
+                className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+              >
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <select 
+                className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+              >
+                {monthNames.map((month, idx) => (
+                  <option key={idx} value={idx}>{month} {selectedYear}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </header>
-      
-      {/* Navigation */}
-      <nav className="bg-white shadow-md">
-        <div className="container mx-auto flex">
-          <button 
-            className={`px-4 py-3 font-medium text-sm flex items-center ${activeTab === 'dashboard' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <BarChart3 className="ml-2 w-4 h-4" /> לוח נתונים
-          </button>
-          <button 
-            className={`px-4 py-3 font-medium text-sm flex items-center ${activeTab === 'expenses' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('expenses')}
-          >
-            <Plus className="ml-2 w-4 h-4" /> הוסף הוצאה
-          </button>
+
+      {/* Modern Navigation */}
+      <nav className="bg-white/70 backdrop-blur-sm border-b border-white/30">
+        <div className="container mx-auto px-6">
+          <div className="flex space-x-1 space-x-reverse">
+            {[
+              { id: 'dashboard', label: 'לוח בקרה', icon: BarChart3 },
+              { id: 'expenses', label: 'הוצאות', icon: Plus },
+            ].map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  className={`px-6 py-4 font-medium text-sm flex items-center space-x-2 space-x-reverse transition-all duration-200 relative ${
+                    activeTab === tab.id 
+                      ? 'text-blue-600 bg-white/60 rounded-t-xl border-b-2 border-blue-600' 
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/30 rounded-t-xl'
+                  }`}
+                  onClick={() => setActiveTab(tab.id as any)}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </nav>
-      
+
       {/* Main Content */}
-      <main className="flex-1 overflow-auto p-4">
-        <div className="container mx-auto">
-          {/* Dashboard Tab */}
-          {activeTab === 'dashboard' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Categories Distribution */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">חלוקה לקטגוריות</h2>
-                <div className="flex items-center justify-center h-64">
+      <main className="container mx-auto px-6 py-8">
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">הכנסות החודש</p>
+                    <p className="text-2xl font-bold text-gray-900">להכין</p>
+                    <p className="text-xs text-emerald-600 flex items-center mt-2">
+                      <TrendingUp className="w-3 h-3 ml-1" />
+                      +12% מהחודש שעבר נתון שקר
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">הוצאות החודש</p>
+                    <p className="text-2xl font-bold text-gray-900">₪{totalExpenses.toLocaleString()}</p>
+                    <p className="text-xs text-orange-600 flex items-center mt-2">
+                      <Target className="w-3 h-3 ml-1" />
+                      {((totalExpenses / 15000) * 100).toFixed(1)}% מהתקציב
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-red-500 rounded-xl flex items-center justify-center">
+                    <Target className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              </div>
+
+
+
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">הוראות קבע</p>
+                    <p className="text-2xl font-bold text-gray-900">{recurringExpenses.length}</p>
+                    <p className="text-xs text-purple-600 flex items-center mt-2">
+                      <Calendar className="w-3 h-3 ml-1" />
+                      פעילות השבוע
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-500 rounded-xl flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Category Distribution */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg">
+                <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">
+                  {showByTag ? 'פילוח לפי תגיות' : 'פילוח לפי קטגוריות'}
+                </h2>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <button
+                    onClick={() => setShowByTag(prev => !prev)}
+                    className="text-sm text-blue-600 hover:text-blue-800 border border-blue-100 px-3 py-1 rounded-xl transition"
+                  >
+                    {showByTag ? 'הצג לפי קטגוריה' : 'הצג לפי תגית'}
+                  </button>
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
+                    <PieChartIcon className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+              </div>
+                <div className="h-64 mb-6">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={expensesByCategory.filter(cat => cat.value > 0)}
+                        data={showByTag ? byTagForChart : expensesByCategory}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
                         outerRadius={80}
-                        fill="#8884d8"
+                        innerRadius={40}
+                        paddingAngle={5}
                         dataKey="value"
-                        //label={({name, percentage}) => `${name}: ${percentage}%`}
                       >
-                        {expensesByCategory.map((entry, index) => (
+                        {(showByTag ? byTagForChart : expensesByCategory).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => `₪${value}`} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4">
-                  {expensesByCategory
-                    .filter(cat => cat.value > 0)
-                    .sort((a, b) => b.value - a.value)
-                    .map(category => (
-                      <div key={category.name} className="flex items-center justify-between py-2 border-b">
-                        <div className="flex items-center">
-                          <span className="ml-2">{category.icon}</span>
-                          <span>{category.name}</span>
-                        </div>
-                        <div className="flex items-center">
-                          <span className="font-medium">₪{category.value.toFixed(2)}</span>
-                          <span className="mr-2 text-sm text-gray-500">({category.percentage}%)</span>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-              
-              {/* Tag Distribution */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">חלוקה לסוגי הוצאה</h2>
-                <div className="flex items-center justify-center h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={byTagWithPct}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        dataKey="sum"
-            
-                        labelLine={false}
-                      >
-                        {byTagWithPct.map((entry, i) => (
-                          <Cell key={i} fill={tagColors[entry.tag]} />
-                        ))}
-                      </Pie>
+
                       <Tooltip 
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length > 0) {
-                            const data = payload[0].payload;
-                            const tagNames: Record<CategoryTag, string> = {
-                              need: 'צרכים',
-                              want: 'רצונות',
-                              debt: 'חובות',
-                              emergency: 'קרן חירום',
-                              goal: 'מטרות',
-                              savings: 'חסכונות'
-                            };
-                            return (
-                              <div className="bg-white border rounded shadow-md px-3 py-2 text-sm text-gray-800">
-                                <div className="font-medium">{tagNames[data.tag as CategoryTag]}</div>
-                                <div>₪{data.sum.toFixed(2)}</div>
-                              </div>
-                            );
-                          }
-                          return null;
+                        formatter={(value: any) => [`₪${value}`, 'סכום']}
+                        contentStyle={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          border: 'none',
+                          borderRadius: '12px',
+                          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)'
                         }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
 
-                <div className="mt-4">
-                  {byTagWithPct.map(t => {
-                    // Translate tag names to Hebrew
-                    const tagNames: Record<CategoryTag, string> = {
-                      need: 'צרכים',
-                      want: 'רצונות',
-                      debt: 'חובות',
-                      emergency: 'קרן חירום',
-                      goal: 'מטרות',
-                      savings: 'חסכונות'
-                    };
-                    
-                    return (
-                      <div key={t.tag} className="flex items-center justify-between py-2 border-b">
-                        <span>{tagNames[t.tag]}</span>
-                        <div className="flex items-center">
-                          <span className="font-medium">₪{t.sum.toFixed(2)}</span>
-                          <span className="mr-2 text-sm text-gray-500">({t.pct}%)</span>
+                <div className="space-y-3">
+                  {(showByTag ? byTagForChart : expensesByCategory)
+                    .sort((a, b) => b.value - a.value)
+                    .map((item, index) => (
+                      <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-xl">
+                        <div className="flex items-center space-x-3 space-x-reverse">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="text-sm">{item.icon ?? ''}</span>
+                          <span className="font-medium text-gray-900">{item.name}</span>
                         </div>
+                        <div className="text-left">
+                          <div className="font-bold text-gray-900">₪{item.value.toLocaleString()}</div>
+                          <div className="text-xs text-gray-500">{item.percentage}%</div>
+                        </div>
+                      </div>
+                  ))}
+                </div>
+
+              </div>
+
+              {/* Monthly Trend */}
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">מגמה חודשית</h2>
+                  <div className="w-8 h-8 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+                
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyData}>
+                      <XAxis 
+                        dataKey="month" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                      <Tooltip 
+                        formatter={(value: any) => [`₪${value}`, 'סכום']}
+                        contentStyle={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          border: 'none',
+                          borderRadius: '12px',
+                          boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)'
+                        }}
+                      />
+                      <Bar
+                        dataKey="amount"
+                        radius={[6, 6, 0, 0]}
+                        onClick={(data) => {
+                          const clickedIndex = monthNames.findIndex(m => m === data.month);
+                          if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
+                        }}
+                      >
+                        {monthlyData.map((entry, index) => (
+                          <Cell
+                            key={`bar-${index}`}
+                            fill={index === selectedMonth ? '#1D4ED8' : 'url(#colorGradient)'}
+                            cursor="pointer"
+                          />
+                        ))}
+                      </Bar>
+                      <defs>
+                        <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.9}/>
+                          <stop offset="95%" stopColor="#1E40AF" stopOpacity={0.7}/>
+                        </linearGradient>
+                      </defs>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Transactions */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">הוצאות אחרונות</h2>
+                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center space-x-1 space-x-reverse">
+                  <span>צפה בהכל</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {expenses
+                  .filter(expense => {
+                    const date = new Date(expense.date);
+                    return date.getMonth() === selectedMonth && date.getFullYear() === selectedYear;
+                  })
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .slice(0, 5)
+                  .map(expense => {
+                    const category = displayCategoriesWithTheHidden.find(c => String(c.id) === String(expense.categoryId));
+                    return (
+                      <div key={expense.id} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-colors">
+                        <div className="flex items-center space-x-4 space-x-reverse">
+                          <div 
+                            className="w-12 h-12 rounded-xl flex items-center justify-center text-lg"
+                            style={{ backgroundColor: `${category?.color}20`, color: category?.color }}
+                          >
+                            {category?.icon}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{expense.description}</div>
+                            <div className="text-sm text-gray-500">{category?.name} • {expense.date}</div>
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-bold text-gray-900">₪{expense.amount.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'expenses' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Add Expense Form */}
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">הוסף הוצאה חדשה</h2>
+              
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">סכום (₪)</label>
+                  <input 
+                    type="number" 
+                    className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50"
+                    value={newExpense.amount}
+                    onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">קטגוריה</label>
+                  <select
+                    className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50"
+                    value={newExpense.categoryId}
+                    onChange={(e) => setNewExpense({ ...newExpense, categoryId: e.target.value })}
+                  >
+                    <option value="">בחר קטגוריה</option>
+                    {displayCategories.map(category => (
+                      <option key={String(category.id)} value={String(category.id)}>
+                        {category.icon} {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">תיאור</label>
+                  <input 
+                    type="text" 
+                    className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50"
+                    value={newExpense.description}
+                    onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                    placeholder="תיאור ההוצאה"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">תאריך</label>
+                  <input 
+                    type="date" 
+                    className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50"
+                    value={newExpense.date}
+                    onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+                  />
+                </div>
+                
+                <button 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 flex items-center justify-center space-x-2 space-x-reverse font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                  onClick={handleAddExpense}
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>הוסף הוצאה</span>
+                </button>
+              </div>
+
+              {/* Recurring Expenses Section */}
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">הוראות קבע</h3>
+                  <button
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-emerald-600 hover:to-teal-700 text-sm font-medium transition-all duration-200"
+                    onClick={() => setShowRecurringForm(!showRecurringForm)}
+                  >
+                    {showRecurringForm ? 'בטל' : '➕ הוסף הוראת קבע'}
+</button>
+                </div>
+
+                {showRecurringForm && (
+                  <div className="space-y-4 p-4 bg-gray-50/50 rounded-xl mb-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      <input
+                        type="number"
+                        placeholder="סכום (₪)"
+                        className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                        value={recurringForm.amount}
+                        onChange={(e) => setRecurringForm({...recurringForm, amount: e.target.value})}
+                      />
+                      
+                      <input
+                        type="text"
+                        placeholder="תיאור"
+                        className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                        value={recurringForm.description}
+                        onChange={(e) => setRecurringForm({...recurringForm, description: e.target.value})}
+                      />
+                      
+                      <select
+                        className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                        value={recurringForm.categoryId}
+                        onChange={(e) => setRecurringForm({...recurringForm, categoryId: e.target.value})}
+                      >
+                        <option value="">בחר קטגוריה</option>
+                        {displayCategories.map(category => (
+                          <option key={String(category.id)} value={String(category.id)}>
+                            {category.icon} {category.name}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">יום בחודש</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="31"
+                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                            value={recurringForm.dayOfMonth}
+                            onChange={(e) => setRecurringForm({...recurringForm, dayOfMonth: Number(e.target.value)})}
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">תאריך התחלה</label>
+                          <input
+                            type="date"
+                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                            value={recurringForm.startDate}
+                            onChange={(e) => setRecurringForm({...recurringForm, startDate: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">תאריך סיום (אופציונלי)</label>
+                        <input
+                          type="date"
+                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                          value={recurringForm.endDate}
+                          onChange={(e) => setRecurringForm({...recurringForm, endDate: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={handleAddRecurring}
+                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-3 rounded-lg hover:from-emerald-600 hover:to-teal-700 font-medium"
+                    >
+                      שמור הוראת קבע
+                    </button>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {recurringExpenses.map(recurring => {
+                    const category = displayCategories.find(c => String(c.id) === String(recurring.categoryId));
+                    return (
+                      <div key={recurring.id} className="flex items-center justify-between p-3 bg-gray-50/50 rounded-lg">
+                        <div className="flex items-center space-x-3 space-x-reverse">
+                          <div className="text-lg">{category?.icon}</div>
+                          <div>
+                            <div className="font-medium text-sm">{recurring.description}</div>
+                            <div className="text-xs text-gray-500">
+                              ₪{recurring.amount} • {recurring.dayOfMonth} בחודש
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteRecurring(recurring.id)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     );
                   })}
                 </div>
               </div>
-              
-              {/* Monthly Trend */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">טרנד חודשי</h2>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={monthlyData} 
-                      onClick={(data) => {
-                        if (data?.activeLabel) {
-                          const monthIndex = monthNames.indexOf(data.activeLabel);
-                          if (monthIndex !== -1) {
-                            setSelectedMonth(monthIndex);
-                          }
-                        }
-                      }}
-                    >
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip formatter={(value) => `₪${value}`} />
-                      <Bar dataKey="amount" fill="#4F46E5" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4">
-                  <h3 className="font-medium text-gray-700">סטטיסטיקה מהירה</h3>
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <div className="bg-blue-50 p-3 rounded">
-                      <div className="text-sm text-gray-500">ממוצע יומי</div>
-                      <div className="font-medium">₪{(totalExpenses / 30).toFixed(2)}</div>
-                    </div>
-                    <div className="bg-green-50 p-3 rounded">
-                      <div className="text-sm text-gray-500">קטגוריה מובילה</div>
-                      <div className="font-medium">
-                        {expensesByCategory.sort((a, b) => b.value - a.value)[0]?.name || 'אין'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Recent Transactions */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">הוצאות לחודש הנוכחי</h2>
-                <div className="h-64 overflow-y-auto">
-                  <div className="min-h-full flex flex-col">
-                    <table className="min-w-full divide-y divide-gray-200 flex-grow">
-                      <thead className="bg-gray-50 sticky top-0 z-10">
-                        <tr>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">קטגוריה</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תיאור</th>
-                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">סכום</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {expenses
-                          .filter(expense => {
-                            const date = new Date(expense.date);
-                            return (
-                              date.getMonth() === selectedMonth &&
-                              date.getFullYear() === selectedYear
-                            );
-                          })
-                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                          .map(expense => {
-                            const category = displayCategoriesWithTheHidden.find(c => String(c.id) === String(expense.categoryId));
-                            return (
-                              <tr key={expense.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.date}</td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <span className="ml-2" style={{ color: category?.color }}>
-                                      {category?.icon}
-                                    </span>
-                                    <span className="text-sm font-medium">{category?.name}</span>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.description}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">₪{expense.amount.toFixed(2)}</td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
             </div>
-          )}
-          
-          {/* Add Expenses Tab */}
-          {activeTab === 'expenses' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Add Form */}
-              <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-semibold mb-4">הוסף הוצאה חדשה</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">סכום (₪)</label>
-                    <input 
-                      type="number" 
-                      className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                      value={newExpense.amount}
-                      onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
-                      placeholder="0.00"
-                    />
+
+            {/* Expenses List */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    הוצאות {monthNames[selectedMonth]} ({filteredExpenses.length})
+                  </h2>
+                  <div className="flex items-center space-x-4 space-x-reverse">
+                    <div className="text-sm text-gray-500">
+                      סה"כ: <span className="font-bold text-gray-900">₪{totalExpenses.toLocaleString()}</span>
+                    </div>
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">קטגוריה</label>
-                    <select
-                      className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                      value={newExpense.categoryId}
-                      onChange={(e) => setNewExpense({ ...newExpense, categoryId: e.target.value })}
-                    >
-                      <option value="">בחר קטגוריה</option>
-                      {displayCategories.map(category => (
-                        <option key={String(category.id)} value={String(category.id)}>
-                          {category.icon} {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
-                    <input 
-                      type="text" 
-                      className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                      value={newExpense.description}
-                      onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
-                      placeholder="תיאור ההוצאה"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">תאריך</label>
-                    <input 
-                      type="date" 
-                      className="w-full p-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                      value={newExpense.date}
-                      onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
-                    />
-                  </div>
-                  
-                  <button 
-                    className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 flex items-center justify-center"
-                    onClick={handleAddExpense}
-                  >
-                    <Plus className="ml-2 w-4 h-4" /> הוסף הוצאה
-                  </button>
                 </div>
-                {/* Recurring Expenses Section */}
-                <div className="bg-white p-6 rounded-lg shadow-md mt-6">
-                  <h2 className="text-xl font-semibold mb-4">הוראות קבע</h2>
-                  <button
-                    className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                    onClick={() => setShowRecurringForm(!showRecurringForm)}
-                  >
-                    {showRecurringForm ? 'בטל' : '➕ הוסף הוראת קבע'}
-                  </button>
 
-                  {showRecurringForm && (
-  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-    {/* תיאור */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">תיאור</label>
-      <input
-        type="text"
-        placeholder="למשל: ביטוח"
-        className="w-full border p-2 rounded"
-        value={recurringForm.description}
-        onChange={(e) => setRecurringForm({ ...recurringForm, description: e.target.value })}
-      />
-    </div>
-
-    {/* סכום */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">סכום (₪)</label>
-      <input
-        type="number"
-        min={0}
-        className="w-full border p-2 rounded"
-        value={recurringForm.amount}
-        onChange={(e) => setRecurringForm({ ...recurringForm, amount: e.target.value })}
-      />
-    </div>
-
-    {/* קטגוריה */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">קטגוריה</label>
-      <select
-        className="w-full border p-2 rounded"
-        value={recurringForm.categoryId}
-        onChange={(e) => setRecurringForm({ ...recurringForm, categoryId: e.target.value })}
-      >
-        <option value="">בחר קטגוריה</option>
-        {displayCategories.map(category => (
-          <option key={category.id} value={String(category.id)}>
-            {category.icon} {category.name}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    {/* יום בחודש */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">יום בחודש (1–28)</label>
-      <input
-        type="number"
-        min={1}
-        max={28}
-        className="w-full border p-2 rounded"
-        value={recurringForm.dayOfMonth}
-        onChange={(e) => setRecurringForm({ ...recurringForm, dayOfMonth: Number(e.target.value) })}
-      />
-    </div>
-
-    {/* תאריך התחלה */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">תאריך התחלה</label>
-      <input
-        type="date"
-        className="w-full border p-2 rounded"
-        value={recurringForm.startDate}
-        onChange={(e) => setRecurringForm({ ...recurringForm, startDate: e.target.value })}
-      />
-    </div>
-
-    {/* תאריך סיום */}
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">תאריך סיום (לא חובה)</label>
-      <input
-        type="date"
-        className="w-full border p-2 rounded"
-        value={recurringForm.endDate}
-        onChange={(e) => setRecurringForm({ ...recurringForm, endDate: e.target.value })}
-      />
-    </div>
-
-    {/* כפתור */}
-    <button
-      className="bg-blue-600 text-white px-4 py-2 rounded col-span-2 hover:bg-blue-700"
-      onClick={handleAddRecurring}
-    >
-      שמור הוראת קבע
-    </button>
-  </div>
-)}
-
-
-                  {/* רשימת הוראות קבע קיימות */}
-                  <div className="mt-6">
-                    {recurringExpenses.length === 0 ? (
-                      <p className="text-gray-500">אין הוראות קבע</p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {recurringExpenses.map(re => (
-                          <li key={re.id} className="flex justify-between items-center border p-3 rounded">
-                            <div>
-                              <div className="font-medium">{re.description}</div>
-                              <div className="text-sm text-gray-500">
-                                ₪{re.amount} | כל חודש ב־{re.dayOfMonth} לחודש | מ־{re.startDate}
+                {filteredExpenses.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CreditCard className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">אין הוצאות</h3>
+                    <p className="text-gray-500">הוסף הוצאות כדי לראות אותן כאן</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredExpenses
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .map(expense => {
+                        const category = displayCategoriesWithTheHidden.find(c => String(c.id) === String(expense.categoryId));
+                        return (
+                          <div key={expense.id} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-xl hover:bg-gray-100/50 transition-colors group">
+                            <div className="flex items-center space-x-4 space-x-reverse">
+                              <div 
+                                className="w-12 h-12 rounded-xl flex items-center justify-center text-lg"
+                                style={{ backgroundColor: `${category?.color}20`, color: category?.color }}
+                              >
+                                {category?.icon}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{expense.description}</div>
+                                <div className="text-sm text-gray-500">
+                                  {category?.name} • {new Date(expense.date).toLocaleDateString('he-IL')}
+                                </div>
                               </div>
                             </div>
-                            <button
-                              className="text-red-600 hover:text-red-800 text-sm"
-                              onClick={() => handleDeleteRecurring(re.id)}
-                            >
-                              מחק
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                            <div className="flex items-center space-x-3 space-x-reverse">
+                              <div className="text-left">
+                                <div className="font-bold text-gray-900">₪{expense.amount.toLocaleString()}</div>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteExpense(expense.id)}
+                                className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 p-2 transition-all duration-200"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">פילוח לפי תגיות</h3>
+                  <div className="space-y-3">
+                    {byTagWithPct.map(({ tag, sum, pct }) => (
+                      <div key={tag} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: tagColors[tag] }}
+                          />
+                          <span className="text-sm capitalize">{tag}</span>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-medium">₪{sum.toLocaleString()}</div>
+                          <div className="text-xs text-gray-500">{pct}%</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-              </div>
-              
-              {/* Expense List */}
-              <div className="bg-white p-6 rounded-lg shadow-md lg:col-span-2">
-                <h2 className="text-xl font-semibold mb-4">כל ההוצאות</h2>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תאריך</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">קטגוריה</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">תיאור</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">סכום</th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">פעולות</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {expenses
-                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                        .map(expense => {
-                          // Find matching category
-                          const category = displayCategoriesWithTheHidden.find(c => String(c.id) === String(expense.categoryId));
-                          
-                          return (
-                            <tr key={expense.id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.date}</td>
-                              <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                  <span className="ml-2" style={{ color: category?.color }}>{category?.icon}</span>
-                                  <span className="text-sm font-medium">{category?.name}</span>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.description}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">₪{expense.amount.toFixed(2)}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button 
-                                  className="text-red-600 hover:text-red-900"
-                                  onClick={() => handleDeleteExpense(expense.id)}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">סטטיסטיקות מהירות</h3>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">ממוצע ליום</span>
+                      <span className="font-medium">₪{(totalExpenses / new Date(selectedYear, selectedMonth + 1, 0).getDate()).toFixed(0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">הוצאה גבוהה ביותר</span>
+                      <span className="font-medium">₪{Math.max(...filteredExpenses.map(e => e.amount), 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">הוצאה נמוכה ביותר</span>
+                      <span className="font-medium">₪{Math.min(...filteredExpenses.map(e => e.amount), 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                      <span className="text-sm text-gray-600">נותר לחודש</span>
+                      <span className="font-bold text-emerald-600">₪{(15000 - totalExpenses).toLocaleString()}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          )}
-          
-        </div>
+          </div>
+        )}
       </main>
     </div>
   );
+
 }
