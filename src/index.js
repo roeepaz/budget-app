@@ -11,6 +11,8 @@ import BudgetAdvisorPage from './pages/BudgetAdvisorPage'
 import CategoryManager from './pages/CategoryManager'
 import SmartBudgetLanding from './components/SmartBudgetLanding'
 import MonthlyBudgetUpdate from './components/MonthlyBudgetUpdate'
+import PrivacyPolicy from './policy/PrivacyPolicy';
+import TermsOfService from './policy/TermsOfService';
 
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -46,6 +48,9 @@ function App() {
         <Route path="/categoryManager" element={<CategoryManager user={user}/>} />
         <Route path="/landing" element={<SmartBudgetLanding />} />
         <Route path="/monthlyIncome" element={<MonthlyBudgetUpdate />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+
       </Routes>
     </BrowserRouter>
   );

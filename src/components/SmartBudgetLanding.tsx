@@ -1,12 +1,15 @@
-import React from 'react';
+import React,{ useState, useEffect } from 'react';
 import { ChevronLeft, Target, Shield, PiggyBank, CreditCard, TrendingUp, Calculator, Brain, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate,Link } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig'; // או הנתיב שלך
+import { db } from '../firebaseConfig'; 
+
 const SmartBudgetLanding = () => {
   const navigate = useNavigate();
-  
+  const [agreedPrivacy, setAgreedPrivacy] = useState<boolean>(false);
+const [agreedTerms, setAgreedTerms] = useState<boolean>(false);
+
   const handleNavigateToCategories = async () => {
     const userId = getAuth().currentUser?.uid;
     if (!userId) {
@@ -285,6 +288,38 @@ const SmartBudgetLanding = () => {
             </div>
           </div>
         </div>
+        {/* User agreement checkboxes */}
+        <div className="bg-white rounded-xl p-6 shadow-md mb-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">לפני שממשיכים</h2>
+          <div className="space-y-4 text-right text-gray-700">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="privacy"
+                className="ml-2"
+                checked={agreedPrivacy}
+                onChange={() => setAgreedPrivacy(!agreedPrivacy)}
+              />
+              <label htmlFor="privacy">
+                קראתי ואני מסכים/ה ל־
+                <Link to="/privacy-policy" className="text-indigo-600 underline ml-1">מדיניות הפרטיות</Link>
+              </label>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="terms"
+                className="ml-2"
+                checked={agreedTerms}
+                onChange={() => setAgreedTerms(!agreedTerms)}
+              />
+              <label htmlFor="terms">
+                קראתי ואני מסכים/ה ל־
+                <Link to="/terms-of-service" className="text-indigo-600 underline ml-1">תנאי השימוש</Link>
+              </label>
+            </div>
+          </div>
+        </div>
 
         {/* קריאה לפעולה */}
         <div className="bg-gradient-to-l from-indigo-600 to-blue-600 rounded-2xl shadow-2xl p-8 text-center text-white">
@@ -293,11 +328,14 @@ const SmartBudgetLanding = () => {
             בואו נתחיל בהגדרת הקטגוריות שלכם - הצעד הראשון לשליטה כלכלית מלאה!
           </p>
           <button 
-            onClick={handleNavigateToCategories}
-            className="bg-white text-indigo-600 font-bold py-4 px-8 rounded-xl text-lg hover:bg-gray-100 transition-colors duration-200 shadow-lg transform hover:scale-105"
-          >
-            בואו נתחיל - לדף הקטגוריות ←
-          </button>
+  onClick={handleNavigateToCategories}
+  disabled={!(agreedPrivacy && agreedTerms)}
+  className={`bg-white text-indigo-600 font-bold py-4 px-8 rounded-xl text-lg transition-all duration-200 shadow-lg transform
+    ${!(agreedPrivacy && agreedTerms) ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 hover:scale-105'}`}
+>
+  בואו נתחיל - לדף הקטגוריות ←
+</button>
+
         </div>
 
         {/* מרווח תחתון */}
