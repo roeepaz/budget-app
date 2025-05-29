@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MessageSquare, Send, Heart, CheckCircle } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { getAuth } from 'firebase/auth';
+import ErrorDialog from '../components/ErrorDialog';
 
 const SERVICE_ID = process.env.EMAILJS_SERVICE_ID!;
 const TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID!;
@@ -9,19 +10,30 @@ const PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY!;
 
 export default function FeedbackForm() {
 
-    const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [submitted, setSubmitted] = useState(false);
-    const auth = getAuth();
-    const user = auth.currentUser;
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const auth = getAuth();
+  const user = auth.currentUser;
 
-    if (!user || !user.email) {
-    return (
-        <div className="text-center text-red-500 font-medium mt-10">
-        ⚠️ לא ניתן לשלוח משוב – משתמש לא מחובר.
-        </div>
-    );
-    }
+  if (!user || !user.email) {
+  return (
+      <div className="text-center text-red-500 font-medium mt-10">
+      ⚠️ לא ניתן לשלוח משוב – משתמש לא מחובר.
+      </div>
+  );
+  }
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDetails, setErrorDetails] = useState({
+    title: '',
+    description: '',
+    severity: 'error' as 'error' | 'warning' | 'info',
+  });
+
+  const showErrorDialog = (title: string, description: string, severity: 'error' | 'warning' | 'info' = 'error') => {
+    setErrorDetails({ title, description, severity });
+    setErrorDialogOpen(true);
+  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
@@ -46,8 +58,7 @@ export default function FeedbackForm() {
       // Reset status after 5 minutes
       setTimeout(() => setSubmitted(false), 50000);
     } catch (error) {
-      console.error('EmailJS Error:', error);
-      alert('שליחה נכשלה. נסה שוב.');
+      showErrorDialog('בעיה בשליחה', 'שליחה נכשלה. נסה שוב בעוד רגע', 'error');      
     } finally {
       setLoading(false);
     }
@@ -83,7 +94,13 @@ export default function FeedbackForm() {
             כל משוב חשוב לנו! בין אם זה רעיון לשיפור, בעיה שנתקלת בה, או פשוט דבר שאהבת - נשמח לשמוע
           </p>
         </div>
-
+        <ErrorDialog
+          isOpen={errorDialogOpen}
+          onClose={() => setErrorDialogOpen(false)}
+          title={errorDetails.title}
+          description={errorDetails.description}
+          severity={errorDetails.severity}
+        />
         {/* Form Content */}
         <div className="p-6 space-y-6">
           {/* User info display */}
