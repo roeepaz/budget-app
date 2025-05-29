@@ -9,6 +9,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import AdvisorBudgetBuilder from '../components/AdvisorBudgetBuilder';
 import {BudgetInputs,BudgetAdvisorPageProps, Debt, SavingsGoal,Category} from '../type/appTypes'
 import SidebarWrapper from '../components/SidebarWrapper';
+import FullPageError from '../components/FullPageError';
 
 
 // 2. Extract form-only fields from BudgetInputs
@@ -42,7 +43,12 @@ const today = new Date().toISOString().split('T')[0];
   const userId = user?.uid;
 const [loading, setLoading] = useState(true);
 const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
-const [loadError, setLoadError] = useState(false);
+
+const [fatalError, setFatalError] = useState<null | {
+  title?: string;
+  description?: string;
+  severity?: 'error' | 'warning' | 'info';
+}>(null);
 
 const [newGoal, setNewGoal] = useState({
   name: '',
@@ -143,8 +149,7 @@ useEffect(() => {
       const monthId = getCurrentMonthId();
       const incomeDocRef = doc(db, 'financial_data', userId, 'monthly_income', monthId);
       const incomeDoc = await getDoc(incomeDocRef);
-console.log("📂 data:", snapshot.exists() ? snapshot.data() : null);
-console.log("📂 income for month:", monthId);
+
       if (incomeDoc.exists()) {
         const monthlyIncome = incomeDoc.data();
         setForm(sanitizeForm({
@@ -163,13 +168,11 @@ console.log("📂 income for month:", monthId);
       setHasLoaded(true);
 
     } catch (error) {
-console.error("⚠️ שגיאה בטעינת הנתונים:", {
-  name: (error as any)?.name,
-  message: (error as any)?.message,
-  stack: (error as any)?.stack,
-  full: error
-});
-      setLoadError(true);
+        setFatalError({
+            title: 'שגיאה בטעינת נתונים',
+            description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
+            severity: 'error'
+          });
       setHasLoaded(false);
     } finally {
       setLoading(false);
@@ -218,13 +221,6 @@ if (loading) {
   }
   if (!user) {
   return <div>Loading or not authenticated...</div>;
-}
-if (loadError) {
-  return (
-    <div className="p-6 text-center text-red-600" dir="rtl">
-      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
-    </div>
-  );
 }
 
   const handleSubmit = () => {
@@ -347,10 +343,19 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
   0
 );
 
-const emergencyFundMonthly = result?.allocations?.emergencyFundMonthly ?? 0;
-const generalSavings = result?.allocations?.generalSavings ?? 0;
-const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
+  const emergencyFundMonthly = result?.allocations?.emergencyFundMonthly ?? 0;
+  const generalSavings = result?.allocations?.generalSavings ?? 0;
+  const discretionarySpending = result?.allocations?.discretionarySpending ?? 0;
 
+  if(fatalError){
+    return(
+    <FullPageError
+      title={fatalError.title}
+      description={fatalError.description}
+      severity={fatalError.severity}
+    />
+    )
+  }
   return (
     <div className={`min-h-screen transition-all duration-500 ${
       darkMode 
