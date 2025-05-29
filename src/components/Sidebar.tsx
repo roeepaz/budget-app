@@ -52,7 +52,7 @@ export default function Sidebar({
     { icon: Wallet, label: 'ניהול הקטגוריות שלי', path: '/categoryManager' },
     { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
     { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
-    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
+    { icon: Wallet, label: 'ניהול חסכונות', path: '/savings' },
 
   ];
   const handleLogout = () => {
