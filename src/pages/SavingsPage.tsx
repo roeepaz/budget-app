@@ -23,6 +23,7 @@ import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc,updateDoc } from 'firebase/firestore';
 import {SavingsGoal, Expense} from '../type/appTypes'
 import SidebarWrapper from '../components/SidebarWrapper';
+import FullPageError from '../components/FullPageError';
 
 const DARK_MODE_KEY = 'budget-app-dark-mode';
 
@@ -56,10 +57,13 @@ export default function SavingsPage({ user }: { user: { uid: string } }) {
   const [loading, setLoading] = useState(true);
 const [loadError, setLoadError] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+const [fatalError, setFatalError] = useState<null | {
+  title?: string;
+  description?: string;
+  severity?: 'error' | 'warning' | 'info';
+}>(null);
 
-  const [isDarkMode, setIsDarkMode] = useState(() => 
-    JSON.parse(localStorage.getItem(DARK_MODE_KEY) || 'false')
-  );
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   // --- states for סיכום חסכונות ---
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -112,20 +116,24 @@ const [loadError, setLoadError] = useState(false);
         if (fSnap.exists()) {
           const d = fSnap.data() as any;
           setGoals(
-  (d.goals || []).map((g: any) => ({
-    ...g,
-    targetDate: g.targetDate?.toDate ? g.targetDate.toDate() : new Date(g.targetDate)
-  }))
-);
-        }
+            (d.goals || []).map((g: any) => ({
+              ...g,
+              targetDate: g.targetDate?.toDate ? g.targetDate.toDate() : new Date(g.targetDate)
+            }))
+          );
+        } 
       } catch (error) {
-    //console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-    setLoadError(true);
-  } finally {
-        setSummaryLoading(false);
-        setLoading(false);
-      }
-    })();
+          setFatalError({
+            title: 'שגיאה בטעינת נתונים',
+            description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
+            severity: 'error'
+          });
+        setLoadError(true);
+      } finally {
+            setSummaryLoading(false);
+            setLoading(false);
+          }
+        })();
   }, [userId]);
 
   useEffect(() => {
@@ -192,13 +200,15 @@ if (loading || summaryLoading) {
     );
   }
   
-if (loadError) {
-  return (
-    <div className="p-6 text-center text-red-600" dir="rtl">
-      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
-    </div>
-  );
-}
+ if(fatalError){
+    return(
+    <FullPageError
+      title={fatalError.title}
+      description={fatalError.description}
+      severity={fatalError.severity}
+    />
+    )
+  }
   // בחר רק את הקרן emergency + savings
   const savingsCats = categories.filter(c => c.tag === 'emergency' || c.tag === 'savings');
   // מטרה כקטגוריה
@@ -396,10 +406,12 @@ const totalPerCat = displayCats.map(c => {
       </div>
       <h1 className="text-xl font-bold">ניהול חסכונות</h1>
     </div>
+      {/*
+        <button onClick={() => setIsDarkMode((prev: boolean) => !prev)}>
+          {isDarkMode ? '☀' : '🌙'}
+        </button>
+      */}
 
-    <button onClick={() => setIsDarkMode((prev: boolean) => !prev)}>
-      {isDarkMode ? '☀' : '🌙'}
-    </button>
   </div>
 </header>
 
