@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, collection,getDocs  } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import {Category,Expense,CategoryTag,ExpenseTrackerProps,Debt, SavingsGoal, RecurringExpense} from '../type/appTypes'
 import SidebarWrapper from '../components/SidebarWrapper';
+import FullPageError from '../components/FullPageError';
 
 export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   // Default categories
@@ -40,6 +41,11 @@ const [recurringForm, setRecurringForm] = useState({
 const [monthlyIncomeData, setMonthlyIncomeData] = useState<Record<string, number>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+const [fatalError, setFatalError] = useState<null | {
+  title?: string;
+  description?: string;
+  severity?: 'error' | 'warning' | 'info';
+}>(null)
   // Form state
   const [newExpense, setNewExpense] = useState({
     amount: '',         // Use empty string for form input
@@ -136,11 +142,14 @@ const tagColors: Record<CategoryTag, string> = {
           setGoals(data.goals || []);
         }
       } catch (error) {
-    //console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-    setLoadError(true);
+    setFatalError({
+        title: 'שגיאה בטעינת נתונים',
+        description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
+        severity: 'error'
+      });
+      setLoadError(true);
     setHasLoaded(false); // ❌ אל תאפשר שמירה
   }  finally {
-        setHasLoaded(true);
         setLoading(false);
       }
     })();
@@ -486,13 +495,15 @@ if (loading || !user) {
     );
   }
   
-  if (loadError) {
-  return (
-    <div className="p-6 text-center text-red-600" dir="rtl">
-      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
-    </div>
-  );
-}
+  if(fatalError){
+      return(
+      <FullPageError
+        title={fatalError.title}
+        description={fatalError.description}
+        severity={fatalError.severity}
+      />
+      )
+    }
 const tagIcons: Record<CategoryTag, string> = {
   need: '🛒',
   want: '🎉',
