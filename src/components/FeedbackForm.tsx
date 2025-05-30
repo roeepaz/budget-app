@@ -2,41 +2,42 @@ import React, { useState } from 'react';
 import { MessageSquare, Send, Heart, CheckCircle } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { getAuth } from 'firebase/auth';
-    const SERVICE_ID = process.env.EMAILJS_SERVICE_ID!;
+import ErrorDialog from '../components/ErrorDialog';
+
+const SERVICE_ID = process.env.EMAILJS_SERVICE_ID!;
 const TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID!;
 const PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY!;
 
-
 export default function FeedbackForm() {
-const [lastSentTime, setLastSentTime] = useState<number | null>(null);
 
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-const auth = getAuth();
-const user = auth.currentUser;
+  const auth = getAuth();
+  const user = auth.currentUser;
 
-if (!user || !user.email) {
+  if (!user || !user.email) {
   return (
-    <div className="text-center text-red-500 font-medium mt-10">
+      <div className="text-center text-red-500 font-medium mt-10">
       ⚠️ לא ניתן לשלוח משוב – משתמש לא מחובר.
-    </div>
+      </div>
   );
-}
+  }
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDetails, setErrorDetails] = useState({
+    title: '',
+    description: '',
+    severity: 'error' as 'error' | 'warning' | 'info',
+  });
 
-const name = user.displayName || user.email.split('@')[0];
-
+  const showErrorDialog = (title: string, description: string, severity: 'error' | 'warning' | 'info' = 'error') => {
+    setErrorDetails({ title, description, severity });
+    setErrorDialogOpen(true);
+  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
 
-    
-    const now = Date.now();
-    
-    if (lastSentTime && now - lastSentTime < 60000) {
-        alert('ניתן לשלוח משוב רק פעם בדקה 🙏');
-        return;
-    }
     setLoading(true);
 
     try {
@@ -53,13 +54,11 @@ const name = user.displayName || user.email.split('@')[0];
 
       setSubmitted(true);
       setMessage('');
-setLastSentTime(Date.now());
 
-      // Reset status after 3 seconds
-      setTimeout(() => setSubmitted(false), 3000);
+      // Reset status after 5 minutes
+      setTimeout(() => setSubmitted(false), 50000);
     } catch (error) {
-      console.error('EmailJS Error:', error);
-      alert('שליחה נכשלה. נסה שוב.');
+      showErrorDialog('בעיה בשליחה', 'שליחה נכשלה. נסה שוב בעוד רגע', 'error');      
     } finally {
       setLoading(false);
     }
@@ -74,6 +73,7 @@ setLastSentTime(Date.now());
           </div>
           <h3 className="text-xl font-bold text-green-800 mb-2">תודה רבה!</h3>
           <p className="text-green-700">המשוב שלך נשלח בהצלחה ויעזור לנו לשפר את החוויה</p>
+            <p className="text-green-700">תוכל לשלוח שוב בקרוב!</p>
         </div>
       </div>
     );
@@ -94,7 +94,13 @@ setLastSentTime(Date.now());
             כל משוב חשוב לנו! בין אם זה רעיון לשיפור, בעיה שנתקלת בה, או פשוט דבר שאהבת - נשמח לשמוע
           </p>
         </div>
-
+        <ErrorDialog
+          isOpen={errorDialogOpen}
+          onClose={() => setErrorDialogOpen(false)}
+          title={errorDetails.title}
+          description={errorDetails.description}
+          severity={errorDetails.severity}
+        />
         {/* Form Content */}
         <div className="p-6 space-y-6">
           {/* User info display */}

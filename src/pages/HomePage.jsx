@@ -25,6 +25,7 @@ import Sidebar from '../components/Sidebar';
 import { Dialog } from '@headlessui/react';
 import FeedbackForm from '../components/FeedbackForm';
 import { MessageSquare } from 'lucide-react';
+import FullPageError from '../components/FullPageError';
 
 export default function HomePage({ user }) {
   const navigate = useNavigate();
@@ -33,27 +34,29 @@ export default function HomePage({ user }) {
   const [showAllCategories, setShowAllCategories] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
 
-  
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+
   const {
     categories,
     expenses,
     debts,
     goals,
     loading,
-    addExpenseToDB
+    addExpenseToDB,
+    userFatalError
   } = useUserData(user?.uid);
   
     const currentMonthExpenses = expenses.filter(exp => {
       const d = new Date(exp.date);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
-const totalExpensesThisMonth = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpensesThisMonth = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+
 
   useEffect(() => {
-    if (!loading && categories.length === 0) {
+    if (!loading && categories.length === 0 && !userFatalError) {
       navigate('/landing');
     }
   }, [loading, categories, navigate]);
@@ -88,8 +91,7 @@ useEffect(() => {
     signOut(auth)
       .then(() => navigate('/'))
       .catch((error) => {
-        console.error('Logout failed:', error);
-        alert('אירעה שגיאה ביציאה מהמערכת');
+      showErrorDialog('בעיה ביציאה', 'לא הצלחנו לבצע את תהליך היציאה. נסה שוב בעוד רגע.', 'error');
       });
   };
 
@@ -257,7 +259,15 @@ const categoriesWithExpenses = displayCategories.map(category => {
       </div>
     );
   }
-
+if(userFatalError){
+    return(
+    <FullPageError
+      title={userFatalError.title}
+      description={userFatalError.description}
+      severity={userFatalError.severity}
+    />
+    )
+  }
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 from-blue-50 to-purple-50 relative">
       {/* כפתור תפריט במובייל */}
@@ -290,7 +300,7 @@ const categoriesWithExpenses = displayCategories.map(category => {
             <h1 className="text-3xl lg:text-5xl font-extrabold text-gray-800 mb-2">
               לוח הבקרה שלך
             </h1>
-            <p className="text-gray-600 text-base lg:text-lg">באהבה מרועי פז 🎓</p>
+            <p className="text-gray-600 text-base lg:text-lg">Kesefy- השותף שלך</p>
              <button
               onClick={() => setIsOpen(true)}
               className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2"

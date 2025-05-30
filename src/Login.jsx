@@ -1,12 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import './firebase';
+import ErrorDialog from './components/ErrorDialog';
 
 export default function Login({ onLogin }) {
   const auth = getAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
-
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorDetails, setErrorDetails] = useState({
+    title: '',
+    description: '',
+    severity: 'error'
+    //severity: 'error' as 'error' | 'warning' | 'info',
+  });
+  const showErrorDialog = (title, description, severity = 'error') => {
+  setErrorDetails({ title, description, severity });
+  setErrorDialogOpen(true);
+  };
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
@@ -15,8 +26,7 @@ export default function Login({ onLogin }) {
       const result = await signInWithPopup(auth, provider);
       onLogin(result.user);
     } catch (error) {
-      console.error('Login failed:', error);
-      alert('נכשל ההתחברות עם גוגל. אנא נסה שוב.');
+      showErrorDialog('בעיה בהתחברות', 'נכשל ההתחברות עם גוגל. אנא נסה שוב.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -30,7 +40,13 @@ export default function Login({ onLogin }) {
         <div className="absolute top-40 right-20 w-72 h-72 bg-emerald-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-300"></div>
         <div className="absolute -bottom-8 left-40 w-72 h-72 bg-teal-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-700"></div>
       </div>
-
+      <ErrorDialog
+        isOpen={errorDialogOpen}
+        onClose={() => setErrorDialogOpen(false)}
+        title={errorDetails.title}
+        description={errorDetails.description}
+        severity={errorDetails.severity}
+      />
       <div className="relative">
         {/* Welcome message */}
         {showWelcome && (
@@ -108,6 +124,10 @@ export default function Login({ onLogin }) {
             </div>
             <p className="text-green-900 text-sm leading-relaxed">
               התחברות מאובטחת ומהירה ללא צורך לזכור סיסמאות נוספות. כל המידע הפיננסי שלך מוגן ומוצפן.
+            </p>
+            <br></br>
+            <p className="text-green-900 text-sm leading-relaxed">
+            חלון Google יופיע בשם firebase – זה תקני ומאובטח, אנחנו משתמשים ב־Google Login כדי להגן עליכם
             </p>
           </div>
 

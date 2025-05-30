@@ -332,7 +332,7 @@ const menuItems = [
   { icon: PieIcon, label: 'מעקב הוצאות', path: '/expense' },
   { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
   { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
-  { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
+  { icon: Wallet, label: 'ניהול חסכונות', path: '/savings' },
 ].map(item => ({
   ...item,
   current: location.pathname === item.path

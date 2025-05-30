@@ -89,7 +89,155 @@ const [agreedTerms, setAgreedTerms] = useState<boolean>(false);
             </div>
           </div>
         </div>
+{/* שיעורי בית - הכנה לפני תחילת העבודה */}
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl shadow-xl p-8 mb-8 border-2 border-amber-200">
+          <div className="flex items-center mb-6">
+            <div className="bg-amber-500 rounded-full p-3 ml-4">
+              <Brain className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-amber-800">שיעורי בית - הכנה חשובה! 📚</h2>
+              <p className="text-amber-700">לפני שמתחילים, חשוב שתכינו מידע בסיסי על המצב הכלכלי שלכם</p>
+            </div>
+          </div>
+          
+          <div className="bg-amber-100 border-r-4 border-amber-400 p-6 mb-6">
+            <h3 className="font-bold text-amber-800 mb-3 text-lg">💡 מה צריך לחשוב מראש?</h3>
+            <p className="text-amber-700">
+              כדי שהמערכת תוכל לבנות עבורכם תקציב מדויק ומותאם, חשוב שתכינו רשימה של ההוצאות הקבועות שלכם.
+              ככל שתהיו מדויקים יותר, כך התקציב יהיה יותר מותאם למציאות שלכם.
+            </p>
+          </div>
 
+          <div className="grid md:grid-cols-2 gap-6 mb-6">
+            {/* הוצאות בסיס */}
+            <div className="bg-white rounded-xl p-6 shadow-md">
+              <div className="flex items-center mb-4">
+                <Shield className="w-6 h-6 text-red-600 ml-2" />
+                <h3 className="text-xl font-bold text-red-800">רשימת הוצאות הבסיס שלכם</h3>
+              </div>
+              <p className="text-gray-700 mb-4">
+                חשבו על כל ההוצאות החודשיות שאתם <strong>חייבים</strong> לשלם:
+              </p>
+              <ul className="space-y-2 text-gray-600">
+                <li className="flex items-start">
+                  <span className="text-red-500 ml-2">•</span>
+                  שכר דירה / משכנתא
+                </li>
+                <li className="flex items-start">
+                  <span className="text-red-500 ml-2">•</span>
+                  חשבונות (חשמל, מים, גז, טלפון, אינטרנט)
+                </li>
+                <li className="flex items-start">
+                  <span className="text-red-500 ml-2">•</span>
+                  קניות בסיסיות בסופר (לא כולל מותרות)
+                </li>
+                <li className="flex items-start">
+                  <span className="text-red-500 ml-2">•</span>
+                  תחבורה (דלק / תחבורה ציבורית)
+                </li>
+                <li className="flex items-start">
+                  <span className="text-red-500 ml-2">•</span>
+                  ביטוחים (בריאות, רכב, דירה)
+                </li>
+                <li className="flex items-start">
+                  <span className="text-red-500 ml-2">•</span>
+                  תרופות וטיפולים רפואיים בסיסיים
+                </li>
+              </ul>
+            </div>
+
+            {/* מה לא נכלל */}
+            <div className="bg-white rounded-xl p-6 shadow-md">
+              <div className="flex items-center mb-4">
+                <div className="w-6 h-6 bg-purple-600 rounded-full ml-2 flex items-center justify-center">
+                  <span className="text-white text-xs">✨</span>
+                </div>
+                <h3 className="text-xl font-bold text-purple-800">מה לא נכלל בהוצאות הבסיס?</h3>
+              </div>
+              <p className="text-gray-700 mb-4">
+                הדברים האלה נדבר עליהם בשלב היועץ:
+              </p>
+              <ul className="space-y-2 text-gray-600">
+                <li className="flex items-start">
+                  <span className="text-purple-500 ml-2">•</span>
+                  בילויים ומסעדות
+                </li>
+                <li className="flex items-start">
+                  <span className="text-purple-500 ml-2">•</span>
+                  קניות לא חיוניות
+                </li>
+                <li className="flex items-start">
+                  <span className="text-purple-500 ml-2">•</span>
+                  חופשות וטיולים
+                </li>
+                <li className="flex items-start">
+                  <span className="text-purple-500 ml-2">•</span>
+                  הלוואות קיימות
+                </li>
+                <li className="flex items-start">
+                  <span className="text-purple-500 ml-2">•</span>
+                  מטרות חיסכון ספציפיות
+                </li>
+                <li className="flex items-start">
+                  <span className="text-purple-500 ml-2">•</span>
+                  חיסכון כללי וקרן חירום
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* דגשים חשובים */}
+          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-6">
+            <h3 className="font-bold text-red-800 mb-4 text-lg">🚨 דגשים חשובים להצלחה:</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold text-red-700 mb-2">קטגוריות חובה:</h4>
+                <ul className="space-y-1 text-red-600 text-sm">
+                  <li>• לפחות קטגוריה אחת של חיסכון כללי</li>
+                  <li>• לפחות קטגוריה אחת של קרן חירום</li>
+                  <li>• קטגוריות הוצאות בסיס מדויקות</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-red-700 mb-2">טיפים לקטגוריות טובות:</h4>
+                <ul className="space-y-1 text-red-600 text-sm">
+                  <li>• תנו שמות ברורים וספציפיים</li>
+                  <li>• חשבו על ההוצאות האמיתיות שלכם</li>
+                  <li>• אל תשכחו הוצאות עונתיות</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* היועץ האוטומטי */}
+        <div className="bg-gradient-to-l from-indigo-50 to-blue-50 rounded-2xl shadow-xl p-8 mb-8">
+          <div className="flex items-center mb-6">
+            <div className="bg-indigo-600 rounded-full p-3 ml-4">
+              <Brain className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">היועץ האוטומטי שלכם</h2>
+              <p className="text-gray-600">יועץ חכם שמנתח את המצב שלכם ומציע המלצות מותאמות אישית</p>
+            </div>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="font-bold text-gray-800 mb-2">🔍 ניתוח מצב</h3>
+              <p className="text-gray-600 text-sm">בודק את התזרים שלכם ומזהה הזדמנויות לשיפור</p>
+            </div>
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="font-bold text-gray-800 mb-2">💡 המלצות חכמות</h3>
+              <p className="text-gray-600 text-sm">מציע איך לחלק את התקציב בצורה המיטבית</p>
+            </div>
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="font-bold text-gray-800 mb-2">📈 תכנון עתיד</h3>
+              <p className="text-gray-600 text-sm">עוזר לתכנן מטרות ולבנות אסטרטגיה כלכלית</p>
+            </div>
+          </div>
+        </div>
         {/* הקטגוריות - הבסיס להכל */}
         <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">

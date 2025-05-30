@@ -10,7 +10,7 @@ import {
   X,
   Home,
   PieChart as PieIcon,
-  TrendingUp,
+  PiggyBank,
   Calculator,
   LogOut,
   Wallet,
@@ -52,7 +52,7 @@ export default function Sidebar({
     { icon: Wallet, label: 'ניהול הקטגוריות שלי', path: '/categoryManager' },
     { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
     { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
-    { icon: Wallet, label: 'ניהול חסכונות', path: '/budget' },
+    { icon: PiggyBank, label: 'ניהול חסכונות', path: '/savings' },
 
   ];
   const handleLogout = () => {
@@ -90,7 +90,7 @@ export default function Sidebar({
         <div className="p-6 border-b border-gray-200 bg-gradient-to-l from-blue-600 to-purple-600 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-bold">ניהול כלכלי חכם</h2>
+              <h2 className="text-xl font-bold">Kesefy 💰</h2>
                 {user && (
                   <p className="text-blue-100 text-sm mt-1">שלום, {user.displayName} 👋</p>
                 )}

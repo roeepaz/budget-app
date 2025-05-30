@@ -4,7 +4,6 @@ import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestor
 import { db } from '../firebaseConfig';
 import { Category, Debt, SavingsGoal, Expense } from '../type/appTypes';
 
-
 // Return type for the hook
 interface UseUserDataReturn {
   categories: Category[];
@@ -20,6 +19,7 @@ interface UseUserDataReturn {
   setLoading: Dispatch<SetStateAction<boolean>>;
   setHasLoaded: Dispatch<SetStateAction<boolean>>;
   addExpenseToDB: (expense: Expense) => Promise<void>;
+  userFatalError:Error | null | unknown;
 }
 
 export function useUserData(userId: string | null | undefined): UseUserDataReturn {
@@ -29,6 +29,7 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [hasLoaded, setHasLoaded] = useState<boolean>(false);
+  const [userFatalError, setUserFatalError] = useState<Error | null | unknown>(null);
 
   // טוען גם קטגוריות, הוצאות, חובות ומטרות
   useEffect(() => {
@@ -60,8 +61,22 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
           }));
           setGoals(loadedGoals);
         }
-      } catch (err) {
-        console.error('שגיאה בטעינה מה־DB:', err);
+      } catch (error: any) {
+        const firebaseCode = error?.code || 'unknown';
+
+        if (firebaseCode === 'permission-denied') {
+          setUserFatalError({
+            title: 'אין לך הרשאה',
+            description: 'הגישה למידע נדחתה. אנא התחבר מחדש.',
+            severity: 'warning',
+          });
+        } else {
+          setUserFatalError({
+            title: 'שגיאה כללית',
+            description: 'לא הצלחנו למשוך את המידע מהשרת. נסה שוב מאוחר יותר.',
+            severity: 'error',
+          });
+        }
       } finally {
         setHasLoaded(true);
         setLoading(false);
@@ -118,9 +133,23 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
         }
       }
 
-    } catch (err) {
-      console.error('שגיאה בעת שמירת הוצאה או עדכון קטגוריות:', err);
-    }
+    } catch (error: any) {
+        const firebaseCode = error?.code || 'unknown';
+
+        if (firebaseCode === 'permission-denied') {
+          setUserFatalError({
+            title: 'אין לך הרשאה',
+            description: 'הגישה למידע נדחתה. אנא התחבר מחדש.',
+            severity: 'warning',
+          });
+        } else {
+          setUserFatalError({
+            title: 'שגיאה כללית',
+            description: 'לא הצלחנו לשמור את המידע. נסה שוב מאוחר יותר.',
+            severity: 'error',
+          });
+        }
+      }
   };
 
   return {
@@ -136,6 +165,7 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
     setGoals,
     setLoading,
     setHasLoaded,
-    addExpenseToDB
+    addExpenseToDB,
+    userFatalError
   };
 }

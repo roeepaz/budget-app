@@ -51,7 +51,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<HomePage user={user} />} />
-          <Route path="/budget" element={<SavingsPage user={user} />} />
+          <Route path="/savings" element={<SavingsPage user={user} />} />
           <Route path="/expense" element={<ExpenseTracker user={user} />} />
           <Route path="/budgetPlanner" element={<BudgetPlanner  user={user}/>} />
           <Route path="/advisor" element={<BudgetAdvisorPage user={user}/>} />

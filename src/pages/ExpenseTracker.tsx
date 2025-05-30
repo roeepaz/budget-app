@@ -6,6 +6,7 @@ import { doc, getDoc, setDoc, collection,getDocs  } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import {Category,Expense,CategoryTag,ExpenseTrackerProps,Debt, SavingsGoal, RecurringExpense} from '../type/appTypes'
 import SidebarWrapper from '../components/SidebarWrapper';
+import FullPageError from '../components/FullPageError';
 
 export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   // Default categories
@@ -40,6 +41,11 @@ const [recurringForm, setRecurringForm] = useState({
 const [monthlyIncomeData, setMonthlyIncomeData] = useState<Record<string, number>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+const [fatalError, setFatalError] = useState<null | {
+  title?: string;
+  description?: string;
+  severity?: 'error' | 'warning' | 'info';
+}>(null)
   // Form state
   const [newExpense, setNewExpense] = useState({
     amount: '',         // Use empty string for form input
@@ -136,11 +142,14 @@ const tagColors: Record<CategoryTag, string> = {
           setGoals(data.goals || []);
         }
       } catch (error) {
-    //console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-    setLoadError(true);
+    setFatalError({
+        title: 'שגיאה בטעינת נתונים',
+        description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
+        severity: 'error'
+      });
+      setLoadError(true);
     setHasLoaded(false); // ❌ אל תאפשר שמירה
   }  finally {
-        setHasLoaded(true);
         setLoading(false);
       }
     })();
@@ -486,13 +495,15 @@ if (loading || !user) {
     );
   }
   
-  if (loadError) {
-  return (
-    <div className="p-6 text-center text-red-600" dir="rtl">
-      ❌ ארעה שגיאה בטעינת הנתונים. אנא נסה לרענן את הדף או בדוק את החיבור.
-    </div>
-  );
-}
+  if(fatalError){
+      return(
+      <FullPageError
+        title={fatalError.title}
+        description={fatalError.description}
+        severity={fatalError.severity}
+      />
+      )
+    }
 const tagIcons: Record<CategoryTag, string> = {
   need: '🛒',
   want: '🎉',
@@ -519,8 +530,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
 
 
    return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" dir="rtl">
-      
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-emerald-100 from-slate-50 via-blue-50 to-indigo-100" dir="rtl">   
       {/* Modern Header */}
       <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
         <div className="container mx-auto px-6 py-4">
@@ -537,7 +547,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                   <Menu className="w-6 h-6 text-gray-700" />
                 </button>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                  יועץ תקציבי חכם
+                  kesefy
                 </h1>
                 <p className="text-sm text-gray-500">מנהל הכספים האישיים שלך</p>
               </div>
@@ -611,13 +621,13 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300">
                 <div className="flex items-center justify-between">
                   <div>
-  <p className="text-sm text-gray-500 mb-1">הכנסות החודש</p>
-  <p className="text-2xl font-bold text-gray-900">₪{currentIncome.toLocaleString()}</p>
-  <p className={`text-xs flex items-center mt-2 ${incomeChangePctNum  >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-    <TrendingUp className="w-3 h-3 ml-1" />
-    {incomeChangePctNum  >= 0 ? '+' : ''}{incomeChangePct}% לעומת החודש הקודם
-  </p>
-</div>
+                    <p className="text-sm text-gray-500 mb-1">הכנסות החודש</p>
+                    <p className="text-2xl font-bold text-gray-900">₪{currentIncome.toLocaleString()}</p>
+                    <p className={`text-xs flex items-center mt-2 ${incomeChangePctNum  >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      <TrendingUp className="w-3 h-3 ml-1" />
+                      {incomeChangePctNum  >= 0 ? '+' : ''}{incomeChangePct}% לעומת החודש הקודם
+                    </p>
+                  </div>
 
                   <div className="w-12 h-12 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center">
                     <TrendingUp className="w-6 h-6 text-white" />
@@ -680,6 +690,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                     <PieChartIcon className="w-4 h-4 text-white" />
                   </div>
                 </div>
+
               </div>
                 <div className="h-64 mb-6">
                   <ResponsiveContainer width="100%" height="100%">
@@ -743,78 +754,74 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={monthlyData}>
-  <XAxis 
-    dataKey="month" 
-    axisLine={false}
-    tickLine={false}
-    tick={{ fontSize: 12, fill: '#6B7280' }}
-  />
-  <YAxis 
-    axisLine={false}
-    tickLine={false}
-    tick={{ fontSize: 12, fill: '#6B7280' }}
-  />
- <Tooltip
-  content={({ active, payload, label }) => {
-    if (!active || !payload || !payload.length) return null;
+                      <XAxis 
+                        dataKey="month" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                      <YAxis 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                      />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload || !payload.length) return null;
 
-    const expenses = payload.find(p => p.dataKey === 'expenses');
-    const income = payload.find(p => p.dataKey === 'income');
+                        const expenses = payload.find(p => p.dataKey === 'expenses');
+                        const income = payload.find(p => p.dataKey === 'income');
 
-    return (
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-        padding: '10px 16px',
-        direction: 'rtl',
-        fontFamily: 'inherit'
-      }}>
-        <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '8px' }}>{label}</div>
-        {expenses && (
-          <div style={{ color: '#EF4444', fontSize: '14px' }}>
-            הוצאות: ₪{expenses.value?.toLocaleString()}
-          </div>
-        )}
-        {income && (
-          <div style={{ color: '#10B981', fontSize: '14px' }}>
-            הכנסות: ₪{income.value?.toLocaleString()}
-          </div>
-        )}
-      </div>
-    );
-  }}
-/>
+                        return (
+                          <div style={{
+                            background: 'white',
+                            borderRadius: '12px',
+                            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+                            padding: '10px 16px',
+                            direction: 'rtl',
+                            fontFamily: 'inherit'
+                          }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '14px', marginBottom: '8px' }}>{label}</div>
+                            {expenses && (
+                              <div style={{ color: '#EF4444', fontSize: '14px' }}>
+                                הוצאות: ₪{expenses.value?.toLocaleString()}
+                              </div>
+                            )}
+                            {income && (
+                              <div style={{ color: '#10B981', fontSize: '14px' }}>
+                                הכנסות: ₪{income.value?.toLocaleString()}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }}
+                    />
+                      <Bar
+                      dataKey="expenses"
+                      radius={[6, 6, 0, 0]}
+                      barSize={30}
+                      fill="#EF4444"
+                      onClick={(data) => {
+                        const clickedIndex = monthNames.findIndex(m => m === data.month);
+                        if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
+                      }}
+                    />
+                    <Bar
+                      dataKey="income"
+                      radius={[6, 6, 0, 0]}
+                      barSize={20}
+                      fill="#10B981"
+                      onClick={(data) => {
+                        const clickedIndex = monthNames.findIndex(m => m === data.month);
+                        if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
+                      }}
+                    />
 
-  <Legend 
-    formatter={(value: string) => (value === 'expenses' ? 'הוצאות' : 'הכנסות')}
-  />
-  
-  <Bar
-    dataKey="expenses"
-    name="הוצאות"
-    radius={[6, 6, 0, 0]}
-    barSize={30}
-    fill="#EF4444"
-    onClick={(data) => {
-      const clickedIndex = monthNames.findIndex(m => m === data.month);
-      if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
-    }}
-  />
-  
-  <Bar
-    dataKey="income"
-    name="הכנסות"
-    radius={[6, 6, 0, 0]}
-    barSize={20}
-    fill="#10B981"
-    onClick={(data) => {
-      const clickedIndex = monthNames.findIndex(m => m === data.month);
-      if (clickedIndex !== -1) setSelectedMonth(clickedIndex);
-    }}
-  />
-</BarChart>
+                    <Legend 
+                      formatter={(value: string) => value === 'expenses' ? 'הוצאות' : 'הכנסות'}
+                    />
 
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
@@ -938,7 +945,7 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
                     onClick={() => setShowRecurringForm(!showRecurringForm)}
                   >
                     {showRecurringForm ? 'בטל' : '➕ הוסף הוראת קבע'}
-</button>
+                  </button>
                 </div>
 
                 {showRecurringForm && (
