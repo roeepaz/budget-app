@@ -3,9 +3,9 @@ import React from 'react';
 export default function PrivacyPolicy() {
   return (
     <div className="max-w-3xl mx-auto p-6 text-right">
-      <h1 className="text-3xl font-bold mb-6">מדיניות פרטיות – MyKesify</h1>
+      <h1 className="text-3xl font-bold mb-6">מדיניות פרטיות – Kesefy</h1>
       <p className="mb-4">עודכן לאחרונה: מאי 2025</p>
-      <p className="mb-4">האתר MyKesify ("האתר", "השירות") מתייחס ברצינות לפרטיות המשתמשים שלו. מדיניות זו נועדה להסביר אילו נתונים נאספים, כיצד הם נשמרים, ולמה הם משמשים.</p>
+      <p className="mb-4">האתר Kesefy ("האתר", "השירות") מתייחס ברצינות לפרטיות המשתמשים שלו. מדיניות זו נועדה להסביר אילו נתונים נאספים, כיצד הם נשמרים, ולמה הם משמשים.</p>
       <ul className="list-disc pr-5 space-y-2">
         <li>
           <strong>מידע שנאסף:</strong> שם, כתובת אימייל, UID, ונתונים פיננסיים אישיים.
@@ -23,7 +23,7 @@ export default function PrivacyPolicy() {
           <strong>זכויות משתמש:</strong> עיון, תיקון ומחיקה של מידע.
         </li>
         <li>
-          <strong>יצירת קשר:</strong> roeepaz15@gmail.com
+          <strong>יצירת קשר:</strong> kesefy.feedback@gmail.com
         </li>
       </ul>
     </div>
