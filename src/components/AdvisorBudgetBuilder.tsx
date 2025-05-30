@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calculator, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { Category,Debt, SavingsGoal } from '../type/appTypes';
+import { X, TrendingUp, Check, AlertCircle, Plus, Minus } from 'lucide-react';
 
+// Mock types for demo
+interface Category {
+  id: string | number;
+  name: string;
+  budget?: number;
+  tag: 'need' | 'want' | 'savings' | 'emergency';
+}
 
+interface Debt {
+  id: string | number;
+  name: string;
+  budget?: number;
+}
+
+interface SavingsGoal {
+  id: string | number;
+  name: string;
+  budget?: number;
+}
 
 interface Allocations {
   emergencyFundMonthly: number;
   generalSavings: number;
   discretionarySpending: number;
   debtAllocations: { id: string; name: string; totalPayment: number }[];
-  goalAllocations: { id: string; name: string; allocatedMonthly: number  }[];
+  goalAllocations: { id: string; name: string; allocatedMonthly: number }[];
 }
 
 interface Props {
@@ -17,11 +34,6 @@ interface Props {
   categories: Category[];
   goals: SavingsGoal[];
   debts: Debt[];
-  totalDebt: number | undefined;
-  totalGoals: number | undefined;
-  totalSavings: number;
-  totalEmergency: number;
-  totalWants: number;
   totalNeeds: number;
   onClose: () => void;
   onUpdate: (
@@ -31,79 +43,92 @@ interface Props {
   ) => void;
 }
 
-export default function AdvisorBudgetBuilder({
-  allocations,
-  categories,
-  goals,
-  debts,
-  totalNeeds,
-  onClose,
-  onUpdate,
-}: Props) {
+// Demo data for the component
+const demoData = {
+  allocations: {
+    emergencyFundMonthly: 2500,
+    generalSavings: 3000,
+    discretionarySpending: 4000,
+    debtAllocations: [
+      { id: '1', name: 'משכנתא', totalPayment: 5500 },
+      { id: '2', name: 'הלוואת רכב', totalPayment: 1200 }
+    ],
+    goalAllocations: [
+      { id: '1', name: 'חופשה', allocatedMonthly: 800 },
+      { id: '2', name: 'מחשב חדש', allocatedMonthly: 600 }
+    ]
+  },
+  categories: [
+    { id: '1', name: 'דיור', budget: 6000, tag: 'need' as const },
+    { id: '2', name: 'מזון', budget: 2500, tag: 'need' as const },
+    { id: '3', name: 'בילויים', budget: 1500, tag: 'want' as const },
+    { id: '4', name: 'ביגוד', budget: 800, tag: 'want' as const },
+    { id: '5', name: 'חיסכון כללי', budget: 2000, tag: 'savings' as const },
+    { id: '6', name: 'קרן חירום', budget: 1500, tag: 'emergency' as const }
+  ],
+  goals: [
+    { id: '1', name: 'חופשה', budget: 800 },
+    { id: '2', name: 'מחשב חדש', budget: 600 }
+  ],
+  debts: [
+    { id: '1', name: 'משכנתא', budget: 5500 },
+    { id: '2', name: 'הלוואת רכב', budget: 1200 }
+  ],
+  totalNeeds: 8500
+};
+
+export default function ModernBudgetBuilder({
+  allocations = demoData.allocations,
+  categories = demoData.categories,
+  goals = demoData.goals,
+  debts = demoData.debts,
+  totalNeeds = demoData.totalNeeds,
+  onClose = () => {},
+  onUpdate = () => {}
+}: Partial<Props>) {
   const [localCategories, setLocalCategories] = useState([...categories]);
   const [localGoals, setLocalGoals] = useState([...goals]);
   const [localDebts, setLocalDebts] = useState([...debts]);
+  const [activeTab, setActiveTab] = useState('needs');
 
-  // Initialize budgets with advisor recommendations
-useEffect(() => {
-  const needCats = categories.filter(c => c.tag === 'need');
-  const wantCats = categories.filter(c => c.tag === 'want');
-  const savingCats = categories.filter(c => c.tag === 'savings');
-  const emergencyCats = categories.filter(c => c.tag === 'emergency');
+  useEffect(() => {
+    const needCats = categories.filter(c => c.tag === 'need');
+    const wantCats = categories.filter(c => c.tag === 'want');
+    const savingCats = categories.filter(c => c.tag === 'savings');
+    const emergencyCats = categories.filter(c => c.tag === 'emergency');
 
-  const needsPerCat = needCats.length > 0 ? Math.round(totalNeeds / needCats.length) : 0;
-  const wantsPerCat = wantCats.length > 0 ? Math.round(allocations.discretionarySpending / wantCats.length) : 0;
-  const savingsPerCat = savingCats.length > 0 ? Math.round(allocations.generalSavings / savingCats.length) : 0;
-  const emergencyPerCat = emergencyCats.length > 0 ? Math.round(allocations.emergencyFundMonthly / emergencyCats.length) : 0;
+    const needsPerCat = needCats.length > 0 ? Math.round(totalNeeds / needCats.length) : 0;
+    const wantsPerCat = wantCats.length > 0 ? Math.round(allocations.discretionarySpending / wantCats.length) : 0;
+    const savingsPerCat = savingCats.length > 0 ? Math.round(allocations.generalSavings / savingCats.length) : 0;
+    const emergencyPerCat = emergencyCats.length > 0 ? Math.round(allocations.emergencyFundMonthly / emergencyCats.length) : 0;
 
-  setLocalCategories(
-    categories.map(cat => {
-      let recommendedBudget = Math.round(cat.budget ?? 0);
-      switch (cat.tag) {
-        case 'need': recommendedBudget = needsPerCat; break;
-        case 'want': recommendedBudget = wantsPerCat; break;
-        case 'savings': recommendedBudget = savingsPerCat; break;
-        case 'emergency': recommendedBudget = emergencyPerCat; break;
-      }
-      return { ...cat, budget: recommendedBudget };
-    })
-  );
-
-  setLocalDebts(
-    debts.map(debt => ({
-      ...debt,
-      budget: Math.round(allocations.debtAllocations.find(d => d.id === debt.id)?.totalPayment ?? debt.budget ?? 0),
-    }))
-  );
-
-  setLocalGoals(
-    goals.map(goal => ({
-      ...goal,
-      budget: Math.round(allocations.goalAllocations.find(g => g.id === goal.id)?.allocatedMonthly ?? goal.budget ?? 0),
-    }))
-  );
-}, []);
-
-
-  const updateCategory = (id: string | number, budget: number) => {
-    setLocalCategories(prev =>
-      prev.map(cat => cat.id === id ? { ...cat, budget: Math.max(0, Math.round(budget)) } : cat)
+    setLocalCategories(
+      categories.map(cat => {
+        let recommendedBudget = Math.round(cat.budget ?? 0);
+        switch (cat.tag) {
+          case 'need': recommendedBudget = needsPerCat; break;
+          case 'want': recommendedBudget = wantsPerCat; break;
+          case 'savings': recommendedBudget = savingsPerCat; break;
+          case 'emergency': recommendedBudget = emergencyPerCat; break;
+        }
+        return { ...cat, budget: recommendedBudget };
+      })
     );
-  };
 
+    setLocalDebts(
+      debts.map(debt => ({
+        ...debt,
+        budget: Math.round(allocations.debtAllocations.find(d => d.id === debt.id)?.totalPayment ?? debt.budget ?? 0),
+      }))
+    );
 
-const updateDebt = (id: string | number, budget: number) => {
-  setLocalDebts(prev =>
-    prev.map(g => (g.id === id ? { ...g, budget: Math.max(0, Math.round(budget)) } : g))
-  );
-};
-
-  const updateGoal = (id: string | number, budget: number) => {
-  setLocalGoals(prev =>
-    prev.map(g => (g.id === id ? { ...g, budget: Math.max(0, Math.round(budget)) } : g))
-  );
-};
-
+    setLocalGoals(
+      goals.map(goal => ({
+        ...goal,
+        budget: Math.round(allocations.goalAllocations.find(g => g.id === goal.id)?.allocatedMonthly ?? goal.budget ?? 0),
+      }))
+    );
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('he-IL', {
@@ -118,11 +143,28 @@ const updateDebt = (id: string | number, budget: number) => {
     return Math.round(num).toLocaleString('he-IL');
   };
 
-  // פונקציה לטיפול בהזנת טקסט עם פסיקים
   const parseNumberInput = (value: string): number => {
     const cleanValue = value.replace(/[,\s]/g, '');
     const parsed = parseInt(cleanValue) || 0;
     return Math.max(0, parsed);
+  };
+
+  const updateCategory = (id: string | number, budget: number) => {
+    setLocalCategories(prev =>
+      prev.map(cat => cat.id === id ? { ...cat, budget: Math.max(0, Math.round(budget)) } : cat)
+    );
+  };
+
+  const updateDebt = (id: string | number, budget: number) => {
+    setLocalDebts(prev =>
+      prev.map(g => (g.id === id ? { ...g, budget: Math.max(0, Math.round(budget)) } : g))
+    );
+  };
+
+  const updateGoal = (id: string | number, budget: number) => {
+    setLocalGoals(prev =>
+      prev.map(g => (g.id === id ? { ...g, budget: Math.max(0, Math.round(budget)) } : g))
+    );
   };
 
   const calculateTotals = () => {
@@ -150,240 +192,218 @@ const updateDebt = (id: string | number, budget: number) => {
                           allocations.debtAllocations.reduce((sum, d) => sum + d.totalPayment, 0) +
                           allocations.goalAllocations.reduce((sum, g) => sum + g.allocatedMonthly, 0));
 
-  const renderBudgetSection = (
-    title: string,
-    items: { id: string | number; name: string; budget?: number }[],
-    recommendedTotal: number,
-    actualTotal: number,
-    onUpdate: (id: string | number, budget: number) => void,
-    color: string = 'blue'
-  ) => {
-    const isOverBudget = actualTotal > recommendedTotal;
-    const isUnderBudget = actualTotal < recommendedTotal;
-
-    return (
-      <div className="mb-6 bg-white rounded-lg shadow-sm border p-4">
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-semibold text-gray-800">
-            {title}
-          </h3>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">מומלץ:</span>
-            <span className="font-medium text-gray-800">{formatCurrency(recommendedTotal)}</span>
-            <span className="text-sm text-gray-600">|</span>
-            <span className="text-sm text-gray-600">בפועל:</span>
-            <span className={`font-medium ${isOverBudget ? 'text-red-600' : isUnderBudget ? 'text-orange-600' : 'text-green-600'}`}>
-              {formatCurrency(actualTotal)}
-            </span>
-            {isOverBudget ? (
-              <AlertTriangle className="w-4 h-4 text-red-500" />
-            ) : !isUnderBudget ? (
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
-            ) : null}
-          </div>
-        </div>
-        
-        {items.length === 0 ? (
-          <div className="text-gray-500 text-center py-4">אין פריטים בקטגוריה זו</div>
-        ) : (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between items-center bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
-                <span className="font-medium text-gray-700">{item.name}</span>
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      className="w-32 border-2 rounded-lg px-3 py-2 text-center font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 transition-colors"
-                      value={formatNumber(item.budget || 0)}
-                      onChange={(e) => onUpdate(item.id, parseNumberInput(e.target.value))}
-                      onFocus={(e) => e.target.select()}
-                      onKeyDown={(e) => {
-                        // מקשי קיצור לשינוי מהיר
-                        if (e.key === 'ArrowUp') {
-                          e.preventDefault();
-                          onUpdate(item.id, (item.budget || 0) + 100);
-                        } else if (e.key === 'ArrowDown') {
-                          e.preventDefault();
-                          onUpdate(item.id, Math.max(0, (item.budget || 0) - 100));
-                        } else if (e.key === 'Enter') {
-                          (e.target as HTMLElement).blur();
-                        }
-                      }}
-                      placeholder="0"
-                    />
-                  </div>
-                  <span className="text-lg text-gray-600 font-medium">₪</span>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      onClick={() => onUpdate(item.id, (item.budget || 0) + 100)}
-                      className="w-6 h-6 bg-blue-100 hover:bg-blue-200 rounded text-blue-600 text-xs font-bold transition-colors"
-                      title="הוסף 100 ₪"
-                    >
-                      +
-                    </button>
-                    <button
-                      onClick={() => onUpdate(item.id, Math.max(0, (item.budget || 0) - 100))}
-                      className="w-6 h-6 bg-red-100 hover:bg-red-200 rounded text-red-600 text-xs font-bold transition-colors"
-                      title="הפחת 100 ₪"
-                    >
-                      -
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   const needCats = localCategories.filter(c => c.tag === 'need');
   const wantCats = localCategories.filter(c => c.tag === 'want');
   const savingCats = localCategories.filter(c => c.tag === 'savings');
   const emergencyCats = localCategories.filter(c => c.tag === 'emergency');
 
-  const confirmAndClose = () => {
-    onUpdate(localCategories, localGoals, localDebts);
-    onClose();
-  };
-
   const isBalanced = Math.abs(totals.grandTotal - recommendedTotal) < 50;
 
+  const tabs = [
+    { id: 'needs', label: 'צרכים', count: needCats.length, icon: '🏠' },
+    { id: 'wants', label: 'רצונות', count: wantCats.length, icon: '🎉' },
+    { id: 'savings', label: 'חיסכון', count: savingCats.length + emergencyCats.length, icon: '💰' },
+    { id: 'debts', label: 'חובות', count: localDebts.length, icon: '💳' },
+    { id: 'goals', label: 'מטרות', count: localGoals.length, icon: '🎯' }
+  ];
+  const BudgetItem = ({ item, onUpdate }: {
+  item: { id: string | number; name: string; budget?: number };
+  onUpdate: (id: string | number, budget: number) => void;
+}) => {
+  const [inputValue, setInputValue] = useState(String(item.budget ?? 0));
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    // עדכן את inputValue רק אם המשתמש לא עורך כרגע
+    if (!isEditing) {
+      setInputValue(String(item.budget ?? 0));
+    }
+  }, [item.budget, isEditing]);
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-start p-4 overflow-auto">
-      <div className="bg-gray-50 w-full max-w-4xl rounded-lg shadow-xl my-4 relative">
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="font-semibold text-gray-800 text-lg">{item.name}</h4>
+        <div className="text-2xl font-bold text-blue-600">
+          {formatCurrency(item.budget || 0)} {/* כאן אפשר להשאיר עיצוב */}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onUpdate(item.id, Math.max(0, (item.budget || 0) - 100))}
+          className="w-10 h-10 bg-red-50 hover:bg-red-100 text-red-600 rounded-full flex items-center justify-center transition-colors"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+
+        <input
+  type="number"
+  className="flex-1 text-center text-lg font-semibold border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-blue-500 focus:outline-none transition-colors"
+  value={inputValue}
+  onFocus={() => setIsEditing(true)}
+  onBlur={() => setIsEditing(false)}
+  onChange={(e) => {
+    const value = e.target.value;
+    setInputValue(value);
+
+    const parsed = parseInt(value);
+    if (!isNaN(parsed)) {
+      onUpdate(item.id, Math.max(0, parsed));
+    }
+  }}
+  inputMode="numeric"
+  placeholder="0"
+/>
+
+
+        <button
+          onClick={() => onUpdate(item.id, (item.budget || 0) + 100)}
+          className="w-10 h-10 bg-green-50 hover:bg-green-100 text-green-600 rounded-full flex items-center justify-center transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'needs':
+        return needCats.map(item => (
+          <BudgetItem key={item.id} item={item} onUpdate={updateCategory} />
+        ));
+      case 'wants':
+        return wantCats.map(item => (
+          <BudgetItem key={item.id} item={item} onUpdate={updateCategory} />
+        ));
+      case 'savings':
+        return [...savingCats, ...emergencyCats].map(item => (
+          <BudgetItem key={item.id} item={item} onUpdate={updateCategory} />
+        ));
+      case 'debts':
+        return localDebts.map(item => (
+          <BudgetItem key={item.id} item={item} onUpdate={updateDebt} />
+        ));
+      case 'goals':
+        return localGoals.map(item => (
+          <BudgetItem key={item.id} item={item} onUpdate={updateGoal} />
+        ));
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
+      <div className="h-full flex flex-col bg-gradient-to-br from-blue-50 to-indigo-50">
         {/* Header */}
-        <div className="bg-blue-600 text-white p-6 rounded-t-lg">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-white hover:text-gray-200 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <div className="flex items-center gap-3">
-            <Calculator className="w-8 h-8" />
-            <div>
-              <h2 className="text-2xl font-bold">📊 בונה תקציב לפי המלצות היועץ</h2>
-              <p className="text-blue-100 mt-1">התאם את ההקצאות לפי הצרכים שלך • השתמש בחצים למעלה/מטה לשינוי מהיר</p>
+        <div className="bg-white shadow-sm border-b">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="w-6 h-6 text-blue-600" />
+              <div>
+                <h1 className="text-xl font-bold text-gray-800">בונה תקציב</h1>
+                <p className="text-sm text-gray-600">התאם את התקציב שלך</p>
+              </div>
             </div>
+            <button
+              onClick={onClose}
+              className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        {/* Summary Bar */}
-        <div className={`p-4 border-b ${isBalanced ? 'bg-green-50' : 'bg-orange-50'}`}>
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">סה"כ תקציב מומלץ:</span>
-              <span className="font-bold text-xl">{formatCurrency(recommendedTotal)}</span>
+        {/* Summary */}
+        <div className={`p-4 ${isBalanced ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'} border-b`}>
+          <div className="flex items-center justify-between">
+            <div className="text-center">
+              <div className="text-sm text-gray-600">מומלץ</div>
+              <div className="text-lg font-bold">{formatCurrency(recommendedTotal)}</div>
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">סה"כ תקציב בפועל:</span>
-              <span className={`font-bold text-xl ${isBalanced ? 'text-green-600' : 'text-orange-600'}`}>
-                {formatCurrency(totals.grandTotal)}
-              </span>
+            <div className="flex items-center gap-2">
               {isBalanced ? (
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
+                <Check className="w-6 h-6 text-green-600" />
               ) : (
-                <AlertTriangle className="w-5 h-5 text-orange-500" />
+                <AlertCircle className="w-6 h-6 text-orange-600" />
               )}
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-gray-600">בפועל</div>
+              <div className={`text-lg font-bold ${isBalanced ? 'text-green-600' : 'text-orange-600'}`}>
+                {formatCurrency(totals.grandTotal)}
+              </div>
             </div>
           </div>
           {!isBalanced && (
-            <div className="mt-2 text-center">
+            <div className="text-center mt-2">
               <span className="text-sm text-orange-600 font-medium">
-                הפרש: {formatCurrency(Math.abs(totals.grandTotal - recommendedTotal))} 
-                {totals.grandTotal > recommendedTotal ? ' מעל התקציב' : ' מתחת לתקציב'}
+                הפרש: {formatCurrency(Math.abs(totals.grandTotal - recommendedTotal))}
               </span>
             </div>
           )}
         </div>
 
+        {/* Tabs */}
+        <div className="bg-white border-b overflow-x-auto">
+          <div className="flex min-w-max px-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 min-w-[80px] py-3 px-4 text-sm font-medium rounded-t-lg transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-800'
+                }`}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-lg">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <span className="bg-gray-200 text-gray-700 text-xs rounded-full px-2 py-0.5">
+                      {tab.count}
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Content */}
-        <div className="p-6 max-h-96 overflow-y-auto">
-          {renderBudgetSection(
-            '🏠 צרכים בסיסיים (Needs)', 
-            needCats, 
-            Math.round(totalNeeds), 
-            totals.needsTotal, 
-            updateCategory,
-            'green'
-          )}
-
-          {renderBudgetSection(
-            '🎉 רצונות (Wants)', 
-            wantCats, 
-            Math.round(allocations.discretionarySpending), 
-            totals.wantsTotal, 
-            updateCategory,
-            'purple'
-          )}
-
-          {renderBudgetSection(
-            '💰 חיסכון כללי', 
-            savingCats, 
-            Math.round(allocations.generalSavings), 
-            totals.savingsTotal, 
-            updateCategory,
-            'blue'
-          )}
-
-          {renderBudgetSection(
-            '🛡️ קרן חירום', 
-            emergencyCats, 
-            Math.round(allocations.emergencyFundMonthly), 
-            totals.emergencyTotal, 
-            updateCategory,
-            'yellow'
-          )}
-
-          {renderBudgetSection(
-            '💳 חובות',
-            localDebts,
-            Math.round(allocations.debtAllocations.reduce((sum, d) => sum + d.totalPayment, 0)),
-            totals.debtsTotal,
-            updateDebt,
-            'red'
-          )}
-
-          {renderBudgetSection(
-            '🎯 מטרות חסכון',
-            localGoals,
-            Math.round(allocations.goalAllocations.reduce((sum, g) => sum + g.allocatedMonthly, 0)),
-            totals.goalsTotal,
-            updateGoal,
-            'indigo'
-          )}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-4 max-w-md mx-auto">
+            {renderTabContent()}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-100 p-6 rounded-b-lg border-t">
-          <div className="flex justify-between items-center">
+        <div className="bg-white border-t p-4">
+          <div className="flex gap-3 max-w-md mx-auto">
             <button
               onClick={onClose}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
             >
               ביטול
             </button>
             <button
-              onClick={confirmAndClose}
-              className={`px-6 py-2 rounded-lg text-white font-medium transition-colors ${
+              onClick={() => {
+                onUpdate(localCategories, localGoals, localDebts);
+                onClose();
+              }}
+              className={`flex-1 py-3 px-4 rounded-xl font-medium text-black transition-colors ${
                 isBalanced 
                   ? 'bg-green-600 hover:bg-green-700' 
                   : 'bg-orange-600 hover:bg-orange-700'
               }`}
             >
-              ✅ אישור והחלת תקציב
+              {isBalanced ? '✅ אישור' : '⚠️ אישור בכל זאת'}
             </button>
-          </div>
-          {!isBalanced && (
-            <div className="mt-3 text-center text-sm text-gray-600">
-              💡 כדאי לאזן את התקציב לפני האישור
-            </div>
-          )}
-          <div className="mt-2 text-center text-xs text-gray-500">
-            💡 טיפ: השתמש בחצים ↑↓ במקלדת לשינוי מהיר של 100₪ • לחץ על השדה לבחירה מלאה
           </div>
         </div>
       </div>
