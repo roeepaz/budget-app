@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, use } from 'react';
-import { Plus, Trash2, Edit3,Wallet, Calculator } from 'lucide-react';
+import { Plus, Trash2, Edit3,Wallet, Calculator,Menu } from 'lucide-react';
 import { db, auth } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -234,70 +234,84 @@ if (loading || !user) {
   return (
   <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4" dir="rtl">
     
-    {/* Header */}
-    <div className="flex justify-between items-center mb-8" dir="rtl">
-      {/* Logo + Title */}
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-          <Wallet className="w-6 h-6 text-white" />
-        </div>
-        <div className="text-right">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-            kesefy
-          </h1>
-          <p className="text-sm text-gray-600 font-medium">מנהל הכספים האישיים שלך</p>
-        </div>
+  <Sidebar
+    user={{
+      uid: user.uid,
+      displayName: user.displayName ?? undefined,
+      email: user.email ?? undefined
+    }}
+    sidebarOpen={sidebarOpen}
+    setSidebarOpen={setSidebarOpen}
+    displayCategories={displayCategories}
+    addExpenseToDB={addExpenseToDB}
+  />
+  
+  {/* Header */}
+  <header>
+    
+
+  <div className="flex justify-between items-center mb-8">
+    {/* Logo + Title */}
+    <div className="flex items-center gap-3">
+      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+        <Wallet className="w-6 h-6 text-white" />
+      </div>
+      <div>
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+          kesefy
+        </h1>
+        <p className="text-sm text-gray-600 font-medium">מנהל הכספים האישיים שלך</p>
       </div>
     </div>
+
+    {/* כפתור תפריט (אם נדרש) */}
+    <button 
+      onClick={() => setSidebarOpen(!sidebarOpen)}
+      className="md:hidden p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
+    >
+      <Menu className="w-6 h-6 text-gray-600" />
+    </button>
+  </div>
+
+      </header>
     
-    <Sidebar
-      user={{
-        uid: user.uid,
-        displayName: user.displayName ?? undefined,
-        email: user.email ?? undefined
-      }}
-      sidebarOpen={sidebarOpen}
-      setSidebarOpen={setSidebarOpen}
-      displayCategories={displayCategories}
-      addExpenseToDB={addExpenseToDB}
-    />
     
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* כפתור צף לבניית תקציב - להוסיף לפני סגירת ה-div הראשי */}
-<div className="fixed top-20 left-6 z-50">
-  <button
-    onClick={() => navigate('/advisor')}
-    className="group relative bg-gradient-to-r from-green-700 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-full shadow-2xl transform transition-all duration-300 hover:scale-110 hover:shadow-3xl flex items-center space-x-3 animate-pulse hover:animate-none"
-  >
-    {/* אייקון */}
-    <div className="bg-white/20 rounded-full p-2">
-      <Calculator className="w-6 h-6" />
-    </div>
-    
-    {/* טקסט */}
-    <span className="text-lg whitespace-nowrap">בואו נבנה תקציב!</span>
-    
-    {/* חץ מנופנף */}
-    <div className="transform transition-transform duration-300 group-hover:translate-x-1">
-      <span className="text-xl">🚀</span>
-    </div>
-    
-    {/* אפקט זוהר */}
-    <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-    
-    {/* עיגולים מתרחבים */}
-    <div className="absolute inset-0 rounded-full border-2 border-green-300 opacity-30 animate-ping"></div>
-    <div className="absolute inset-0 rounded-full border-2 border-green-400 opacity-20 animate-ping" style={{animationDelay: '0.5s'}}></div>
-  </button>
-  
-  {/* טולטיפ */}
-  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-    <div className="bg-gray-800 text-white text-sm py-2 px-3 rounded-lg whitespace-nowrap shadow-lg">
-      מוכנים לבנות את התקציב החכם שלכם?
-      <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-    </div>
-  </div>
-</div>
+      <div className="fixed top-20 left-6 z-50">
+        <button
+          onClick={() => navigate('/advisor')}
+          className="group relative bg-gradient-to-r from-green-700 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-full shadow-2xl transform transition-all duration-300 hover:scale-110 hover:shadow-3xl flex items-center space-x-3 animate-pulse hover:animate-none"
+        >
+          {/* אייקון */}
+          <div className="bg-white/20 rounded-full p-2">
+            <Calculator className="w-6 h-6" />
+          </div>
+          
+          {/* טקסט */}
+          <span className="text-lg whitespace-nowrap">בואו נבנה תקציב!</span>
+          
+          {/* חץ מנופנף */}
+          <div className="transform transition-transform duration-300 group-hover:translate-x-1">
+            <span className="text-xl">🚀</span>
+          </div>
+          
+          {/* אפקט זוהר */}
+          <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+          
+          {/* עיגולים מתרחבים */}
+          <div className="absolute inset-0 rounded-full border-2 border-green-300 opacity-30 animate-ping"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-green-400 opacity-20 animate-ping" style={{animationDelay: '0.5s'}}></div>
+        </button>
+        
+        {/* טולטיפ */}
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+          <div className="bg-gray-800 text-white text-sm py-2 px-3 rounded-lg whitespace-nowrap shadow-lg">
+            מוכנים לבנות את התקציב החכם שלכם?
+            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+          </div>
+        </div>
+      </div>
       {/* Add / Edit Category Form */}
       <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-white/20">
         <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
