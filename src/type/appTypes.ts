@@ -11,6 +11,8 @@ export interface Category {
   currentAmount?: number; 
   budget?: number;
   hidden?: boolean;
+    docId?: string;
+
 }
 
 export interface Expense {
@@ -19,6 +21,7 @@ export interface Expense {
   description: string;
   categoryId: string | number; // Allow both string and number for flexibility
   date: string; // ISO yyyy-MM-dd
+  docId?: string;
 }
 
 export interface ExpenseTrackerProps {
