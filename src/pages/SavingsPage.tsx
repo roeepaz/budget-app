@@ -5,7 +5,7 @@ import {
   Moon,
   Sun,
   Wallet,
-  BarChart,
+  PiggyBank,
   TrendingUp,
   Layers,
   RefreshCw,
@@ -402,7 +402,7 @@ const totalPerCat = displayCats.map(c => {
         </button>
       )}
       <div className={`p-2 rounded-full ${isDarkMode ? 'bg-indigo-800' : 'bg-indigo-500'}`}>
-        <Wallet size={24} />
+        <PiggyBank size={24} />
       </div>
       <h1 className="text-xl font-bold">ניהול חסכונות</h1>
     </div>
