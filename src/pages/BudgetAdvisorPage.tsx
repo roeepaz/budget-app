@@ -209,6 +209,28 @@ useEffect(() => {
   return () => clearTimeout(timeout);
 }, [categories, userId, hasLoaded]);
 
+useEffect(() => {
+  if (!user || loading) return;
+
+  const checkOnboarding = async () => {
+    const ref = doc(db, 'income_update', user.uid);
+    const snap = await getDoc(ref);
+    const data = snap.data() || {};
+
+    const step = data.onboardingStep || 'landing';
+    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    
+    if (step === 'landing') {
+      navigate('/landing');
+    } else if (step === 'income') {
+      navigate('/monthlyIncome', { state: { isNewUser: true } });
+    } else if (data.lastIncomeMonth !== currentMonth) {
+      navigate('/monthlyIncome', { state: { isNewUser: false } });
+    }
+  };
+
+  checkOnboarding();
+}, [user, loading]);
 if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
