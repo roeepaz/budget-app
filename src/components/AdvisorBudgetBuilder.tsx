@@ -1,25 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, Check, AlertCircle, Plus, Minus } from 'lucide-react';
 
-// Mock types for demo
-interface Category {
-  id: string | number;
-  name: string;
-  budget?: number;
-  tag: 'need' | 'want' | 'savings' | 'emergency';
-}
+import { Category, Debt, SavingsGoal } from '../type/appTypes';
 
-interface Debt {
-  id: string | number;
-  name: string;
-  budget?: number;
-}
-
-interface SavingsGoal {
-  id: string | number;
-  name: string;
-  budget?: number;
-}
 
 interface Allocations {
   emergencyFundMonthly: number;
@@ -35,6 +18,11 @@ interface Props {
   goals: SavingsGoal[];
   debts: Debt[];
   totalNeeds: number;
+   totalDebt?: number;
+    totalGoals?: number;
+    totalSavings?: number;
+  totalEmergency?: number;
+  totalWants?:number;
   onClose: () => void;
   onUpdate: (
     updatedCategories: Category[],
@@ -59,20 +47,12 @@ const demoData = {
     ]
   },
   categories: [
-    { id: '1', name: 'דיור', budget: 6000, tag: 'need' as const },
-    { id: '2', name: 'מזון', budget: 2500, tag: 'need' as const },
-    { id: '3', name: 'בילויים', budget: 1500, tag: 'want' as const },
-    { id: '4', name: 'ביגוד', budget: 800, tag: 'want' as const },
-    { id: '5', name: 'חיסכון כללי', budget: 2000, tag: 'savings' as const },
-    { id: '6', name: 'קרן חירום', budget: 1500, tag: 'emergency' as const }
+    { id: '1', name: 'דיור', budget: 6000, tag: 'need' as const, color: '', icon: '' },
   ],
   goals: [
-    { id: '1', name: 'חופשה', budget: 800 },
-    { id: '2', name: 'מחשב חדש', budget: 600 }
+
   ],
   debts: [
-    { id: '1', name: 'משכנתא', budget: 5500 },
-    { id: '2', name: 'הלוואת רכב', budget: 1200 }
   ],
   totalNeeds: 8500
 };
