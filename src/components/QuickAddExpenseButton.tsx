@@ -8,12 +8,18 @@ type QuickAddExpenseButtonProps = {
 };
 
 export default function QuickAddExpenseButton({ onAddExpense, categories }: QuickAddExpenseButtonProps) {
+  const getLocalDateString = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const local = new Date(now.getTime() - offset * 60 * 1000);
+    return local.toISOString().split('T')[0];
+  };
   const [showModal, setShowModal] = useState(false);
   const [quickExpense, setQuickExpense] = useState({
     amount: '',
     description: '',
     categoryId: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateString(),
   });
 const visibleCategories = categories.filter(c => !c.hidden);
 
@@ -36,7 +42,7 @@ const visibleCategories = categories.filter(c => !c.hidden);
       amount: '',
       description: '',
       categoryId: '',
-      date: new Date().toISOString().split('T')[0],
+      date: getLocalDateString(),
     });
     setShowModal(false);
   };
