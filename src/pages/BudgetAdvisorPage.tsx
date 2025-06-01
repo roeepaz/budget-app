@@ -460,8 +460,8 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
             {[
   { key: 'income', label: 'הכנסה חודשית נטו', icon: Wallet, placeholder: '10,000', color: 'green' },
   { key: 'needs', label: 'הוצאות קבועות', icon: Shield, placeholder: '4,000', color: 'orange' },
-  { key: 'emergencyTargetMonths', label: 'יעד חירום (חודשים)', icon: Shield, placeholder: '3', color: 'blue' },
-  { key: 'currentSavings', label: 'חיסכון חודשי קבוע', icon: PiggyBank, placeholder: '500', color: 'purple' }
+  { key: 'emergencyTargetMonths', label: 'יעד קרן חירום בחודשים(את הסכום נחשב במספר חודשים כפול הוצאות קבועות)', icon: Shield, placeholder: '3', color: 'blue' },
+  { key: 'currentSavings', label: 'חיסכון חודשי קבוע (אופציונלי- סכום זה ירד מחישוב התזרים)', icon: PiggyBank, placeholder: '500', color: 'purple' }
 ].map(({ key, label, icon: Icon, placeholder, color }) => {
   const typedKey = key as keyof typeof form;
 

@@ -11,7 +11,7 @@ import {
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar'; // הנתיב לפי מיקום הקובץ
+import SidebarWrapper from '../components/SidebarWrapper'; // ⬅ שדרוג קריטי
 import { useUserData } from '../hooks/useUserData';
 export default function BudgetPlanner({ user }) {
   const navigate = useNavigate();
@@ -356,31 +356,39 @@ const menuItems = [
     }))
   ];
   
-  return (
-      <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50" dir="rtl">
-      <Sidebar
-        user={user}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        menuItems={menuItems}
-        displayCategories={displayCategories}
-        addExpenseToDB={addExpenseToDB}
-      />
-       <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
-      <div className="flex justify-between items-center mb-6">
-       <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">
-         🎯 <span className="text-yellow-500">מנהל התקציב</span>
-        </h1>
+ return (
+  <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-purple-50" dir="rtl">
+    
+    {/* תפריט צד מותאם למובייל */}
+    <SidebarWrapper
+      sidebarOpen={sidebarOpen}
+      setSidebarOpen={setSidebarOpen}
+    />
 
-            <button 
-            className="flex items-center text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1 rounded-full text-sm transition"
-            onClick={() => navigate('/')}
-            >
-            <ChevronLeft size={18} className="ml-1" />
-            חזרה
-            </button>
+    {/* תוכן ראשי */}
+    <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+
+      {/* כותרת הדף */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <Wallet className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">kesefy</h1>
+            <p className="text-sm text-gray-500">מנהל התקציב החודשי שלך</p>
+          </div>
+        </div>
+
+        {/* כפתור תפריט – יופיע רק במובייל */}
+        <button
+          onClick={() => navigate('/')}
+          className="lg:hidden p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition"
+        >
+          <Home className="w-6 h-6 text-gray-600" />
+        </button>
       </div>
-      
+     
       {/* Navigation Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <div className="mb-6 flex justify-center gap-3">
