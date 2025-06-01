@@ -217,24 +217,24 @@ export default function ModernBudgetBuilder({
         </button>
 
         <input
-  type="number"
-  className="flex-1 text-center text-lg font-semibold border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-blue-500 focus:outline-none transition-colors"
-  value={inputValue}
-  onFocus={() => setIsEditing(true)}
-  onBlur={() => setIsEditing(false)}
-  onChange={(e) => {
-    const value = e.target.value;
-    setInputValue(value);
-
-    const parsed = parseInt(value);
-    if (!isNaN(parsed)) {
-      onUpdate(item.id, Math.max(0, parsed));
-    }
-  }}
-  inputMode="numeric"
-  placeholder="0"
-/>
-
+          type="text"
+          inputMode="numeric"
+          className="flex-1 text-center text-lg font-semibold border-2 border-gray-200 rounded-xl py-3 px-4 focus:border-blue-500 focus:outline-none transition-colors"
+          value={inputValue}
+          onFocus={() => setIsEditing(true)}
+          onBlur={() => {
+            setIsEditing(false);
+            const parsed = parseInt(inputValue.replace(/[^\d]/g, ''));
+            if (!isNaN(parsed)) {
+              onUpdate(item.id, Math.max(0, parsed));
+            }
+          }}
+          onChange={(e) => {
+            const val = e.target.value.replace(/[^\d]/g, '');
+            setInputValue(val);
+          }}
+          placeholder="0"
+        />
 
         <button
           onClick={() => onUpdate(item.id, (item.budget || 0) + 100)}

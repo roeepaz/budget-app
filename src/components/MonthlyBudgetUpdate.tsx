@@ -214,6 +214,8 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                 <div className="relative">
                   <input
                     type="text"
+                      inputMode="numeric"
+                      pattern="\d*"
                     value={incomeData.salary}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleIncomeChange('salary', e.target.value)}
                     placeholder="0"
@@ -230,6 +232,8 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                 <div className="relative">
                   <input
                     type="text"
+                      inputMode="numeric"
+                      pattern="\d*"
                     value={incomeData.freelance}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleIncomeChange('freelance', e.target.value)}
                     placeholder="0"
@@ -246,6 +250,8 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                 <div className="relative">
                   <input
                     type="text"
+                      inputMode="numeric"
+                      pattern="\d*"
                     value={incomeData.passive}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleIncomeChange('passive', e.target.value)}
                     placeholder="0"
@@ -262,6 +268,8 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                 <div className="relative mb-2">
                   <input
                     type="text"
+                        inputMode="numeric"
+                      pattern="\d*"
                     value={incomeData.other}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleIncomeChange('other', e.target.value)}
                     placeholder="0"
@@ -271,6 +279,8 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                 </div>
                 <input
                   type="text"
+                    inputMode="numeric"
+                  pattern="\d*"
                   value={incomeData.otherDescription}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIncomeData(prev => ({ ...prev, otherDescription: e.target.value }))}
                   placeholder="תיאור (אופציונלי)"

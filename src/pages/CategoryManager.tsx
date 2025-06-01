@@ -5,7 +5,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useLocation } from 'react-router-dom';
 import { Category, CategoryTag, Expense } from '../type/appTypes';
-import Sidebar from '../components/Sidebar';
+import SidebarWrapper from '../components/SidebarWrapper'; // ⬅ שדרוג קריטי
 import { useUserData } from '../hooks/useUserData';
 import { useNavigate } from 'react-router-dom';
 export default function CategoryManager() {
@@ -231,50 +231,29 @@ if (loading || !user) {
       </div>
     );
   }
-  return (
-  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4" dir="rtl">
-    
-  <Sidebar
-    user={{
-      uid: user.uid,
-      displayName: user.displayName ?? undefined,
-      email: user.email ?? undefined
-    }}
-    sidebarOpen={sidebarOpen}
-    setSidebarOpen={setSidebarOpen}
-    displayCategories={displayCategories}
-    addExpenseToDB={addExpenseToDB}
-  />
+
   
-  {/* Header */}
-  <header>
-    
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4" dir="rtl">
+      
+      {/* Sidebar as Drawer – מותאם לנייד */}
+      <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-  <div className="flex justify-between items-center mb-8">
-    {/* Logo + Title */}
-    <div className="flex items-center gap-3">
-      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-        <Wallet className="w-6 h-6 text-white" />
-      </div>
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-          kesefy
-        </h1>
-        <p className="text-sm text-gray-600 font-medium">מנהל הכספים האישיים שלך</p>
-      </div>
+      {/* Header */}
+   <header className="relative bg-white py-4 px-6 flex items-center justify-between">
+  {/* לוגו וטקסט */}
+  <div className="flex items-center gap-3">
+    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+      <Wallet className="w-5 h-5 text-white" />
     </div>
-
-    {/* כפתור תפריט (אם נדרש) */}
-    <button 
-      onClick={() => setSidebarOpen(!sidebarOpen)}
-      className="md:hidden p-2 rounded-lg bg-white shadow-md hover:shadow-lg transition-shadow"
-    >
-      <Menu className="w-6 h-6 text-gray-600" />
-    </button>
+    <div>
+      <h1 className="text-xl font-bold text-gray-800">kesefy</h1>
+      <p className="text-sm text-gray-500">מנהל הכספים האישיים שלך</p>
+    </div>
   </div>
 
-      </header>
-    
+</header>
+ 
     
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* כפתור צף לבניית תקציב - להוסיף לפני סגירת ה-div הראשי */}

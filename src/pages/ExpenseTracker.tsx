@@ -529,91 +529,99 @@ const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
 }));
 
 
-   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-emerald-100 from-slate-50 via-blue-50 to-indigo-100" dir="rtl">   
-      {/* Modern Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4 space-x-reverse">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                <Home className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <button
-                  onClick={() => setSidebarOpen(true)}
-                  className="fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-                >
-                  <Menu className="w-6 h-6 text-gray-700" />
-                </button>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                  kesefy
-                </h1>
-                <p className="text-sm text-gray-500">מנהל הכספים האישיים שלך</p>
-              </div>
+return (
+  <div className="min-h-screen bg-gradient-to-br from-blue-50 via-blue-100 to-emerald-100 from-slate-50 via-blue-50 to-indigo-100" dir="rtl">
+    
+    {/* Modern Header */}
+    <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-50 relative">
+      <div className="container mx-auto px-6 py-4">
+        <div className="flex justify-between items-center">
+          {/* Logo & Title */}
+          <div className="flex items-center space-x-4 space-x-reverse">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+              <Home className="w-5 h-5 text-white" />
             </div>
-            
-            <div className="flex items-center space-x-4 space-x-reverse">
-              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-2xl shadow-lg">
-                <div className="text-center text-black">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                kesefy
+              </h1>
+              <p className="text-sm text-gray-500">מנהל הכספים האישיים שלך</p>
+            </div>
+          </div>
+
+          {/* Top Stats & Selectors */}
+          <div className="flex items-center space-x-4 space-x-reverse">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-2xl shadow-lg">
+              <div className="text-center text-black">
                 <div className="text-sm opacity-90">סה"כ החודש</div>
                 <div className="text-xl font-bold">₪{totalExpenses.toLocaleString()}</div>
               </div>
-              </div>
-              <select
-                className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-              >
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-              <select 
-                className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              >
-                {monthNames.map((month, idx) => (
-                  <option key={idx} value={idx}>{month} {selectedYear}</option>
-                ))}
-              </select>
             </div>
+            <select
+              className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+            >
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+            <select 
+              className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            >
+              {monthNames.map((month, idx) => (
+                <option key={idx} value={idx}>{month} {selectedYear}</option>
+              ))}
+            </select>
           </div>
-        </div>
-      </header>
-      <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      {/* Modern Navigation */}
-      <nav className="bg-white/70 backdrop-blur-sm border-b border-white/30">
-        <div className="container mx-auto px-6">
-          <div className="flex space-x-1 space-x-reverse">
-            {[
-              { id: 'dashboard', label: 'לוח בקרה', icon: BarChart3 },
-              { id: 'expenses', label: 'הוצאות', icon: Plus },
-            ].map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  className={`px-6 py-4 font-medium text-sm flex items-center space-x-2 space-x-reverse transition-all duration-200 relative ${
-                    activeTab === tab.id 
-                      ? 'text-blue-600 bg-white/60 rounded-t-xl border-b-2 border-blue-600' 
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/30 rounded-t-xl'
-                  }`}
-                  onClick={() => setActiveTab(tab.id as any)}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          {/* Menu Button – Mobile */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="absolute top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow lg:hidden"
+          >
+            <Menu className="w-6 h-6 text-gray-700" />
+          </button>
         </div>
-      </nav>
+      </div>
+    </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
+    {/* Sidebar */}
+    <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+    {/* Navigation Tabs */}
+    <nav className="bg-white/70 backdrop-blur-sm border-b border-white/30 overflow-x-auto">
+      <div className="container mx-auto px-6">
+        <div className="flex w-max space-x-1 space-x-reverse">
+          {[
+            { id: 'dashboard', label: 'לוח בקרה', icon: BarChart3 },
+            { id: 'expenses', label: 'הוצאות', icon: Plus },
+          ].map(tab => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                className={`px-6 py-4 font-medium text-sm flex items-center space-x-2 space-x-reverse transition-all duration-200 relative ${
+                  activeTab === tab.id 
+                    ? 'text-blue-600 bg-white/60 rounded-t-xl border-b-2 border-blue-600' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/30 rounded-t-xl'
+                }`}
+                onClick={() => setActiveTab(tab.id as any)}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </nav>
+
+    {/* Main Content */}
+    <main className="container mx-auto px-6 py-8">
+
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
             {/* Stats Cards */}
