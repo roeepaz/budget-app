@@ -325,13 +325,15 @@ if(userFatalError){
               לוח הבקרה שלך
             </h1>
             <p className="text-gray-600 text-base lg:text-lg">Kesefy- השותף שלך</p>
-             <button
-              onClick={() => setIsOpen(true)}
-              className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2"
-            >
-              <MessageSquare className="w-5 h-5" />
-              משוב
-            </button>
+            {!sidebarOpen && (
+              <button
+                onClick={() => setIsOpen(true)}
+                className="fixed bottom-6 right-6 z-30 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2"
+              >
+                <MessageSquare className="w-5 h-5" />
+                משוב
+              </button>
+            )}
 
      {/* מודל המשוב */}
     <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed z-50 inset-0">
