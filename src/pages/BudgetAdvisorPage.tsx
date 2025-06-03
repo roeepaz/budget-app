@@ -458,37 +458,37 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-  { key: 'income', label: 'הכנסה חודשית נטו', icon: Wallet, placeholder: '10,000', color: 'green' },
-  { key: 'needs', label: 'הוצאות קבועות', icon: Shield, placeholder: '4,000', color: 'orange' },
-  { key: 'emergencyTargetMonths', label: 'יעד קרן חירום בחודשים(את הסכום נחשב במספר חודשים כפול הוצאות קבועות)', icon: Shield, placeholder: '3', color: 'blue' },
-  { key: 'currentSavings', label: 'חיסכון חודשי קבוע (אופציונלי- סכום זה ירד מחישוב התזרים)', icon: PiggyBank, placeholder: '500', color: 'purple' }
-].map(({ key, label, icon: Icon, placeholder, color }) => {
-  const typedKey = key as keyof typeof form;
+              { key: 'income', label: 'הכנסה חודשית נטו', icon: Wallet, placeholder: '10,000', color: 'green' },
+              { key: 'needs', label: 'הוצאות קבועות', icon: Shield, placeholder: '4,000', color: 'orange' },
+              { key: 'emergencyTargetMonths', label: 'יעד קרן חירום בחודשים(את הסכום נחשב במספר חודשים כפול הוצאות קבועות)', icon: Shield, placeholder: '3', color: 'blue' },
+              { key: 'currentSavings', label: 'חיסכון חודשי קבוע (אופציונלי- סכום זה ירד מחישוב התזרים)', icon: PiggyBank, placeholder: '500', color: 'purple' }
+            ].map(({ key, label, icon: Icon, placeholder, color }) => {
+              const typedKey = key as keyof typeof form;
 
-  return (
-    <div key={key} className="group relative">
-      <label className={`block text-sm font-semibold mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
-        <Icon className={`inline w-4 h-4 mr-2 text-${color}-500`} />
-        {label}
-      </label>
-      <div className="relative">
-        <input
-          type="number"
-          placeholder={placeholder}
-          className={`w-full p-4 rounded-2xl border-2 transition-all duration-300 focus:scale-105 ${
-            darkMode 
-              ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700/70' 
-              : 'bg-white/80 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-400 focus:bg-white backdrop-blur-sm'
-          } focus:ring-4 focus:ring-blue-400/20 focus:outline-none group-hover:border-blue-300`}
-          value={form[typedKey] || ''}
-          onChange={(e) => setForm({ ...form, [typedKey]: Number(e.target.value) })}
-        />
-        <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-${color}-400/10 to-${color}-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`}></div>
-      </div>
-    </div>
-  );
-})
-}
+              return (
+                <div key={key} className="group relative">
+                  <label className={`block text-sm font-semibold mb-3 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                    <Icon className={`inline w-4 h-4 mr-2 text-${color}-500`} />
+                    {label}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      placeholder={placeholder}
+                      className={`w-full p-4 rounded-2xl border-2 transition-all duration-300 focus:scale-105 ${
+                        darkMode 
+                          ? 'bg-slate-700/50 border-slate-600 text-white placeholder-slate-400 focus:border-blue-400 focus:bg-slate-700/70' 
+                          : 'bg-white/80 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-blue-400 focus:bg-white backdrop-blur-sm'
+                      } focus:ring-4 focus:ring-blue-400/20 focus:outline-none group-hover:border-blue-300`}
+                      value={form[typedKey] || ''}
+                      onChange={(e) => setForm({ ...form, [typedKey]: Number(e.target.value) })}
+                    />
+                    <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r from-${color}-400/10 to-${color}-500/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`}></div>
+                  </div>
+                </div>
+              );
+            })
+            }
           </div>
         </div>
 
@@ -576,7 +576,7 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
                         {goal.name}
                       </div>
                       <div className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-{formatCurrency(goal.currentAmount ?? 0)} / {formatCurrency(goal.targetAmount ?? 0)}
+                        {formatCurrency(goal.currentAmount ?? 0)} / {formatCurrency(goal.targetAmount ?? 0)}
                       </div>
                     </div>
                   </div>
