@@ -257,40 +257,41 @@ if (loading || !user) {
     
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* כפתור צף לבניית תקציב - להוסיף לפני סגירת ה-div הראשי */}
-      <div className="fixed top-20 left-6 z-50">
+      <div className="fixed top-20 left-40 z-40 scale-90 sm:scale-100">
         <button
           onClick={() => navigate('/advisor')}
-          className="group relative bg-gradient-to-r from-green-700 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-6 rounded-full shadow-2xl transform transition-all duration-300 hover:scale-110 hover:shadow-3xl flex items-center space-x-3 animate-pulse hover:animate-none"
+          className="group relative bg-gradient-to-r from-green-700 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center space-x-2 animate-pulse hover:animate-none text-sm"
         >
           {/* אייקון */}
-          <div className="bg-white/20 rounded-full p-2">
-            <Calculator className="w-6 h-6" />
+          <div className="bg-white/20 rounded-full p-1.5">
+            <Calculator className="w-4 h-4" />
           </div>
-          
+
           {/* טקסט */}
-          <span className="text-lg whitespace-nowrap">בואו נבנה תקציב!</span>
-          
-          {/* חץ מנופנף */}
-          <div className="transform transition-transform duration-300 group-hover:translate-x-1">
-            <span className="text-xl">🚀</span>
+          <span className="whitespace-nowrap">בואו נבנה תקציב!</span>
+
+          {/* חץ */}
+          <div className="transition-transform duration-300 group-hover:translate-x-1">
+            <span className="text-base">🚀</span>
           </div>
-          
-          {/* אפקט זוהר */}
+
+          {/* זוהר */}
           <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-          
+
           {/* עיגולים מתרחבים */}
-          <div className="absolute inset-0 rounded-full border-2 border-green-300 opacity-30 animate-ping"></div>
-          <div className="absolute inset-0 rounded-full border-2 border-green-400 opacity-20 animate-ping" style={{animationDelay: '0.5s'}}></div>
+          <div className="absolute inset-0 rounded-full border border-green-300 opacity-30 animate-ping"></div>
+          <div className="absolute inset-0 rounded-full border border-green-400 opacity-20 animate-ping" style={{ animationDelay: '0.5s' }}></div>
         </button>
-        
+
         {/* טולטיפ */}
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-          <div className="bg-gray-800 text-white text-sm py-2 px-3 rounded-lg whitespace-nowrap shadow-lg">
-            מוכנים לבנות את התקציב החכם שלכם?
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+          <div className="bg-gray-800 text-white text-xs py-1 px-2 rounded shadow">
+            מוכנים לבנות את התקציב שלכם?
             <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
           </div>
         </div>
       </div>
+
       {/* Add / Edit Category Form */}
       <div className="bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-white/20">
         <h2 className="text-xl font-bold mb-6 text-gray-800 flex items-center gap-2">
