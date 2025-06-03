@@ -149,53 +149,77 @@ const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBud
 
 const generateQuickInsights = () => {
   if (!categories || !expenses) return [];
-  
+
   const now = new Date();
   const month = now.getMonth();
   const year = now.getFullYear();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const day = now.getDate();
   const monthProgress = Math.floor((day / daysInMonth) * 100);
-  
+
   const totalBudget = [...categories, ...debts, ...goals].reduce(
     (sum, item) => sum + (item.budget || 0), 0
   );
+
   const totalSpent = expenses
-  .filter(exp => {
-    const d = new Date(exp.date);
-    return d.getMonth() === month && d.getFullYear() === year;
-  })
-  .reduce((sum, e) => sum + e.amount, 0);
-  
+    .filter(exp => {
+      const d = new Date(exp.date);
+      return d.getMonth() === month && d.getFullYear() === year;
+    })
+    .reduce((sum, e) => sum + e.amount, 0);
+
   const percentUsed = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
-  
+  const avgDailySpend = day > 0 ? totalSpent / day : 0;
+  const projectedEndOfMonth = avgDailySpend * daysInMonth;
 
   const insights = [];
-  
+
+  if (projectedEndOfMonth > totalBudget) {
+    insights.push({
+      icon: <TrendingUp className="text-red-600" />,
+      text: `⚠️ בקצב ההוצאות הנוכחי תחרוג ב־₪${Math.round(projectedEndOfMonth - totalBudget)} עד סוף החודש.`
+    });
+  }
+
   if (percentUsed > 100) {
     insights.push({
       icon: <AlertCircle className="text-red-500" />,
-      text: 'חרגת מהתקציב החודשי. כדאי לבדוק את הקטגוריות.'
-    });
-  } else if (monthProgress < 50 && percentUsed > 60) {
-    insights.push({
-      icon: <TrendingUp className="text-orange-500" />,
-      text: 'קצב ההוצאות גבוה יחסית לתחילת החודש.'
-    });
-  } else if (monthProgress > 80 && percentUsed < 70) {
-    insights.push({
-      icon: <ArrowDownCircle className="text-green-500" />,
-      text: 'אתה חוסך יותר מהצפוי – מעולה!'
-    });
-  } else {
-    insights.push({
-      icon: <DollarSign className="text-blue-500" />,
-      text: 'התקציב שלך מאוזן נכון לעכשיו.'
+      text: 'חריגה מהתקציב! חשוב לבדוק את הקטגוריות החריגות.'
     });
   }
-  
+
+  if (monthProgress < 50 && percentUsed > 60) {
+    insights.push({
+      icon: <TrendingUp className="text-orange-500" />,
+      text: 'קצב ההוצאות גבוה יחסית לשלב זה של החודש.'
+    });
+  }
+
+  if (monthProgress > 50 && percentUsed < 50) {
+    insights.push({
+      icon: <ArrowDownCircle className="text-green-500" />,
+      text: '💰 אתה מתנהל באחריות – ההוצאות שלך נמוכות יחסית.'
+    });
+  }
+
+  const hasZeroBudget = categories.concat(goals, debts).some(c => (c.budget || 0) === 0);
+  if (hasZeroBudget) {
+    insights.push({
+      icon: <AlertCircle className="text-yellow-500" />,
+      text: 'יש קטגוריות ללא תקציב מוגדר – זה עלול להוביל להפתעות לא צפויות.'
+    });
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      icon: <DollarSign className="text-blue-500" />,
+      text: 'התקציב שלך מאוזן נכון לעכשיו. המשך כך! 🎯'
+    });
+  }
+
   return insights;
 };
+
 const getCategoryBudgetAlerts = () => {
   const items = [
     ...categories.map(c => ({
