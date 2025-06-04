@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Menu,Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home, Calendar, Target, CreditCard, TrendingUp, Filter, Search } from 'lucide-react';
 import { db } from '../firebaseConfig';
-import { doc, getDoc, setDoc, collection,getDocs  } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection,getDocs, deleteDoc, updateDoc} from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
 import {Category,Expense,CategoryTag,ExpenseTrackerProps,Debt, SavingsGoal, RecurringExpense} from '../type/appTypes'
 import SidebarWrapper from '../components/SidebarWrapper';
 import FullPageError from '../components/FullPageError';
+import { setDocWithIdList } from '../services/firestoreService';
+import { useUserData } from '../hooks/useUserData';
 
 export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   // Default categories
@@ -24,46 +26,42 @@ const [recurringForm, setRecurringForm] = useState({
   startDate: new Date().toISOString().split('T')[0],
   endDate: ''
 });
+// State
+const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'categories'>('dashboard');
+const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+const currentYear = new Date().getFullYear();
+const yearOptions = Array.from({ length: currentYear - 2020 + 1 }, (_, i) => 2020 + i);
 
-  // State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'expenses' | 'categories'>('dashboard');
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: currentYear - 2020 + 1 }, (_, i) => 2020 + i);
+const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-  const [categories, setCategories] = useState<Category[]>(defaultCategories);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]);
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [loadError, setLoadError] = useState<boolean>(false);
+const [loadError, setLoadError] = useState<boolean>(false);
 const [monthlyIncomeData, setMonthlyIncomeData] = useState<Record<string, number>>({});
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+const [sidebarOpen, setSidebarOpen] = useState(false);
 
 const [fatalError, setFatalError] = useState<null | {
   title?: string;
   description?: string;
   severity?: 'error' | 'warning' | 'info';
 }>(null)
-  // Form state
-  const [newExpense, setNewExpense] = useState({
-    amount: '',         // Use empty string for form input
-    description: '',
-    categoryId: '',     // Use empty string for form input
-    date: new Date().toISOString().split('T')[0],
-  });
+// Form state
+const [newExpense, setNewExpense] = useState({
+  amount: '',         // Use empty string for form input
+  description: '',
+  categoryId: '',     // Use empty string for form input
+  date: new Date().toISOString().split('T')[0],
+});
 
-  const [newCategory, setNewCategory] = useState<Omit<Category, 'id'>>({
-    name: '',
-    color: '#' + Math.floor(Math.random() * 16777215).toString(16),
-    icon: '📊',
-    tag: 'need'
-  });
+const [newCategory, setNewCategory] = useState<Omit<Category, 'id'>>({
+  name: '',
+  color: '#' + Math.floor(Math.random() * 16777215).toString(16),
+  icon: '📊',
+  tag: 'need'
+});
 
-  // All possible tags - FIXED: include 'savings'
-  const tags: CategoryTag[] = ['need', 'want', 'debt', 'emergency', 'goal', 'savings'];
-  
+// All possible tags - FIXED: include 'savings'
+const tags: CategoryTag[] = ['need', 'want', 'debt', 'emergency', 'goal', 'savings'];
+
 const tagColors: Record<CategoryTag, string> = {
   need:      '#3B82F6', // כחול
   want:      '#EF4444', // אדום
@@ -74,9 +72,23 @@ const tagColors: Record<CategoryTag, string> = {
 };
 ;
 
-  const userId = user?.uid;
-  const [loading, setLoading] = useState<boolean>(true);
-  const [hasLoaded, setHasLoaded] = useState<boolean>(false);
+const userId = user?.uid;
+
+const {
+  categories,
+  expenses,
+  debts,
+  goals,
+  loading,
+  setCategories,
+  setExpenses,
+  setDebts,
+  setGoals,
+  setLoading,
+  setHasLoaded,
+  addExpenseToDB,
+  addCategoryToDB
+} = useUserData(userId);
 
   // Helper function to clean data for Firebase (removes undefined values)
   const cleanDataForFirebase = (obj: any): any => {
@@ -94,121 +106,113 @@ const tagColors: Record<CategoryTag, string> = {
     return obj;
   };
 
-  // Load user data from Firebase
-  useEffect(() => {
-    if (!userId) return;
-(async () => {
-    const colRef = collection(db, 'financial_data', userId, 'monthly_income');
-    const snapshot = await getDocs(colRef);
-    const incomeMap: Record<string, number> = {};
+ useEffect(() => {
+  if (!userId) return;
 
-    snapshot.forEach(docSnap => {
-      const month = docSnap.id; // example: "2025-05"
-      const total = docSnap.data().total;
-      if (typeof total === 'number') {
-        incomeMap[month] = total;
+  (async () => {
+    try {
+      // 1. טעינת הכנסות חודשיות
+      const colRef = collection(db, 'financial_data', userId, 'monthly_income');
+      const snapshot = await getDocs(colRef);
+      const incomeMap: Record<string, number> = {};
+
+      snapshot.forEach(docSnap => {
+        const month = docSnap.id; // דוגמה: "2025-05"
+        const total = docSnap.data().total;
+        if (typeof total === 'number') {
+          incomeMap[month] = total;
+        }
+      });
+      setMonthlyIncomeData(incomeMap);
+
+      // 2. טעינת קטגוריות מה־subcollection
+      const categoriesSnap = await getDocs(collection(db, 'users', userId, 'categories'));
+      const categories = categoriesSnap.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          name: data.name,
+          color: data.color,
+          icon: data.icon,
+          tag: data.tag,
+          budget: data.budget ?? 0,
+          hidden: data.hidden ?? false,
+          currentAmount: ['savings', 'emergency'].includes(data.tag)
+            ? data.currentAmount ?? 0
+            : data.currentAmount
+        };
+      });
+      setCategories(categories);
+
+      // 3. טעינת הוצאות מה־subcollection
+      const expensesSnap = await getDocs(collection(db, 'users', userId, 'expenses'));
+      const expenses = expensesSnap.docs.map(docSnap => {
+  const data = docSnap.data();
+ return {
+  id: docSnap.id,
+  amount: data.amount ?? 0,
+  description: data.description ?? '',
+  categoryId: data.categoryId ?? '',
+  date: data.date ?? new Date().toISOString().split('T')[0]
+} as Expense;
+});
+setExpenses(expenses);
+
+
+     // 4. טעינת הוצאות חוזרות מתוך users/{uid}/recurringExpenses
+const recurringRef = collection(db, 'users', userId, 'recurringExpenses');
+const recurringSnap = await getDocs(recurringRef);
+const recurringList: RecurringExpense[] = recurringSnap.docs.map(doc => ({
+  id: doc.id,
+  ...(doc.data() as Omit<RecurringExpense, 'id'>)
+}));
+setRecurringExpenses(recurringList);
+
+
+      // 5. טעינת חובות ומטרות מתוך financial_data/{uid}
+      const finSnap = await getDoc(doc(db, 'financial_data', userId));
+      if (finSnap.exists()) {
+        const data = finSnap.data();
+        setDebts(data.debts || []);
+        setGoals(
+          (data.goals || []).map((g: any) => ({
+            ...g,
+            targetDate: g.targetDate?.toDate ? g.targetDate.toDate() : new Date(g.targetDate)
+          }))
+        );
       }
-    });
 
-    setMonthlyIncomeData(incomeMap);
-
-      try {
-        // Load categories & expenses from users/{uid}
-        const userSnap = await getDoc(doc(db, 'users', userId));
-        if (userSnap.exists()) {
-          const data = userSnap.data() as any;
-          setCategories(data.categories?.map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            color: c.color,
-            icon: c.icon,
-            tag: c.tag,
-            budget: c.budget ?? 0,
-            hidden: c.hidden ?? false,
-            currentAmount: ['savings', 'emergency'].includes(c.tag)
-              ? c.currentAmount ?? 0
-              : c.currentAmount
-          })) || defaultCategories);
-
-
-          setExpenses(data.expenses || []);
-          setRecurringExpenses(data.recurringExpenses || [])
-        }
-        // Load debts & goals from financial_data/{uid}
-        const finSnap = await getDoc(doc(db, 'financial_data', userId));
-        if (finSnap.exists()) {
-          const data = finSnap.data() as any;
-          setDebts(data.debts || []);
-          setGoals(data.goals || []);
-        }
-      } catch (error) {
-    setFatalError({
+      setHasLoaded(true);
+    } catch (error) {
+      setFatalError({
         title: 'שגיאה בטעינת נתונים',
         description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
         severity: 'error'
       });
       setLoadError(true);
-    setHasLoaded(false); // ❌ אל תאפשר שמירה
-  }  finally {
-        setLoading(false);
-      }
-    })();
-  }, [userId]);
+      setHasLoaded(false);
+    } finally {
+      setLoading(false);
+    }
+  })();
+}, [userId]);
 
-  // Save data to Firebase when state changes - FIXED: Clean data before saving
-  useEffect(() => {
-    if (!userId || !hasLoaded) return;
-    const timeout = setTimeout(() => {
-      // Clean data before saving to Firebase
-      const cleanCategories = cleanDataForFirebase(categories);
-      const cleanExpenses = cleanDataForFirebase(expenses);
-      const cleanDebts = cleanDataForFirebase(debts);
-      const cleanGoals: SavingsGoal[] = goals.map(g => ({
-              id: g.id,
-              name: g.name,
-              targetAmount: g.targetAmount,
-              currentAmount: g.currentAmount,
-              priority: g.priority,
-              targetDate: g.targetDate as Timestamp,
-              budget: g.budget ?? 0
-            }));
-      
-      setDoc(doc(db, 'financial_data', userId), { 
-        debts: cleanDebts, 
-        goals: cleanGoals 
-      }, { merge: true });
-      const cleanRecurring = cleanDataForFirebase(recurringExpenses);
+ 
+useEffect(() => {
+  if (loading || !userId) return;
 
-      setDoc(doc(db, 'users', userId), { 
-        categories: cleanCategories, 
-        expenses: cleanExpenses,
-        recurringExpenses: cleanRecurring // ✅ שמירה
-      }, { merge: true });
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
 
-    }, 800);
-    return () => clearTimeout(timeout);
-  }, [categories, expenses, debts, goals, userId, hasLoaded]);
-  const [generatedThisMonth, setGeneratedThisMonth] = useState<Set<string>>(new Set());
-
-
-  useEffect(() => {
-    if (!hasLoaded || !userId) return;
-
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-
-    const keyForRecurring = (r: RecurringExpense) =>
-      `${r.id}_${year}_${month}`;
-
-    const generated: Expense[] = [];
-    const newKeys: string[] = [];
-
+  const generateAndSave = async () => {
     for (const r of recurringExpenses) {
-      const key = keyForRecurring(r);
+      const key = `${r.id}_${year}_${month}`;
+      const genRef = doc(db, 'users', userId, 'generatedRecurring', key);
 
-      // אם כבר נוצרה החודש — מדלג
-      if (generatedThisMonth.has(key)) continue;
+      // 🔸 בדיקה אם כבר נוצרה הוצאה להוראה קבועה זו החודש
+      const genSnap = await getDoc(genRef);
+      if (genSnap.exists()) continue;
 
       const start = new Date(r.startDate);
       const end = r.endDate ? new Date(r.endDate) : null;
@@ -219,26 +223,27 @@ const tagColors: Record<CategoryTag, string> = {
       const safeDay = Math.min(r.dayOfMonth, lastDay);
       const date = new Date(year, month, safeDay);
 
-      generated.push({
-        id: Date.now() + Math.random(),
+      const newExpense: Expense = {
+        id: Date.now() + Math.random(), // מזהה זמני
         amount: r.amount,
         description: r.description,
         categoryId: r.categoryId,
         date: date.toISOString().split('T')[0]
-      });
+      };
 
-      newKeys.push(key);
-    }
+      // 🟢 יצירת ההוצאה בפועל
+      await addExpenseToDB(newExpense);
 
-    if (generated.length > 0) {
-      setExpenses(prev => [...prev, ...generated]);
-      setGeneratedThisMonth(prev => {
-        const updated = new Set(prev);
-        newKeys.forEach(k => updated.add(k));
-        return updated;
-      });
+      // 🟢 שמירה ב־Firestore כ"נוצרה"
+      await setDoc(genRef, { createdAt: Timestamp.now() });
     }
-  }, [recurringExpenses, hasLoaded, userId]);
+  };
+
+  generateAndSave();
+}, [recurringExpenses, loading, userId]);
+
+
+
   const currentMonthId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
   const previousMonthId = selectedMonth === 0
     ? `${selectedYear - 1}-12`
@@ -324,10 +329,8 @@ const filteredExpenses = expenses.filter(exp => {
       categoryId: catId, // Store as is (string or number)
       date: newExpense.date
     };
-    
-    // Add to expenses array
-    setExpenses(prev => [...prev, exp]);
-    
+        
+    addExpenseToDB(exp)
     // Reset form
     setNewExpense({ 
       amount: '', 
@@ -338,9 +341,62 @@ const filteredExpenses = expenses.filter(exp => {
   };
 
   // Delete expense handler
-  const handleDeleteExpense = (id: number) => {
+const handleDeleteExpense = async (id: number) => {
+  if (!userId) return;
+
+  const expense = expenses.find(e => e.id === id);
+  if (!expense) return;
+
+  try {
+    // 1. מחיקה מ־Firestore
+    await deleteDoc(doc(db, 'users', userId, 'expenses', String(id)));
+
+    // 2. עדכון סטייט מקומי
     setExpenses(prev => prev.filter(e => e.id !== id));
-  };
+
+    // 3. עדכון חוב אם צריך
+    if (typeof expense.categoryId === 'string' && expense.categoryId.startsWith('debt-')) {
+      const idOnly = expense.categoryId.replace('debt-', '');
+      const updatedDebts = debts.map(d =>
+        d.id === idOnly ? { ...d, principal: d.principal + expense.amount } : d
+      );
+      setDebts(updatedDebts);
+      await updateDoc(doc(db, 'financial_data', userId), { debts: updatedDebts });
+    }
+
+    // 4. עדכון מטרה אם צריך
+    if (typeof expense.categoryId === 'string' && expense.categoryId.startsWith('goal-')) {
+      const idOnly = expense.categoryId.replace('goal-', '');
+      const updatedGoals = goals.map(g =>
+        g.id === idOnly ? { ...g, currentAmount: (g.currentAmount ?? 0) - expense.amount } : g
+      );
+      setGoals(updatedGoals);
+      await updateDoc(doc(db, 'financial_data', userId), { goals: updatedGoals });
+    }
+
+    // 5. עדכון קטגוריה רגילה אם היא savings או emergency
+    const catIndex = categories.findIndex(c => String(c.id) === String(expense.categoryId));
+    if (catIndex !== -1) {
+      const cat = categories[catIndex];
+      if (cat.tag === 'savings' || cat.tag === 'emergency') {
+        const updatedCategories = [...categories];
+        updatedCategories[catIndex] = {
+          ...cat,
+          currentAmount: (cat.currentAmount ?? 0) - expense.amount,
+        };
+        setCategories(updatedCategories);
+
+        const categoryDocRef = doc(db, 'users', userId, 'categories', String(cat.id));
+        await updateDoc(categoryDocRef, {
+          currentAmount: (cat.currentAmount ?? 0) - expense.amount,
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error('⚠️ שגיאה במחיקת הוצאה:', error);
+  }
+};
 
   // Filter and sort expenses
   const filtered = filteredExpenses
@@ -410,17 +466,16 @@ const filteredExpenses = expenses.filter(exp => {
     
     return { tag, sum: tagSum };
   });
-const handleAddRecurring = () => {
+const handleAddRecurring = async () => {
   const { amount, description, categoryId, dayOfMonth, startDate, endDate } = recurringForm;
 
-  // בדיקות בסיסיות
   if (!amount || !description || !categoryId || !dayOfMonth || !startDate) {
     alert('אנא מלא את כל השדות הנדרשים');
     return;
   }
 
   const newRecurring: RecurringExpense = {
-    id: String(Date.now()),
+    id: String(Date.now()), // או תן ל־Firestore ליצור id אוטומטי
     amount: parseFloat(amount),
     description,
     categoryId,
@@ -429,38 +484,63 @@ const handleAddRecurring = () => {
     endDate: endDate || undefined
   };
 
-  setRecurringExpenses(prev => [...prev, newRecurring]);
+  try {
+    if (!userId) return;
 
-  // איפוס טופס
-  setRecurringForm({
-    amount: '',
-    description: '',
-    categoryId: '',
-    dayOfMonth: 1,
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: ''
-  });
+    // שמירה ל־Firestore (subcollection)
+    const recColRef = collection(db, 'users', userId, 'recurringExpenses');
+    const newDocRef = doc(recColRef, newRecurring.id);
+    await setDoc(newDocRef, newRecurring);
 
-  setShowRecurringForm(false);
+    // עדכון סטייט מקומי
+    setRecurringExpenses(prev => [...prev, newRecurring]);
+
+    // איפוס טופס
+    setRecurringForm({
+      amount: '',
+      description: '',
+      categoryId: '',
+      dayOfMonth: 1,
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: ''
+    });
+
+    setShowRecurringForm(false);
+  } catch (err) {
+    console.error('⚠️ שגיאה בשמירת הוצאה חוזרת:', err);
+  }
 };
-const handleDeleteRecurring = (id: string) => {
-  setRecurringExpenses(prev => prev.filter(r => r.id !== id));
 
-  // מחיקה של ההוצאה הצפויה הבאה (אם נוצרה)
-  setExpenses(prev => prev.filter(exp => {
-    const match = recurringExpenses.find(r => r.id === id);
-    if (!match) return true;
 
-    const expDate = new Date(exp.date);
-    const now = new Date();
-    return !(
-      exp.description === match.description &&
-      exp.categoryId === match.categoryId &&
-      expDate.getMonth() === now.getMonth() &&
-      expDate.getFullYear() === now.getFullYear()
-    );
-  }));
+const handleDeleteRecurring = async (id: string) => {
+  try {
+        if (!userId || !id) return;
+
+    // מחיקה מה־Firestore
+    await deleteDoc(doc(db, 'users', userId, 'recurringExpenses', String(id)));
+
+    // עדכון סטייט
+    setRecurringExpenses(prev => prev.filter(r => r.id !== id));
+
+    // הסרת ההוצאה הצפויה שנוצרה
+    setExpenses(prev => prev.filter(exp => {
+      const match = recurringExpenses.find(r => r.id === id);
+      if (!match) return true;
+
+      const expDate = new Date(exp.date);
+      const now = new Date();
+      return !(
+        exp.description === match.description &&
+        exp.categoryId === match.categoryId &&
+        expDate.getMonth() === now.getMonth() &&
+        expDate.getFullYear() === now.getFullYear()
+      );
+    }));
+  } catch (err) {
+    console.error('⚠️ שגיאה במחיקת הוצאה חוזרת:', err);
+  }
 };
+
 
   // Add percentages to tag data
   type TagSum = { tag: CategoryTag; sum: number };
@@ -930,7 +1010,7 @@ return (
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">הוראות קבע</h3>
                   <button
-                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-emerald-600 hover:to-teal-700 text-sm font-medium transition-all duration-200"
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-black px-4 py-2 rounded-lg hover:from-emerald-600 hover:to-teal-700 text-sm font-medium transition-all duration-200"
                     onClick={() => setShowRecurringForm(!showRecurringForm)}
                   >
                     {showRecurringForm ? 'בטל' : '➕ הוסף הוראת קבע'}

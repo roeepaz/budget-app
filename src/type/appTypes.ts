@@ -16,7 +16,7 @@ export interface Category {
 }
 
 export interface Expense {
-  id: number;
+  id: number | string;
   amount: number;
   description: string;
   categoryId: string | number; // Allow both string and number for flexibility

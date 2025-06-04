@@ -20,7 +20,7 @@ import {
   Legend
 } from 'recharts';
 import { db } from '../firebaseConfig';
-import { doc, getDoc, setDoc,updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc,collection, getDocs } from 'firebase/firestore';
 import {SavingsGoal, Expense} from '../type/appTypes'
 import SidebarWrapper from '../components/SidebarWrapper';
 import FullPageError from '../components/FullPageError';
@@ -82,59 +82,69 @@ const [fatalError, setFatalError] = useState<null | {
   const [withdrawDesc, setWithdrawDesc] =
     useState<string>('');
 
-  // 2) Load חסכונות (categories, expenses) ו־goals
   useEffect(() => {
-    (async () => {
-      try {
-        // users/{uid}
-        const uSnap = await getDoc(doc(db, 'users', userId));
-        if (uSnap.exists()) {
-          const d = uSnap.data() as any;
-          setCategories(
-            (d.categories || []).map((c: any) => {
-              const base = {
-                ...c,
-                id: String(c.id),
-                hidden: c.hidden ?? false,
-                budget: c.budget ?? 0,
-              };
+  (async () => {
+    try {
+      // 1. Load categories (users/{userId}/categories)
+      const catRef = collection(db, 'users', userId, 'categories');
+      const catSnap = await getDocs(catRef);
+      const loadedCategories = catSnap.docs.map(docSnap => {
+      const c = docSnap.data();
+      return {
+        id: String(docSnap.id),
+        name: c.name ?? 'ללא שם',
+        color: c.color ?? '#cccccc',
+        icon: c.icon ?? 'HelpCircle',
+        tag: c.tag ?? 'need',
+        hidden: c.hidden ?? false,
+        budget: c.budget ?? 0,
+        currentAmount: ['savings', 'emergency'].includes(c.tag) ? (c.currentAmount ?? 0) : undefined
+      };
+    });
 
-              if (['savings', 'emergency'].includes(c.tag)) {
-                return {
-                  ...base,
-                  currentAmount: c.currentAmount ?? 0
-                };
-              }
+      setCategories(loadedCategories);
 
-              return base;
-            })
-          );
-          setExpenses(d.expenses || []);
-        }
-        // financial_data/{uid}
-        const fSnap = await getDoc(doc(db, 'financial_data', userId));
-        if (fSnap.exists()) {
-          const d = fSnap.data() as any;
-          setGoals(
-            (d.goals || []).map((g: any) => ({
-              ...g,
-              targetDate: g.targetDate?.toDate ? g.targetDate.toDate() : new Date(g.targetDate)
-            }))
-          );
-        } 
-      } catch (error) {
-          setFatalError({
-            title: 'שגיאה בטעינת נתונים',
-            description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
-            severity: 'error'
-          });
-        setLoadError(true);
-      } finally {
-            setSummaryLoading(false);
-            setLoading(false);
-          }
-        })();
-  }, [userId]);
+      // 2. Load expenses (users/{userId}/expenses)
+      const expRef = collection(db, 'users', userId, 'expenses');
+      const expSnap = await getDocs(expRef);
+      const loadedExpenses: Expense[] = expSnap.docs.map(docSnap => {
+      const d = docSnap.data();
+      return {
+        id: docSnap.id,
+        amount: Number(d.amount) || 0,
+        description: String(d.description ?? ''),
+        categoryId: String(d.categoryId ?? ''),
+        date: String(d.date ?? new Date().toISOString().split('T')[0]),
+      };
+    });
+
+      setExpenses(loadedExpenses);
+
+      // 3. Load goals (financial_data/{userId})
+      const fSnap = await getDoc(doc(db, 'financial_data', userId));
+      if (fSnap.exists()) {
+        const d = fSnap.data() as any;
+        setGoals(
+          (d.goals || []).map((g: any) => ({
+            ...g,
+            targetDate: g.targetDate?.toDate ? g.targetDate.toDate() : new Date(g.targetDate)
+          }))
+        );
+      }
+    } catch (error) {
+      setFatalError({
+        title: 'שגיאה בטעינת נתונים',
+        description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
+        severity: 'error'
+      });
+      setLoadError(true);
+    } finally {
+      setSummaryLoading(false);
+      setLoading(false);
+    }
+  })();
+}, [userId]);
+
 
   useEffect(() => {
     localStorage.setItem(DARK_MODE_KEY, JSON.stringify(isDarkMode));
@@ -145,39 +155,37 @@ const handleWithdraw = async () => {
   if (!withdrawTarget || withdrawAmount <= 0) return;
   const { id, type } = withdrawTarget;
 
-  let updatedCategories = categories;
-  let updatedGoals = goals;
-
-  if (type === 'goal') {
-    updatedGoals = goals.map(g =>
-      `goal-${g.id}` === id
-        ? { ...g, currentAmount: (g.currentAmount ?? 0) - withdrawAmount }
-        : g
-    );
-    setGoals(updatedGoals);
-  } else {
-    updatedCategories = categories.map(c =>
-      String(c.id) === id
-        ? { ...c, currentAmount: (c.currentAmount ?? 0) - withdrawAmount }
-        : c
-    );
-    setCategories(updatedCategories);
-  }
-
   try {
-    // שמירה של כל הקטגוריות כמו שהן
-    await setDoc(
-      doc(db, 'users', userId),
-      { categories: updatedCategories },
-      { merge: true }
-    );
+    if (type === 'goal') {
+      const updatedGoals = goals.map(g =>
+        `goal-${g.id}` === id
+          ? { ...g, currentAmount: (g.currentAmount ?? 0) - withdrawAmount }
+          : g
+      );
+      setGoals(updatedGoals);
 
-    // שמירה של כל המטרות כמו שהן
-    await setDoc(
-      doc(db, 'financial_data', userId),
-      { goals: updatedGoals },
-      { merge: true }
-    );
+      // שמור את כל המטרות יחד כי הן במסמך מרוכז
+      await setDoc(
+        doc(db, 'financial_data', userId),
+        { goals: updatedGoals },
+        { merge: true }
+      );
+    } else {
+      const updatedCategories = categories.map(c =>
+        String(c.id) === id
+          ? { ...c, currentAmount: (c.currentAmount ?? 0) - withdrawAmount }
+          : c
+      );
+      setCategories(updatedCategories);
+
+      // שמור רק את הקטגוריה הזו בתור מסמך בתת-קולקציה
+      const cat = updatedCategories.find(c => String(c.id) === id);
+      if (cat) {
+        const catRef = doc(db, 'users', userId, 'categories', String(cat.id));
+        await setDoc(catRef, cat);
+      }
+    }
+
   } catch (e: any) {
     console.error('שגיאה בשמירת המשיכה:', e.code, e.message);
     alert(`שגיאה: ${e.code} - ${e.message}`);
@@ -381,6 +389,51 @@ const totalPerCat = displayCats.map(c => {
             )}
           </div>
         );
+
+      case 'investments':
+  const investmentCats = categories.filter(c => c.tag === 'savings');
+  const totalSavings = investmentCats.reduce((sum, c) => sum + (c.currentAmount ?? 0), 0);
+
+  return (
+    <div className={`rounded-lg shadow-md p-6 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      <h2 className="font-semibold mb-2 flex items-center text-xl">
+        <TrendingUp className="ml-2" size={24} /> השקעות
+      </h2>
+
+      {investmentCats.length > 0 ? (
+        <>
+          {/* סיכום כולל */}
+          <div className="text-gray-600 text-sm mb-4">
+            סך הכל בחסכונות: <span className="font-bold text-green-600">{formatCurrency(totalSavings)}</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {investmentCats.map((cat) => (
+              <div
+                key={cat.id}
+                className={`rounded-lg p-4 shadow transition hover:scale-[1.01] flex justify-between items-center
+                ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'}`}
+              >
+                <div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <div className="text-lg">{cat.icon}</div>
+                    <div className="font-semibold text-lg">{cat.name}</div>
+                  </div>
+                  <div className="text-sm text-gray-500 mt-1">
+                    {formatCurrency(cat.currentAmount ?? 0)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="text-gray-500 text-center">אין השקעות להצגה כרגע</p>
+      )}
+    </div>
+  );
+
+
       default:
         return null;
     }

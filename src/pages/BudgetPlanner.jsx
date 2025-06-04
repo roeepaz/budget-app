@@ -13,6 +13,7 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import SidebarWrapper from '../components/SidebarWrapper'; // ⬅ שדרוג קריטי
 import { useUserData } from '../hooks/useUserData';
+import {getUserData, getFinancialData} from '../help'
 export default function BudgetPlanner({ user }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,69 +73,53 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     categories,
     addExpenseToDB
   } = useUserData(user?.uid);
-  useEffect(() => {
-    if (!userId) return;
 
-    const loadUserData = async () => {
-      try {
-        const userRef = doc(db, 'users', userId);
-        const finRef = doc(db, 'financial_data', userId);
+ useEffect(() => {
+  if (!userId) return;
 
-        const [userSnap, finSnap] = await Promise.all([
-          getDoc(userRef),
-          getDoc(finRef)
-        ]);
+  const loadUserData = async () => {
+    try {
+      const userData = await getUserData(userId);
+      const finData = await getFinancialData(userId);
 
-        let loadedExpenses = [];
-        let loadedCategoriesData = [];
-        let loadedDebtsData = [];
-        let loadedGoalsData = [];
+      let loadedExpenses = userData?.expenses || [];
+      let loadedCategoriesData = userData?.categories || [];
+      let loadedDebtsData = finData?.debts || [];
+      let loadedGoalsData = finData?.goals || [];
 
-        if (userSnap.exists()) {
-          const d = userSnap.data();
-          loadedExpenses = d.expenses || [];
-          loadedCategoriesData = d.categories || [];
+      const currentMonth = new Date().getMonth();
+      const currentYear = new Date().getFullYear();
+      const expensesByCategory = {};
+
+      for (const exp of loadedExpenses) {
+        const date = new Date(exp.date);
+        if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
+          const id = exp.categoryId;
+          expensesByCategory[id] = (expensesByCategory[id] || 0) + exp.amount;
         }
-
-        if (finSnap.exists()) {
-          const d = finSnap.data();
-          loadedDebtsData = d.debts || [];
-          loadedGoalsData = d.goals || [];
-        }
-
-        const currentMonth = new Date().getMonth();
-        const currentYear = new Date().getFullYear();
-        const expensesByCategory = {};
-
-        for (const exp of loadedExpenses) {
-          const date = new Date(exp.date);
-          if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-            const id = exp.categoryId;
-            expensesByCategory[id] = (expensesByCategory[id] || 0) + exp.amount;
-          }
-        }
-
-        const processedCategories = loadedCategoriesData.map(cat => ({
-          ...cat,
-          spent: expensesByCategory[cat.id] || 0,
-          budget: cat.budget || 0,
-        }));
-
-        setExpenses(loadedExpenses);
-        setDebts(loadedDebtsData);
-        setGoals(loadedGoalsData);
-        setTrueCategories(processedCategories);
-      } catch (error) {
-        console.error("⚠️ שגיאה בטעינת הנתונים:", error);
-        setLoadError(true);
-      } finally {
-        setHasLoaded(true);
-        setLoading(false);
       }
-    };
 
-    loadUserData();
-  }, [userId]);
+      const processedCategories = loadedCategoriesData.map(cat => ({
+        ...cat,
+        spent: expensesByCategory[cat.id] || 0,
+        budget: cat.budget || 0,
+      }));
+
+      setExpenses(loadedExpenses);
+      setDebts(loadedDebtsData);
+      setGoals(loadedGoalsData);
+      setTrueCategories(processedCategories);
+    } catch (error) {
+      console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+      setLoadError(true);
+    } finally {
+      setHasLoaded(true);
+      setLoading(false);
+    }
+  };
+
+  loadUserData();
+}, [userId]);
 
   useEffect(() => {
     if (!userId || !hasLoaded) return;
@@ -149,14 +134,22 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
       debts
     };
 
-    const timeout = setTimeout(async () => {
-      try {
-        await setDoc(doc(db, 'users', userId), userDocData);
-        await setDoc(doc(db, 'financial_data', userId), financialDocData, { merge: true });
-      } catch (error) {
-        console.error("⚠️ שגיאה בשמירת הנתונים:", error);
-      }
-    }, 800);
+   const timeout = setTimeout(async () => {
+  try {
+    // שמירת קטגוריות כ־subcollection
+    const categoryPromises = (userDocData.categories || []).map((cat) =>
+      setDoc(doc(db, 'users', userId, 'categories', String(cat.id)), cat, { merge: true })
+    );
+
+    await Promise.all(categoryPromises);
+
+    // שמירת נתונים פיננסיים במסמך הראשי
+    await setDoc(doc(db, 'financial_data', userId), financialDocData, { merge: true });
+  } catch (error) {
+    console.error("⚠️ שגיאה בשמירת הנתונים:", error);
+  }
+}, 800);
+
 
     return () => clearTimeout(timeout);
   }, [expenses, trueCategories, goals, debts, userId, hasLoaded]);

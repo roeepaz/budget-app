@@ -31,28 +31,97 @@ import {
 
 // רכיב מד התקדמות קטן לקטגוריות
 const CategoryProgressBar = ({ percentage, spent, budget, isOverBudget }) => {
+  // בדיקות בטיחות בסיסיות
+  const safePercentage = typeof percentage === 'number' && !isNaN(percentage) ? percentage : 0;
+  const safeSpent = typeof spent === 'number' && !isNaN(spent) && spent >= 0 ? spent : 0;
+  const safeBudget = typeof budget === 'number' && !isNaN(budget) && budget > 0 ? budget : 0;
+  const safeIsOverBudget = Boolean(isOverBudget);
+  
+  // חישוב מחדש של האחוז על בסיס נתונים בטוחים
+  const calculatedPercentage = safeBudget > 0 ? (safeSpent / safeBudget) * 100 : 0;
+  const finalPercentage = Math.max(safePercentage, calculatedPercentage);
+  
+  // הגבלת האחוז לטווח סביר (0-150% למקרה של חריגה)
+  const cappedPercentage = Math.min(Math.max(finalPercentage, 0), 150);
+  const displayPercentage = Math.min(cappedPercentage, 100); // להצגה בבר
+  
+  // קביעת צבע הבר עם לוגיקה משופרת
   const getBarColor = () => {
-    if (isOverBudget) return 'bg-red-500';
-    if (percentage >= 80) return 'bg-orange-500';
-    if (percentage >= 60) return 'bg-yellow-500';
-    return 'bg-green-500';
+    if (safeIsOverBudget || finalPercentage > 100) return 'bg-red-500';
+    if (finalPercentage >= 95) return 'bg-orange-600';
+    if (finalPercentage >= 80) return 'bg-orange-500';
+    if (finalPercentage >= 60) return 'bg-yellow-500';
+    if (finalPercentage >= 0) return 'bg-green-500';
+    return 'bg-gray-400'; // fallback
   };
+
+  // קביעת טקסט הסטטוס
+  const getStatusText = () => {
+    if (safeBudget <= 0) return 'ללא תקציב מוגדר';
+    if (safeSpent <= 0) return 'טרם נוצל';
+    if (safeIsOverBudget || finalPercentage > 100) {
+      const overage = safeSpent - safeBudget;
+      return `חריגה: +₪${overage.toLocaleString()}`;
+    }
+    if (finalPercentage >= 95) return 'כמעט מלא';
+    if (finalPercentage >= 80) return 'מתקרב למלא';
+    return `${Math.round(finalPercentage)}% נוצל`;
+  };
+
+  // בדיקה אם להציג את הבר
+  const showBar = safeBudget > 0 && safeSpent >= 0;
+  
+  // בדיקה אם יש נתונים תקינים להצגה
+  const hasValidData = safeBudget > 0 || safeSpent > 0;
+
+  if (!hasValidData) {
+    return (
+      <div className="flex items-center gap-2 min-w-0">
+        <div className="text-xs text-gray-400 italic">אין נתונים להצגה</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2 min-w-0">
-  <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-    <div 
-      className={`h-2 rounded-full transition-all duration-500 ${getBarColor()}`}
-      style={{ width: `${Math.min(percentage, 100)}%` }}
-    />
-  </div>
-  <div className="text-xs text-gray-600 whitespace-nowrap">
-    {percentage.toFixed(0)}%
-  </div>
-</div>
-
+      {showBar ? (
+        <>
+          {/* הבר עצמו */}
+          <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden min-w-0">
+            <div
+              className={`h-2 rounded-full transition-all duration-500 ${getBarColor()}`}
+              style={{ 
+                width: `${displayPercentage}%`,
+                minWidth: safeSpent > 0 ? '2px' : '0px' // מינימום רוחב כדי שיהיה נראה
+              }}
+            />
+          </div>
+          
+          {/* טקסט סטטוס */}
+          <div className={`text-xs font-medium whitespace-nowrap ${
+            safeIsOverBudget || finalPercentage > 100 
+              ? 'text-red-600' 
+              : finalPercentage >= 80 
+                ? 'text-orange-600' 
+                : 'text-gray-600'
+          }`}>
+            {getStatusText()}
+          </div>
+        </>
+      ) : (
+        /* במקרה שאין תקציב אבל יש הוצאה */
+        <div className="flex items-center gap-2 w-full">
+          <div className="flex-1 bg-gray-100 rounded-full h-2">
+            <div className="bg-blue-400 h-2 rounded-full w-2 transition-all duration-500" />
+          </div>
+          <div className="text-xs text-gray-500 italic whitespace-nowrap">
+            {safeSpent > 0 ? `₪${safeSpent.toLocaleString()} - ${getStatusText()}` : 'ללא פעילות'}
+          </div>
+        </div>
+      )}
+    </div>
   );
-};
+};;
 
 export default function HomePage({ user }) {
   const navigate = useNavigate();
@@ -450,73 +519,177 @@ if(userFatalError){
 
           {/* תרשימים ונתונים נוספים */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-           <div className="bg-white rounded-xl shadow-lg p-6">
-  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-    <PieIcon className="w-6 h-6 text-blue-600" />
-    הוצאות לפי קטגוריות
-  </h3>
+          {/*תרשים קטגוריות משופר עם טיפול במקרי קצה*/}
+<div className="bg-white rounded-xl shadow-lg p-6">
+  {/* כותרת מתוקנת */}
+  <div className="mb-6">
+    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-2">
+      <PieIcon className="w-6 h-6 text-blue-600 flex-shrink-0" />
+      <span>הוצאות לפי קטגוריות</span>
+    </h3>
+    
+    {/* מידע נוסף אם נחוץ */}
+    {categoriesWithExpenses?.length > 0 && (
+      <p className="text-sm text-gray-500">
+        {categoriesWithExpenses.length} קטגוריות פעילות השבוע
+      </p>
+    )}
+  </div>
 
-  {displayCategories.length > 0 ? (
-    <div className="space-y-4">
+  {/* תוכן עיקרי */}
+  <div className="space-y-4">
+    {/* מקרה: אין נתונים כלל */}
+    {(!displayCategories || displayCategories.length === 0) ? (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <PieIcon className="w-8 h-8 text-gray-400" />
+        </div>
+        <p className="text-gray-500 text-lg font-medium mb-2">עדיין לא הוספת קטגוריות</p>
+        <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את התרשים</p>
+      </div>
+    ) : (!categoriesWithExpenses || categoriesWithExpenses.length === 0) ? (
+      <div className="text-center py-12">
+        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <PieIcon className="w-8 h-8 text-blue-400" />
+        </div>
+        <p className="text-gray-600 text-lg font-medium mb-2">אין הוצאות השבוע</p>
+        <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את החלוקה לפי קטגוריות</p>
+      </div>
+    ) : (
+      /* הצגת קטגוריות */
+      <>
+        <div className="space-y-6">
+          {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map((category, index) => {
+            // בדיקות בטיחות
+            const safeTotal = Math.max(0, Number(category.total) || 0);
+            const safeBudget = category.budget && Number(category.budget) > 0 ? Number(category.budget) : null;
+            const safeRemaining = Number(category.remaining) || 0;
+            const isOnThePeni = safeRemaining == 0;
+            const percentOfBudget = safeBudget ? Math.min((safeTotal / safeBudget) * 100, 150) : 0;
+            const hasBudget = safeBudget !== null;
+            const isOverBudget = hasBudget && safeRemaining < 0;
+            const isNearlyExhausted =!isOnThePeni && hasBudget && safeRemaining >= 0 && safeRemaining <= 50;
 
-      {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map(category => {
-        const percentOfBudget = category.budget ? (category.total / category.budget) * 100 : 0;
-        const hasBudget = typeof category.budget === 'number' && category.budget > 0;
+            return (
+              <div 
+                key={category.id || `category-${index}`} 
+                className="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
+              >
+                {/* שורת מידע עליונה */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div
+                      className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white"
+                      style={{ backgroundColor: category.color || '#6B7280' }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-gray-800 text-base truncate">
+                        {category.name || 'קטגוריה ללא שם'}
+                      </h4>
+                      <p className="text-sm text-gray-500 mt-1">
+                        ₪{safeTotal.toLocaleString('he-IL')}
+                        {hasBudget && (
+                          <span className="text-gray-400">
+                            {' / '}₪{safeBudget.toLocaleString('he-IL')}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* סטטוס */}
+                  <div className="flex-shrink-0 text-left">
+                    {isOverBudget ? (
+                      <div className="text-red-600 font-semibold text-sm">
+                        <span className="block">חריגה</span>
+                        <span className="block text-xs">
+                          +₪{Math.abs(safeRemaining).toLocaleString('he-IL')}
+                        </span>
+                      </div>
+                    ) : isNearlyExhausted ? (
+                      <div className="text-orange-600 font-medium text-sm">
+                        <span className="block">כמעט נגמר</span>
+                        <span className="block text-xs text-gray-500">
+                          ₪{safeRemaining.toLocaleString('he-IL')} נותרו
+                        </span>
+                      </div>
+                    ) : hasBudget && safeRemaining > 0 ? (
+                      <div className="text-green-600 font-medium text-sm">
+                        <span className="block">בתקציב</span>
+                        <span className="block text-xs text-gray-500">
+                          ₪{safeRemaining.toLocaleString('he-IL')} נותרו
+                        </span>
+                      </div>
+                    ) : isOnThePeni ? (
+                      <div className="text-gray-500 text-sm">
+                        <span className="block">מדויק</span>
+                      </div>
+                    ) : (
+                      <div className="text-gray-400 text-sm">
+                        <span className="block">ללא תקציב</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-        return (
-          <div key={category.id} className="flex flex-col gap-1">
-            {/* שורת כותרת עם שם וצבע */}
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
-              <span className="text-gray-700 font-medium text-sm">{category.name}</span>
-            </div>
-
-            {/* סכום והסבר */}
-            <div className="flex items-center justify-between text-sm text-gray-800">
-              <span>
-                ₪{category.total.toLocaleString()}
+                {/* בר התקדמות */}
                 {hasBudget && (
-                  <> מתוך ₪{category.budget.toLocaleString()}</>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs text-gray-500">
+                      <span>0%</span>
+                      <span>{Math.round(percentOfBudget)}%</span>
+                      <span>100%</span>
+                    </div>
+                    
+                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+  <div
+    className={`h-3 rounded-full transition-all duration-700 ease-out ${
+      isOverBudget || percentOfBudget === 100
+        ? 'bg-red-500'
+        : percentOfBudget >= 90
+          ? 'bg-orange-500'
+          : percentOfBudget >= 70
+            ? 'bg-yellow-500'
+            : 'bg-green-500'
+    }`}
+    style={{ 
+      width: `${Math.min(percentOfBudget, 100)}%`,
+      minWidth: safeTotal > 0 ? '4px' : '0px'
+    }}
+  />
+</div>
+
+                    {isOverBudget && (
+                      <div className="text-xs text-red-600 font-medium text-center bg-red-50 rounded py-1">
+                        חריגה של {Math.round(percentOfBudget - 100)}% מהתקציב
+                      </div>
+                    )}
+                  </div>
                 )}
-              </span>
-              {hasBudget && category.overBudget ? (
-                <span className="text-red-600 font-medium">
-                  חריגה של ₪{Math.abs(category.remaining).toLocaleString()}
-                </span>
-              ) : hasBudget ? (
-                <span className="text-gray-500">
-                  נותרו ₪{category.remaining.toLocaleString()}
-                </span>
-              ) : null}
-            </div>
+              </div>
+            );
+          })}
+        </div>
 
-            {/* בר התקדמות */}
-            {hasBudget && (
-              <CategoryProgressBar 
-                percentage={percentOfBudget}
-                spent={category.total}
-                budget={category.budget}
-                isOverBudget={category.overBudget}
-              />
-            )}
+        {/* כפתור הצגת עוד */}
+        {categoriesWithExpenses.length > 5 && (
+          <div className="pt-4 border-t border-gray-100">
+            <button
+              onClick={() => setShowAllCategories(!showAllCategories)}
+              className="w-full py-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 
+                       text-sm font-medium transition-all duration-200 rounded-lg
+                       border border-blue-200 hover:border-blue-300"
+            >
+              {showAllCategories 
+                ? '🔼 הצג פחות קטגוריות' 
+                : `🔽 הצג עוד ${categoriesWithExpenses.length - 5} קטגוריות`
+              }
+            </button>
           </div>
-        );
-      })}
-
-      {/* כפתור הצג עוד/פחות */}
-      {categoriesWithExpenses.length > 5 && (
-        <button
-          className="text-sm text-blue-600 hover:underline mt-2"
-          onClick={() => setShowAllCategories(prev => !prev)}
-        >
-          {showAllCategories ? 'הצג פחות' : 'הצג עוד'}
-        </button>
-      )}
-
-    </div>
-  ) : (
-    <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו קטגוריות</p>
-  )}
+        )}
+      </>
+    )}
+  </div>
 </div>
 
             {/* יעדים פעילים */}
@@ -555,6 +728,7 @@ if(userFatalError){
               )}
             </div>
           </div>
+
       {/* התראות קטגוריה */}
       <div className="mt-6 border border-yellow-300 bg-yellow-50 rounded-xl p-5 shadow-sm">
         <h3 className="text-md font-bold text-yellow-800 mb-3 flex items-center gap-2">

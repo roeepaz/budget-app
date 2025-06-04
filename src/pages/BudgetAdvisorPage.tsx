@@ -5,11 +5,13 @@ import { useBudgetModel} from '../hooks/useBudgetModel';
 import { Menu, HeartPulse, TrendingUp, CheckCircle, AlertTriangle, Target, Moon, Sun } from 'lucide-react';
 import {  Calculator, Shield, Wallet, PiggyBank, CreditCard } from 'lucide-react';
 import { db } from '../firebaseConfig.js';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc,collection } from 'firebase/firestore';
 import AdvisorBudgetBuilder from '../components/AdvisorBudgetBuilder';
 import {BudgetInputs,BudgetAdvisorPageProps, Debt, SavingsGoal,Category} from '../type/appTypes'
 import SidebarWrapper from '../components/SidebarWrapper';
 import FullPageError from '../components/FullPageError';
+import { useUserData } from '../hooks/useUserData';
+import { loadCategoriesFromFirestore, loadExpensesFromFirestore } from '../services/firestoreService';
 
 
 // 2. Extract form-only fields from BudgetInputs
@@ -39,10 +41,19 @@ const today = new Date().toISOString().split('T')[0];
 
   const [debts, setDebts] = useState<Debt[]>([]);
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const userId = user?.uid;
 const [loading, setLoading] = useState(true);
 const [hasLoaded, setHasLoaded] = useState(false); // דגל לקריאה שהסתיימה
+const {
+  categories,
+  expenses,
+  setCategories,
+  addExpenseToDB,
+  deleteExpenseFromDB,
+  addCategoryToDB,
+  updateCategoryField
+} = useUserData(user?.uid);
+
 
 const [fatalError, setFatalError] = useState<null | {
   title?: string;
@@ -93,91 +104,78 @@ useEffect(() => {
   });
 
   const loadUserData = async () => {
-    setLoading(true);
+  setLoading(true);
 
-    try {
-      const docRef = doc(db, 'financial_data', userId);
-      const catRef = doc(db, 'users', userId);
+  try {
+    const docRef = doc(db, 'financial_data', userId);
+    const snapshot = await getDoc(docRef);
 
-      const [snapshot, catSnap] = await Promise.all([
-        getDoc(docRef),
-        getDoc(catRef)
-      ]);
+    const defaultForm: FormState = {
+      income: 0,
+      needs: 0,
+      wants: 0,
+      emergencyFund: 0,
+      emergencyTargetMonths: 3,
+      currentSavings: 0,
+      currency: '₪'
+    };
 
-      // ערכים ריקים אם אין
-      const defaultForm: FormState = {
-        income: 0,
-        needs: 0,
-        wants: 0,
-        emergencyFund: 0,
-        emergencyTargetMonths: 3,
-        currentSavings: 0,
-        currency: '₪'
-      };
-
-      const defaultCategories: Category[] = [];
-
-      if (!snapshot.exists()) {
-        await setDoc(docRef, {
-          form: defaultForm,
-          debts: [],
-          goals: []
-        });
-      }
-
-      if (!catSnap.exists()) {
-        await setDoc(catRef, {
-          categories: defaultCategories
-        });
-      }
-
-      const updatedSnap = snapshot.exists() ? snapshot : await getDoc(docRef);
-      const updatedCatSnap = catSnap.exists() ? catSnap : await getDoc(catRef);
-
-      const data = updatedSnap.data() as {
-        form: Partial<FormState>;
-        debts: Debt[];
-        goals: SavingsGoal[];
-      };
-
-      const goals = (data.goals || []).map(g => ({
-        ...g,
-        targetDate: g.targetDate as Timestamp
-      }));
-
-      // טען הכנסה לפי חודש
-      const monthId = getCurrentMonthId();
-      const incomeDocRef = doc(db, 'financial_data', userId, 'monthly_income', monthId);
-      const incomeDoc = await getDoc(incomeDocRef);
-
-      if (incomeDoc.exists()) {
-        const monthlyIncome = incomeDoc.data();
-        setForm(sanitizeForm({
-          ...data.form,
-          income: monthlyIncome.total || 0
-        }));
-      } else {
-        // אין הכנסה לחודש הזה – שלח להזין
-        navigate('/monthlyIncome', { state: { isNewUser: true } });
-        return;
-      }
-
-      setDebts(data.debts || []);
-      setGoals(goals);
-      setCategories(updatedCatSnap.data()?.categories || []);
-      setHasLoaded(true);
-
-    } catch (error) {
-        setFatalError({
-            title: 'שגיאה בטעינת נתונים',
-            description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
-            severity: 'error'
-          });
-      setHasLoaded(false);
-    } finally {
-      setLoading(false);
+    if (!snapshot.exists()) {
+      await setDoc(docRef, {
+        form: defaultForm,
+        debts: [],
+        goals: []
+      });
     }
-  };
+
+    const updatedSnap = snapshot.exists() ? snapshot : await getDoc(docRef);
+
+    const data = updatedSnap.data() as {
+      form: Partial<FormState>;
+      debts: Debt[];
+      goals: SavingsGoal[];
+    };
+
+    const goals = (data.goals || []).map(g => ({
+      ...g,
+      targetDate: g.targetDate as Timestamp
+    }));
+
+    // טען הכנסה לפי חודש
+    const monthId = getCurrentMonthId();
+    const incomeDocRef = doc(db, 'financial_data', userId, 'monthly_income', monthId);
+    const incomeDoc = await getDoc(incomeDocRef);
+
+    if (incomeDoc.exists()) {
+      const monthlyIncome = incomeDoc.data();
+      setForm(sanitizeForm({
+        ...data.form,
+        income: monthlyIncome.total || 0
+      }));
+    } else {
+      navigate('/monthlyIncome', { state: { isNewUser: true } });
+      return;
+    }
+
+    setDebts(data.debts || []);
+    setGoals(goals);
+
+    // ✅ טען קטגוריות מהתת־קולקציה החדשה
+    const categoryList = await loadCategoriesFromFirestore(userId);
+    setCategories(categoryList);
+
+    setHasLoaded(true);
+  } catch (error) {
+    setFatalError({
+      title: 'שגיאה בטעינת נתונים',
+      description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
+      severity: 'error'
+    });
+    setHasLoaded(false);
+  } finally {
+    setLoading(false);
+  }
+};
 
   loadUserData();
 }, [userId]);
@@ -188,26 +186,35 @@ useEffect(() => {
   
     const timeout = setTimeout(() => {
      setDoc(doc(db, 'financial_data', userId), {
-  form,
-  debts,
-  goals,
-}, { merge: true });
+      form,
+      debts,
+      goals,
+    }, { merge: true });
     }, 800); // שמירה אחרי 800ms של שקט
-  
+      
     return () => clearTimeout(timeout);
   }, [form, debts,goals, userId, hasLoaded]);
 
-  useEffect(() => {
-  if (!userId || !hasLoaded) return;
+useEffect(() => {
+    if (!userId || !hasLoaded) return;
 
-  const timeout = setTimeout(() => {
-    setDoc(doc(db, 'users', userId), {
-      categories, // שומר את הקטגוריות במסמך של המשתמש
-    }, { merge: true }); // חשוב! שלא ימחוק שדות אחרים במסמך
-  }, 800);
+    const timeout = setTimeout(async () => {
+      try {
+        const updatePromises = categories.map(cat =>
+          setDoc(
+            doc(db, 'users', userId, 'categories', String(cat.id)),
+            cat,
+            { merge: true } // 🟢 שומר שדות קיימים שלא כתבת
+          )
+        );
+        await Promise.all(updatePromises);
+      } catch (err) {
+        console.error('⚠️ שגיאה בסנכרון הקטגוריות:', err);
+      }
+    }, 800);
 
-  return () => clearTimeout(timeout);
-}, [categories, userId, hasLoaded]);
+    return () => clearTimeout(timeout);
+  }, [userId, categories, hasLoaded]);
 
 useEffect(() => {
   if (!user || loading) return;
@@ -969,29 +976,38 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
                   //navigate('/BudgetPlanner'); 
                 }}
 
-                onUpdate={async (updatedCategories, updatedGoals, updatedDebts) => {
-                  const userDoc = doc(db, 'users', user.uid);
-                  const financialDoc = doc(db, 'financial_data', user.uid);
+               onUpdate={async (updatedCategories, updatedGoals, updatedDebts) => {
+                const financialDoc = doc(db, 'financial_data', user.uid);
+                const categoriesRef = collection(db, 'users', user.uid, 'categories');
 
-                  // 1. עדכון סטייט מקומי
-                  setCategories(updatedCategories.filter(cat =>
-                    !['goal', 'debt'].includes(cat.tag)
-                  ));
+                // 1. עדכון סטייט מקומי
+                setCategories(updatedCategories.filter(cat =>
+                  !['goal', 'debt'].includes(cat.tag)
+                ));
+                setGoals(updatedGoals);
+                setDebts(updatedDebts);
 
-                  setGoals(updatedGoals);
-                  setDebts(updatedDebts);
+                // 2. שמור כל קטגוריה עם merge: true (לא מוחק, רק מעדכן/יוצר לפי ID)
+                const saveCategoryPromises = updatedCategories.map(cat =>
+                  setDoc(
+                    doc(categoriesRef, String(cat.id)),
+                    cat,
+                    { merge: true }
+                  )
+                );
+                await Promise.all(saveCategoryPromises);
 
-                  // 2. שמירה ל־Firestore
-                  await setDoc(userDoc, { categories: updatedCategories }, { merge: true });
-                  await setDoc(financialDoc, {
-                    form,
-                    goals: updatedGoals,
-                    debts: updatedDebts,
-                  }, { merge: true });
+                // 3. שמירה של goals + debts + form במסמך הכלכלי
+                await setDoc(financialDoc, {
+                  form,
+                  goals: updatedGoals,
+                  debts: updatedDebts,
+                }, { merge: true });
 
-                  // 3. מעבר בטוח לעמוד הבא
-                  navigate('/BudgetPlanner');
-                }}
+                // 4. נווט לעמוד הבא
+                navigate('/BudgetPlanner');
+              }}
+
                 />
                 )}
             <div className="text-center">
