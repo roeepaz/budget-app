@@ -3,8 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig'; // או הנתיב שלך
-import QuickAddExpenseButton from '../components/QuickAddExpenseButton';
 import { useUserData } from '../hooks/useUserData';
+
+import { AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import Sidebar from '../components/Sidebar';
+import { Dialog } from '@headlessui/react';
+import FeedbackForm from '../components/FeedbackForm';
+import { MessageSquare } from 'lucide-react';
+import FullPageError from '../components/FullPageError';
+import GaugeChart from 'react-gauge-chart';
 import { 
   DollarSign, 
   Menu, 
@@ -20,12 +27,32 @@ import {
   AlertCircle,
   CheckCircle2
 } from 'lucide-react';
-import { AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
-import { Dialog } from '@headlessui/react';
-import FeedbackForm from '../components/FeedbackForm';
-import { MessageSquare } from 'lucide-react';
-import FullPageError from '../components/FullPageError';
+
+
+// רכיב מד התקדמות קטן לקטגוריות
+const CategoryProgressBar = ({ percentage, spent, budget, isOverBudget }) => {
+  const getBarColor = () => {
+    if (isOverBudget) return 'bg-red-500';
+    if (percentage >= 80) return 'bg-orange-500';
+    if (percentage >= 60) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+  <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+    <div 
+      className={`h-2 rounded-full transition-all duration-500 ${getBarColor()}`}
+      style={{ width: `${Math.min(percentage, 100)}%` }}
+    />
+  </div>
+  <div className="text-xs text-gray-600 whitespace-nowrap">
+    {percentage.toFixed(0)}%
+  </div>
+</div>
+
+  );
+};
 
 export default function HomePage({ user }) {
   const navigate = useNavigate();
@@ -271,6 +298,14 @@ const categoriesWithExpenses = displayCategories.map(category => {
     overBudget
   };
 }).sort((a, b) => b.total - a.total);
+const monthlySavingsTotal = expenses
+  .filter(exp => {
+    const d = new Date(exp.date);
+    const isThisMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    const category = categories.find(c => String(c.id) === String(exp.categoryId));
+    return isThisMonth && category?.tag === 'savings';
+  })
+  .reduce((sum, exp) => sum + exp.amount, 0);
 
 
   if (loading) {
@@ -319,12 +354,11 @@ if(userFatalError){
       {/* תוכן עיקרי */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 lg:p-8 pt-20 lg:pt-8">
-          {/* כותרת עיקרית */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl lg:text-5xl font-extrabold text-gray-800 mb-2">
-              לוח הבקרה שלך
-            </h1>
-            <p className="text-gray-600 text-base lg:text-lg">Kesefy- השותף שלך</p>
+
+          {/* כותרת אישית */}
+          <div className="text-center mb-6">
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-1">שלום, {user.displayName} 👋</h1>
+            <p className="text-gray-600 text-base">זה מצב התקציב שלך לחודש הנוכחי</p>
             {!sidebarOpen && (
               <button
                 onClick={() => setIsOpen(true)}
@@ -356,109 +390,134 @@ if(userFatalError){
       </div>
     </Dialog>
 
-          </div>
+    </div>
 
-          {/* כרטיסי סיכום */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6 mb-8" dir="rtl">
-            {/* הוצאות חודשיות */}
-            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">הוצאות החודש</p>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-800">₪{monthlyExpenses.toLocaleString()}</p>
-                </div>
-                <div className="p-2 lg:p-3 bg-blue-100 rounded-lg">
-                  <TrendingUp className="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
+    {/* כרטיסי סיכום */}
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-center">
+      {/* הוצאות חודשיות */}
+      <div className="bg-white rounded-xl shadow p-4">
+        <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
+        <p className="text-2xl font-bold text-red-500">₪{monthlyExpenses.toLocaleString()}</p>
+      </div>
 
-            {/* ניצול תקציב */}
-            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-green-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">ניצול תקציב</p>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-800">
-                    {budgetUsedPercentage}%
-                  </p>
-                  <p className={`text-xs mt-1 ${totalSpent > totalBudget ? 'text-red-600' : 'text-gray-500'}`}>
-                    {totalSpent > totalBudget
-                      ? `חריגה של ₪${(totalSpent - totalBudget).toFixed(2)}`
-                      : `נותרו ₪${(totalBudget - totalSpent).toFixed(2)} לניצול`}
-                  </p>
-                </div>
-                <div className="p-2 lg:p-3 bg-green-100 rounded-lg">
-                  <Wallet className="w-5 h-5 lg:w-6 lg:h-6 text-green-600" />
-                </div>
-              </div>
-            </div>
+      {/* יתרה / חריגה */}
+      <div className="bg-white rounded-xl shadow p-4">
+        <p className="text-sm text-gray-500">מצב התקציב</p>
 
-            {/* חובות */}
-            <div className="bg-white rounded-xl shadow-lg p-4 lg:p-6 border-r-4 border-orange-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">חובות</p>
-                  <p className="text-xl lg:text-2xl font-bold text-gray-800">
-                    {totalDebts > 0 ? `₪${totalDebts.toLocaleString()}` : 'אין חובות'}
-                  </p>
-                </div>
-                <div className="p-2 lg:p-3 bg-orange-100 rounded-lg">
-                  <CreditCard className="w-5 h-5 lg:w-6 lg:h-6 text-orange-600" />
-                </div>
-              </div>
-            </div>
+        {totalSpent <= totalBudget ? (
+          <p className="text-2xl font-bold text-green-600">
+            נותרו ₪{(totalBudget - totalSpent).toLocaleString()}
+          </p>
+        ) : (
+          <p className="text-2xl font-bold text-red-600">
+            חריגה של ₪{(totalSpent - totalBudget).toLocaleString()} מהתקציב!
+          </p>
+        )}
+      </div>
+      {/* חסכון חודשי */}
+      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center text-center">
+        <p className="text-sm text-gray-500">חיסכון החודש</p>
 
-          </div>
+        <p className="text-2xl font-bold text-green-600 mt-1">
+          ₪{monthlySavingsTotal.toLocaleString()}
+        </p>
+
+        {totalBudget > 0 && monthlySavingsTotal / totalBudget < 0.1 && (
+          <p className="text-xs text-yellow-500 mt-1">
+            כדאי לשקול להגדיל את הסכום שמועבר לחיסכון 🙏
+          </p>
+        )}
+      </div>
+    </div>
+
+    {/* מד התקציב החודשי */}
+    <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center mb-5">
+      <GaugeChart 
+        id="budget-gauge"
+        nrOfLevels={30}
+        colors={['#10B981', '#F59E0B', '#EF4444']}
+        arcWidth={0.3}
+        percent={budgetUsedPercentage / 100}
+        textColor="#374151"
+        needleColor="#111827"
+        formatTextValue={() => `${budgetUsedPercentage.toFixed(0)}%`}
+        style={{ width: '200px', maxWidth: '100%' }}
+      />
+
+      
+    </div>
+
 
           {/* תרשימים ונתונים נוספים */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* הוצאות לפי קטגוריות */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <PieIcon className="w-6 h-6 text-blue-600" />
-              הוצאות לפי קטגוריות
-            </h3>
-            {displayCategories.length > 0 ? (
-              <div className="space-y-3">
-                {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map(category => (
-                  <div key={category.id} className="flex items-center justify-between flex-col sm:flex-row gap-1 sm:gap-0">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full" style={{ backgroundColor: category.color }} />
-                      <span className="text-gray-700 font-medium text-sm lg:text-base">
-                        {category.name}
-                      </span>
-                    </div>
+           <div className="bg-white rounded-xl shadow-lg p-6">
+  <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+    <PieIcon className="w-6 h-6 text-blue-600" />
+    הוצאות לפי קטגוריות
+  </h3>
 
-                    <div className="text-left">
-                      <div className="text-sm lg:text-base font-bold text-gray-800">
-                        ₪{category.total.toLocaleString()} <span className="text-xs text-gray-500">({category.percentage.toFixed(1)}%)</span>
-                      </div>
+  {displayCategories.length > 0 ? (
+    <div className="space-y-4">
 
-                      {category.budget !== undefined && typeof category.remaining === 'number' && (
-                        <div className={`text-xs lg:text-sm mt-1 ${category.overBudget ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
-                          {category.overBudget
-                            ? `חריגה של ₪${Math.abs(category.remaining).toLocaleString()} מהתקציב`
-                            : `נותרו ₪${category.remaining.toLocaleString()} בתקציב`}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
+      {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map(category => {
+        const percentOfBudget = category.budget ? (category.total / category.budget) * 100 : 0;
+        const hasBudget = typeof category.budget === 'number' && category.budget > 0;
 
-                {categoriesWithExpenses.length > 5 && (
-                  <button
-                    className="text-sm text-blue-600 hover:underline mt-2"
-                    onClick={() => setShowAllCategories(prev => !prev)}
-                  >
-                    {showAllCategories ? 'הצג פחות' : 'הצג עוד'}
-                  </button>
+        return (
+          <div key={category.id} className="flex flex-col gap-1">
+            {/* שורת כותרת עם שם וצבע */}
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
+              <span className="text-gray-700 font-medium text-sm">{category.name}</span>
+            </div>
+
+            {/* סכום והסבר */}
+            <div className="flex items-center justify-between text-sm text-gray-800">
+              <span>
+                ₪{category.total.toLocaleString()}
+                {hasBudget && (
+                  <> מתוך ₪{category.budget.toLocaleString()}</>
                 )}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו קטגוריות</p>
-            )}
+              </span>
+              {hasBudget && category.overBudget ? (
+                <span className="text-red-600 font-medium">
+                  חריגה של ₪{Math.abs(category.remaining).toLocaleString()}
+                </span>
+              ) : hasBudget ? (
+                <span className="text-gray-500">
+                  נותרו ₪{category.remaining.toLocaleString()}
+                </span>
+              ) : null}
+            </div>
 
+            {/* בר התקדמות */}
+            {hasBudget && (
+              <CategoryProgressBar 
+                percentage={percentOfBudget}
+                spent={category.total}
+                budget={category.budget}
+                isOverBudget={category.overBudget}
+              />
+            )}
           </div>
+        );
+      })}
+
+      {/* כפתור הצג עוד/פחות */}
+      {categoriesWithExpenses.length > 5 && (
+        <button
+          className="text-sm text-blue-600 hover:underline mt-2"
+          onClick={() => setShowAllCategories(prev => !prev)}
+        >
+          {showAllCategories ? 'הצג פחות' : 'הצג עוד'}
+        </button>
+      )}
+
+    </div>
+  ) : (
+    <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו קטגוריות</p>
+  )}
+</div>
 
             {/* יעדים פעילים */}
             <div className="bg-white rounded-xl shadow-lg p-6">
