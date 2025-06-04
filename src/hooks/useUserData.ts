@@ -1,10 +1,17 @@
-// hooks/useUserData.ts
 import { useState, useEffect, Dispatch, SetStateAction } from 'react';
-import { doc, getDoc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  Timestamp,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+} from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Category, Debt, SavingsGoal, Expense } from '../type/appTypes';
 
-// Return type for the hook
 interface UseUserDataReturn {
   categories: Category[];
   expenses: Expense[];
@@ -19,7 +26,10 @@ interface UseUserDataReturn {
   setLoading: Dispatch<SetStateAction<boolean>>;
   setHasLoaded: Dispatch<SetStateAction<boolean>>;
   addExpenseToDB: (expense: Expense) => Promise<void>;
-  userFatalError:Error | null | unknown;
+  deleteExpenseFromDB: (expenseId: string) => Promise<void>;
+  addCategoryToDB: (category: Omit<Category, 'id'>) => Promise<void>;
+  updateCategoryField: (categoryId: string, updatedFields: Partial<Category>) => Promise<void>;
+  userFatalError: Error | null | unknown;
 }
 
 export function useUserData(userId: string | null | undefined): UseUserDataReturn {
@@ -31,22 +41,26 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
   const [hasLoaded, setHasLoaded] = useState<boolean>(false);
   const [userFatalError, setUserFatalError] = useState<Error | null | unknown>(null);
 
-  // טוען גם קטגוריות, הוצאות, חובות ומטרות
   useEffect(() => {
     if (!userId) return;
 
     const load = async (): Promise<void> => {
       try {
-        // טען categories + expenses מ־users/{uid}
-        const userRef = doc(db, 'users', userId);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const data = userSnap.data();
-          setCategories(data.categories || []);
-          setExpenses(data.expenses || []);
-        }
+        const categoryRef = collection(db, 'users', userId, 'categories');
+        const categorySnap = await getDocs(categoryRef);
+        const catList: Category[] = [];
+        categorySnap.forEach(doc => catList.push({ id: doc.id, ...doc.data() } as Category));
+        setCategories(catList);
 
-        // טען debts + goals מ־financial_data/{uid}
+        const expensesRef = collection(db, 'users', userId, 'expenses');
+        const expensesSnap = await getDocs(expensesRef);
+        const expenseList: Expense[] = [];
+        expensesSnap.forEach(doc => {
+          const data = doc.data() as Omit<Expense, 'id'>;
+          expenseList.push({ id: doc.id, ...data });
+        });
+        setExpenses(expenseList);
+
         const finRef = doc(db, 'financial_data', userId);
         const finSnap = await getDoc(finRef);
         if (finSnap.exists()) {
@@ -54,16 +68,12 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
           setDebts(data.debts || []);
           const loadedGoals: SavingsGoal[] = (data.goals || []).map((g: any) => ({
             ...g,
-            // המרה מתאריך Firestore ל־JS Date
-            targetDate: g.targetDate instanceof Timestamp
-              ? g.targetDate.toDate()
-              : new Date(g.targetDate)
+            targetDate: g.targetDate instanceof Timestamp ? g.targetDate.toDate() : new Date(g.targetDate)
           }));
           setGoals(loadedGoals);
         }
       } catch (error: any) {
         const firebaseCode = error?.code || 'unknown';
-
         if (firebaseCode === 'permission-denied') {
           setUserFatalError({
             title: 'אין לך הרשאה',
@@ -88,37 +98,28 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
 
   const addExpenseToDB = async (expense: Expense): Promise<void> => {
     if (!userId) return;
-    const userRef = doc(db, 'users', userId);
+    const expensesRef = collection(db, 'users', userId, 'expenses');
     const finRef = doc(db, 'financial_data', userId);
 
     try {
-      // 1. שמירת ההוצאה ב־Firestore וב־state
-      await updateDoc(userRef, {
-        expenses: arrayUnion(expense)
-      });
-      setExpenses(prev => [...prev, expense]);
+      const newExpense = { ...expense };
+      const addedDoc = await addDoc(expensesRef, newExpense);
+      setExpenses(prev => [...prev, { ...newExpense, id: addedDoc.id }]);
 
-      // 2. אם זו קטגוריית חוב → הורדת הקרן
       if (typeof expense.categoryId === 'string' && expense.categoryId.startsWith('debt-')) {
         const id = expense.categoryId.replace('debt-', '');
-        const updatedDebts = debts.map(d =>
-          d.id === id ? { ...d, principal: d.principal - expense.amount } : d
-        );
+        const updatedDebts = debts.map(d => d.id === id ? { ...d, principal: d.principal - expense.amount } : d);
         setDebts(updatedDebts);
         await updateDoc(finRef, { debts: updatedDebts });
       }
 
-      // 3. אם זו מטרה → הגדלת currentAmount
       if (typeof expense.categoryId === 'string' && expense.categoryId.startsWith('goal-')) {
         const id = expense.categoryId.replace('goal-', '');
-        const updatedGoals = goals.map(g =>
-          g.id === id ? { ...g, currentAmount: (g.currentAmount ?? 0) + expense.amount } : g
-        );
+        const updatedGoals = goals.map(g => g.id === id ? { ...g, currentAmount: (g.currentAmount ?? 0) + expense.amount } : g);
         setGoals(updatedGoals);
         await updateDoc(finRef, { goals: updatedGoals });
       }
 
-      // 4. אם זו קטגוריה מסוג savings/emergency → עדכון currentAmount
       const catIndex = categories.findIndex(c => String(c.id) === String(expense.categoryId));
       if (catIndex !== -1) {
         const cat = categories[catIndex];
@@ -126,30 +127,57 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
           const updatedCategories = [...categories];
           updatedCategories[catIndex] = {
             ...cat,
-            currentAmount: (cat.currentAmount ?? 0) + expense.amount
+            currentAmount: (cat.currentAmount ?? 0) + expense.amount,
           };
           setCategories(updatedCategories);
-          await updateDoc(userRef, { categories: updatedCategories });
+          const categoryDocRef = doc(db, 'users', userId, 'categories', String(cat.id));
+          await updateDoc(categoryDocRef, {
+            currentAmount: (cat.currentAmount ?? 0) + expense.amount
+          });
         }
       }
-
     } catch (error: any) {
-        const firebaseCode = error?.code || 'unknown';
+      const firebaseCode = error?.code || 'unknown';
+      setUserFatalError({
+        title: 'שגיאה כללית',
+        description: 'לא הצלחנו לשמור את המידע. נסה שוב מאוחר יותר.',
+        severity: 'error',
+      });
+    }
+  };
 
-        if (firebaseCode === 'permission-denied') {
-          setUserFatalError({
-            title: 'אין לך הרשאה',
-            description: 'הגישה למידע נדחתה. אנא התחבר מחדש.',
-            severity: 'warning',
-          });
-        } else {
-          setUserFatalError({
-            title: 'שגיאה כללית',
-            description: 'לא הצלחנו לשמור את המידע. נסה שוב מאוחר יותר.',
-            severity: 'error',
-          });
-        }
-      }
+  const deleteExpenseFromDB = async (expenseId: string): Promise<void> => {
+    if (!userId) return;
+    const expenseRef = doc(db, 'users', userId, 'expenses', expenseId);
+    await deleteDoc(expenseRef);
+    setExpenses(prev => prev.filter(e => e.id !== expenseId));
+  };
+
+  const addCategoryToDB = async (category: Omit<Category, 'id'>): Promise<void> => {
+    if (!userId) return;
+    try {
+      const categoryRef = collection(db, 'users', userId, 'categories');
+      const docRef = await addDoc(categoryRef, category);
+      const newCategory: Category = { id: docRef.id, ...category };
+      setCategories(prev => [...prev, newCategory]);
+    } catch (error: any) {
+      setUserFatalError({
+        title: 'שגיאה בשמירת קטגוריה',
+        description: 'לא הצלחנו לשמור קטגוריה חדשה. נסה שוב.',
+        severity: 'error',
+      });
+    }
+  };
+
+  const updateCategoryField = async (categoryId: string, updatedFields: Partial<Category>): Promise<void> => {
+    if (!userId) return;
+    try {
+      const categoryDocRef = doc(db, 'users', userId, 'categories', categoryId);
+      await updateDoc(categoryDocRef, updatedFields);
+      setCategories(prev => prev.map(cat => cat.id === categoryId ? { ...cat, ...updatedFields } : cat));
+    } catch (error) {
+      console.error('שגיאה בעדכון קטגוריה:', error);
+    }
   };
 
   return {
@@ -166,6 +194,9 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
     setLoading,
     setHasLoaded,
     addExpenseToDB,
+    deleteExpenseFromDB,
+    addCategoryToDB,
+    updateCategoryField,
     userFatalError
   };
 }

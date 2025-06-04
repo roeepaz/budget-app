@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, use } from 'react';
 import { Plus, Trash2, Edit3,Wallet, Calculator,Menu } from 'lucide-react';
 import { db, auth } from '../firebaseConfig';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc,updateDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { useLocation } from 'react-router-dom';
 import { Category, CategoryTag, Expense } from '../type/appTypes';
@@ -25,7 +25,8 @@ const {
   setGoals,
   setLoading,
   setHasLoaded,
-  addExpenseToDB
+  addExpenseToDB,
+  addCategoryToDB
 } = useUserData(userId);
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
@@ -86,56 +87,75 @@ const {
   const visibleCategories = useMemo(() => categories.filter(c => !c.hidden), [categories]);
 
   const handleAddCategory = () => {
-    if (!newCategory.name.trim()) return;
+  if (!newCategory.name.trim()) return;
 
-    const isSavingType = newCategory.tag === 'savings' || newCategory.tag === 'emergency';
+  const isSavingType = newCategory.tag === 'savings' || newCategory.tag === 'emergency';
 
-    const cat: Category = {
-      id: Date.now(),
-      name: newCategory.name,
-      color: newCategory.color,
-      icon: newCategory.icon,
-      tag: newCategory.tag,
-      ...(isSavingType && { currentAmount: 0 })
-    };
-    setCategories(prev => [...prev, cat]);
-    saveCategoriesToDB(userId!, [...categories, cat]);
-
-    resetCategoryForm();
+  const categoryWithoutId: Omit<Category, 'id'> = {
+    name: newCategory.name,
+    color: newCategory.color,
+    icon: newCategory.icon,
+    tag: newCategory.tag,
+    ...(isSavingType && { currentAmount: 0 })
   };
 
-  const handleUpdateCategory = () => {
-    if (!selectedCategoryId || !newCategory.name.trim()) return;
+  addCategoryToDB(categoryWithoutId); // ✅ שולח רק את הקטגוריה החדשה
 
-    const updatedCategory: Category = {
-  ...newCategory,
-  id: Number(selectedCategoryId),
-  currentAmount: ['savings', 'emergency'].includes(newCategory.tag) ? 0 : undefined
+  resetCategoryForm();
 };
-    const updatedList = categories.map(cat =>
-  cat.id === Number(selectedCategoryId) ? updatedCategory : cat
-);
-
-setCategories(updatedList);
-saveCategoriesToDB(userId!, updatedList);
 
 
-    resetCategoryForm();
+  const handleUpdateCategory = async () => {
+  if (!selectedCategoryId || !newCategory.name.trim()) return;
+
+  const isSavingType = ['savings', 'emergency'].includes(newCategory.tag);
+  const updatedCategory: Category = {
+    ...newCategory,
+    id: selectedCategoryId, // אל תשתמש ב־Number! ה־id הוא string
+    currentAmount: isSavingType ? newCategory.currentAmount ?? 0 : undefined
   };
 
-  const handleDeleteCategory = (categoryId: string | number) => {
-    const confirmMsg = expenses.some(exp => exp.categoryId === categoryId)
-      ? 'קטגוריה זו מכילה הוצאות. האם להסתיר?' : 'האם להסיר את הקטגוריה?';
+  const updatedList = categories.map(cat =>
+    cat.id === selectedCategoryId ? updatedCategory : cat
+  );
+  setCategories(updatedList);
 
-    if (!confirm(confirmMsg)) return;
+  try {
+    const categoryDocRef = doc(db, 'users', userId!, 'categories', selectedCategoryId);
+    await updateDoc(categoryDocRef, {
+      name: updatedCategory.name,
+      color: updatedCategory.color,
+      icon: updatedCategory.icon,
+      tag: updatedCategory.tag,
+      ...(updatedCategory.currentAmount !== undefined && { currentAmount: updatedCategory.currentAmount }),
+      ...(updatedCategory.hidden !== undefined && { hidden: updatedCategory.hidden }),
+    });
+      } catch (error) {
+        console.error('שגיאה בעדכון קטגוריה:', error);
+      }
 
-    const updated = categories.map(cat =>
-      cat.id === categoryId ? { ...cat, hidden: true } : cat
-    );
-    setCategories(updated);
-    saveCategoriesToDB(userId!, updated);
+      resetCategoryForm();
+    };
 
-  };
+  const handleDeleteCategory = async (categoryId: string | number) => {
+  const confirmMsg = expenses.some(exp => exp.categoryId === categoryId)
+    ? 'קטגוריה זו מכילה הוצאות. האם להסתיר?' : 'האם להסיר את הקטגוריה?';
+
+  if (!confirm(confirmMsg)) return;
+
+  const updated = categories.map(cat =>
+    cat.id === categoryId ? { ...cat, hidden: true } : cat
+  );
+  setCategories(updated);
+
+  try {
+    const categoryDocRef = doc(db, 'users', userId!, 'categories', String(categoryId));
+    await updateDoc(categoryDocRef, { hidden: true }); // 🔁 עדכון רק שדה hidden
+  } catch (error) {
+    console.error('שגיאה בהסתרת קטגוריה:', error);
+  }
+};
+
 
   const handleEditCategory = (category: Category) => {
     setSelectedCategoryId(String(category.id));
@@ -165,23 +185,7 @@ const handleCancelEdit = () => {
     tag: 'need',
   });
 };
-const saveCategoriesToDB = async (userId: string, categories: Category[]) => {
-  if (!userId) return;
 
-  const cleaned = categories.map(cat => {
-    const c = { ...cat };
-    Object.keys(c).forEach(k => {
-      if (c[k as keyof Category] === undefined) {
-        delete c[k as keyof Category];
-      }
-    });
-    return c;
-  });
-
-  await setDoc(doc(db, 'users', userId), {
-    categories: cleaned
-  }, { merge: true });
-};
 
 const tags: CategoryTag[] = ['need', 'want', 'debt', 'emergency', 'goal', 'savings'];
 
