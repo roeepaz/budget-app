@@ -59,7 +59,6 @@ export default function Sidebar({
     signOut(auth)
       .then(() => navigate('/'))
       .catch((error) => {
-        console.error('Logout failed:', error);
         alert('אירעה שגיאה ביציאה מהמערכת');
       });
   };

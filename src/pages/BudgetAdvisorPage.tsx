@@ -208,8 +208,12 @@ useEffect(() => {
           )
         );
         await Promise.all(updatePromises);
-      } catch (err) {
-        console.error('⚠️ שגיאה בסנכרון הקטגוריות:', err);
+      } catch (error: any) {
+        <FullPageError
+          title={'שגיאה בשמירת קטגוריה'}
+          description={ 'לא הצלחנו לשמור קטגוריה חדשה. נסה שוב.'}
+          severity={'error'}
+        />
       }
     }, 800);
 

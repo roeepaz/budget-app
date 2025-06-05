@@ -21,7 +21,6 @@ export const loadCategoriesFromFirestore = async (userId: string): Promise<Categ
 
     return categoryList;
   } catch (error) {
-    console.error('שגיאה בטעינת קטגוריות:', error);
     return [];
   }
 };
@@ -42,7 +41,6 @@ export const loadExpensesFromFirestore = async (userId: string): Promise<Expense
 
     return expenseList;
   } catch (error) {
-    console.error('שגיאה בטעינת הוצאות:', error);
     return [];
   }
 };

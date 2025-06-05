@@ -187,8 +187,10 @@ const handleWithdraw = async () => {
     }
 
   } catch (e: any) {
-    console.error('שגיאה בשמירת המשיכה:', e.code, e.message);
-    alert(`שגיאה: ${e.code} - ${e.message}`);
+    <FullPageError
+      title={'לצערנו לא הצלחנו לשמור את הנתונים'}
+      description={'הנה נסה שוב מאוחר יותר'}
+    />
   }
 
   // איפוס
