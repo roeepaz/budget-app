@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig'; // או הנתיב שלך
+import { db } from '../firebaseConfig'; 
 import { useUserData } from '../hooks/useUserData';
 
-import { AlertCircle, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import { Dialog } from '@headlessui/react';
 import FeedbackForm from '../components/FeedbackForm';
@@ -21,9 +20,9 @@ import {
   TrendingUp, 
   Calculator,
   LogOut,
-  Wallet,
+  AlertCircle,
   Target,
-  CreditCard,
+  ArrowDownCircle,
   AlertCircle,
   CheckCircle2
 } from 'lucide-react';
@@ -398,6 +397,12 @@ if(userFatalError){
   }
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 from-blue-50 to-purple-50 relative">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-72 h-72 bg-emerald-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-300"></div>
+        <div className="absolute -bottom-8 left-40 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-700"></div>
+      </div>
       {/* כפתור תפריט במובייל */}
       <button
         onClick={() => setSidebarOpen(true)}
@@ -637,28 +642,27 @@ if(userFatalError){
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs text-gray-500">
                       <span>0%</span>
-                      <span>{Math.round(percentOfBudget)}%</span>
+                        <span className="text-lg font-bold text-black-1800">{Math.round(percentOfBudget)}%</span>
                       <span>100%</span>
                     </div>
                     
                    <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-  <div
-    className={`h-3 rounded-full transition-all duration-700 ease-out ${
-      isOverBudget || percentOfBudget === 100
-        ? 'bg-red-500'
-        : percentOfBudget >= 90
-          ? 'bg-orange-500'
-          : percentOfBudget >= 70
-            ? 'bg-yellow-500'
-            : 'bg-green-500'
-    }`}
-    style={{ 
-      width: `${Math.min(percentOfBudget, 100)}%`,
-      minWidth: safeTotal > 0 ? '4px' : '0px'
-    }}
-  />
-</div>
-
+                    <div
+                      className={`h-3 rounded-full transition-all duration-700 ease-out ${
+                        isOverBudget || percentOfBudget === 100
+                          ? 'bg-red-500'
+                          : percentOfBudget >= 90
+                            ? 'bg-orange-500'
+                            : percentOfBudget >= 70
+                              ? 'bg-yellow-500'
+                              : 'bg-green-500'
+                      }`}
+                      style={{ 
+                        width: `${Math.min(percentOfBudget, 100)}%`,
+                        minWidth: safeTotal > 0 ? '4px' : '0px'
+                      }}
+                    />
+                  </div>
                     {isOverBudget && (
                       <div className="text-xs text-red-600 font-medium text-center bg-red-50 rounded py-1">
                         חריגה של {Math.round(percentOfBudget - 100)}% מהתקציב

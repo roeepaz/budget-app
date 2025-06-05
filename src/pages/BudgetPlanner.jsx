@@ -110,7 +110,11 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
       setGoals(loadedGoalsData);
       setTrueCategories(processedCategories);
     } catch (error) {
-      console.error("⚠️ שגיאה בטעינת הנתונים:", error);
+      <FullPageError
+        title={'שגיאה בשמירת הנתונים'}
+        description={ 'לא הצלחנו לשמור קטגוריה חדשה. נסה שוב.'}
+        severity={'error'}
+      />      
       setLoadError(true);
     } finally {
       setHasLoaded(true);
@@ -146,7 +150,12 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
     // שמירת נתונים פיננסיים במסמך הראשי
     await setDoc(doc(db, 'financial_data', userId), financialDocData, { merge: true });
   } catch (error) {
-    console.error("⚠️ שגיאה בשמירת הנתונים:", error);
+     <FullPageError
+        title={'שגיאה בשמירת הנתונים'}
+        description={ 'לא הצלחנו לשמור קטגוריה חדשה. נסה שוב.'}
+        severity={'error'}
+      />      
+      setLoadError(true);
   }
 }, 800);
 

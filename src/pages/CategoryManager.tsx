@@ -8,6 +8,8 @@ import { Category, CategoryTag, Expense } from '../type/appTypes';
 import SidebarWrapper from '../components/SidebarWrapper'; // ⬅ שדרוג קריטי
 import { useUserData } from '../hooks/useUserData';
 import { useNavigate } from 'react-router-dom';
+import FullPageError from '../components/FullPageError';
+
 export default function CategoryManager() {
   const location = useLocation();
   const [user] = useAuthState(auth);
@@ -84,6 +86,16 @@ const {
     savings: 'text-cyan-700 border-cyan-200'
   };
 
+  
+    const resetCategoryForm = () => {
+      setSelectedCategoryId('');
+      setNewCategory({
+        name: '',
+        color: '#' + Math.floor(Math.random() * 16777215).toString(16),
+        icon: '📊',
+        tag: 'need'
+      });
+    };
   const visibleCategories = useMemo(() => categories.filter(c => !c.hidden), [categories]);
 
   const handleAddCategory = () => {
@@ -131,9 +143,12 @@ const {
       ...(updatedCategory.hidden !== undefined && { hidden: updatedCategory.hidden }),
     });
       } catch (error) {
-        console.error('שגיאה בעדכון קטגוריה:', error);
-      }
-
+        <FullPageError
+        title={'שגיאה בשמירת קטגוריה'}
+        description={ 'לא הצלחנו לשמור קטגוריה . נסה שוב.'}
+        severity={'error'}
+      />            
+    }
       resetCategoryForm();
     };
 
@@ -151,10 +166,14 @@ const {
   try {
     const categoryDocRef = doc(db, 'users', userId!, 'categories', String(categoryId));
     await updateDoc(categoryDocRef, { hidden: true }); // 🔁 עדכון רק שדה hidden
-  } catch (error) {
-    console.error('שגיאה בהסתרת קטגוריה:', error);
-  }
-};
+    } catch (error) {
+      <FullPageError
+          title={'שגיאה במחיקת הקטגוריה'}
+          description={ 'נסה שוב מאוחר יותר'}
+          severity={'error'}
+        />      
+    };
+  };
 
 
   const handleEditCategory = (category: Category) => {
@@ -164,16 +183,6 @@ const {
       color: category.color,
       icon: category.icon,
       tag: category.tag
-    });
-  };
-
-  const resetCategoryForm = () => {
-    setSelectedCategoryId('');
-    setNewCategory({
-      name: '',
-      color: '#' + Math.floor(Math.random() * 16777215).toString(16),
-      icon: '📊',
-      tag: 'need'
     });
   };
 const handleCancelEdit = () => {

@@ -175,9 +175,13 @@ export function useUserData(userId: string | null | undefined): UseUserDataRetur
       const categoryDocRef = doc(db, 'users', userId, 'categories', categoryId);
       await updateDoc(categoryDocRef, updatedFields);
       setCategories(prev => prev.map(cat => cat.id === categoryId ? { ...cat, ...updatedFields } : cat));
-    } catch (error) {
-      console.error('שגיאה בעדכון קטגוריה:', error);
-    }
+    } catch (error: any) {
+      setUserFatalError({
+        title: 'שגיאה בשמירת קטגוריה',
+        description: 'לא הצלחנו לשמור קטגוריה חדשה. נסה שוב.',
+        severity: 'error',
+      });    
+      }
   };
 
   return {

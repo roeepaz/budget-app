@@ -394,7 +394,11 @@ const handleDeleteExpense = async (id: number) => {
     }
 
   } catch (error) {
-    console.error('⚠️ שגיאה במחיקת הוצאה:', error);
+    <FullPageError
+          title={'שגיאה במחיקת הוצאה'}
+          description={ 'נסה שוב מאוחר יותר'}
+          severity={'error'}
+        />     
   }
 };
 
@@ -507,7 +511,11 @@ const handleAddRecurring = async () => {
 
     setShowRecurringForm(false);
   } catch (err) {
-    console.error('⚠️ שגיאה בשמירת הוצאה חוזרת:', err);
+    <FullPageError
+      title={'שגיאה בשמירת הוראת קבע'}
+      description={ 'נסה שוב מאוחר יותר'}
+      severity={'error'}
+    />     
   }
 };
 
@@ -537,8 +545,11 @@ const handleDeleteRecurring = async (id: string) => {
       );
     }));
   } catch (err) {
-    console.error('⚠️ שגיאה במחיקת הוצאה חוזרת:', err);
-  }
+    <FullPageError
+      title={'שגיאה במחיקת הוראת קבע'}
+      description={ 'נסה שוב מאוחר יותר'}
+      severity={'error'}
+    />  }
 };
 
 

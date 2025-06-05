@@ -4,6 +4,7 @@ import { Debt, SavingsGoal } from '../type/appTypes';
 import { db } from '../firebaseConfig.js';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
+import FullPageError from '../components/FullPageError';
 
 interface GoalsAndDebtsTrackerProps {
   user: { uid: string } | null;
@@ -102,7 +103,11 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
           setDebts(loadedDebts);
         }
       } catch (error) {
-        console.error('⚠️ שגיאה בטעינת הנתונים:', error);
+        <FullPageError
+              title={'שגיאה בשמירת  נתונים'}
+              description={ 'נסה שוב מאוחר יותר'}
+              severity={'error'}
+            />
       } finally {
         setHasLoaded(true);
         setLoading(false);

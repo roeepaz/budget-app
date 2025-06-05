@@ -90,13 +90,6 @@ const goToAdvisor = async (): Promise<void> => {
       return;
     }
     const totalIncome = calculateTotalIncome();
-    console.log('מעבר ליועץ התקציב עם הנתונים:', {
-      totalIncome,
-      incomeBreakdown: incomeData,
-      month: getCurrentMonth(),
-      isNewUser
-    });
-
     await setDoc(doc(db, 'income_update', userId), {
       onboardingStep: 'done',
       lastIncomeMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
