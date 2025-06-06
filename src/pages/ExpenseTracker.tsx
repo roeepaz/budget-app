@@ -253,9 +253,10 @@ useEffect(() => {
   const previousIncome = monthlyIncomeData?.[previousMonthId];
 
 
-  const incomeChangePct = previousIncome
-    ? (((currentIncome - previousIncome) / previousIncome) * 100).toFixed(1)
-    : '0.0';
+  const incomeChangePct = (typeof currentIncome === 'number' && typeof previousIncome === 'number')
+  ? (((currentIncome - previousIncome) / previousIncome) * 100).toFixed(1)
+  : '0.0';
+
   const incomeChangePctNum = parseFloat(incomeChangePct);
 
   // Create dynamic categories from debts and goals
@@ -632,38 +633,46 @@ return (
 
 
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-40 px-6 py-4">
-        <div className="flex justify-between items-center">
-          
-          {/* מידע וכפתורים */}
-          <div className="flex items-center space-x-4 space-x-reverse">
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-2xl shadow-lg">
-              <div className="text-center text-black">
-                <div className="text-sm opacity-90">סה"כ החודש</div>
-                <div className="text-xl font-bold">₪{totalExpenses.toLocaleString()}</div>
-              </div>
+    <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-40 px-4 sm:px-6 py-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
+        {typeof currentIncome !== 'number' && (
+          <p className="text-sm text-red-500 mt-1">אין נתוני הכנסה לחודש זה</p>
+        )}
+
+        {/* אזור בחירה של תאריך */}
+        <div className="w-full flex flex-wrap gap-3 items-center justify-center">
+          <select 
+            className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+          >
+            {monthNames.map((month, idx) => (
+              <option key={idx} value={idx}>{month} {selectedYear}</option>
+            ))}
+          </select>
+
+          <select
+            className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+          >
+            {yearOptions.map(year => (
+              <option key={year} value={year}>{year}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* תצוגת סכום החודש + כפתור תפריט */}
+        <div className="flex items-center justify-between sm:justify-end gap-4">
+          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-2xl shadow-lg">
+            <div className="text-center text-black">
+              <div className="text-sm opacity-90">סה"כ החודש</div>
+              <div className="text-xl font-bold">₪{totalExpenses.toLocaleString()}</div>
             </div>
-            <select
-              className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-            >
-              {yearOptions.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-            <select 
-              className="bg-white/90 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            >
-              {monthNames.map((month, idx) => (
-                <option key={idx} value={idx}>{month} {selectedYear}</option>
-              ))}
-            </select>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       {/* Navigation Tabs */}
       <nav className="bg-white/70 backdrop-blur-sm border-b border-white/30 overflow-x-auto px-6">
@@ -702,7 +711,9 @@ return (
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">הכנסות החודש</p>
-                    <p className="text-2xl font-bold text-gray-900">₪{currentIncome.toLocaleString()}</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        ₪{typeof currentIncome === 'number' ? currentIncome.toLocaleString() : 'אין נתונים'}
+                      </p>
                     <p className={`text-xs flex items-center mt-2 ${incomeChangePctNum  >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                       <TrendingUp className="w-3 h-3 ml-1" />
                       {incomeChangePctNum  >= 0 ? '+' : ''}{incomeChangePct}% לעומת החודש הקודם

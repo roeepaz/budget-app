@@ -398,10 +398,13 @@ if(userFatalError){
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 from-blue-50 to-purple-50 relative">
       {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-72 h-72 bg-emerald-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-300"></div>
-        <div className="absolute -bottom-8 left-40 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-700"></div>
+      <div 
+        className="absolute inset-0 overflow-hidden pointer-events-none -z-10" 
+        aria-hidden="true"
+      >
+        <div className="absolute top-20 left-20 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" />
+        <div className="absolute top-40 right-20 w-72 h-72 bg-emerald-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-300" />
+        <div className="absolute -bottom-8 left-40 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-700" />
       </div>
       {/* כפתור תפריט במובייל */}
       <button
@@ -578,7 +581,7 @@ if(userFatalError){
             return (
               <div 
                 key={category.id || `category-${index}`} 
-                className="border-b border-gray-100 pb-4 last:border-b-0 last:pb-0"
+                className="border-b border-gray-400 pb-4 last:border-b-0 last:pb-0"
               >
                 {/* שורת מידע עליונה */}
                 <div className="flex items-start justify-between mb-3">
@@ -680,7 +683,7 @@ if(userFatalError){
           <div className="pt-4 border-t border-gray-100">
             <button
               onClick={() => setShowAllCategories(!showAllCategories)}
-              className="w-full py-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 
+              className="w-full z-40 py-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 
                        text-sm font-medium transition-all duration-200 rounded-lg
                        border border-blue-200 hover:border-blue-300"
             >
