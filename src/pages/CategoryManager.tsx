@@ -55,8 +55,6 @@ const {
     { value: '💰', label: '💰 חיסכון' },
     { value: '🧒', label: '🧒 ילדים' },
     { value: '🛡️', label: '🛡️ ביטחון' },
-    { value: '🎯', label: '🎯 מטרות' },
-    { value: '💳', label: '💳 חובות' },
     { value: '📊', label: '📊 אחר' }
   ];
 

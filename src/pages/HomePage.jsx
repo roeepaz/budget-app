@@ -375,6 +375,11 @@ const monthlySavingsTotal = expenses
   })
   .reduce((sum, exp) => sum + exp.amount, 0);
 
+  // מחוץ ל־return, אחרי חישוב monthlySavingsTotal
+  const monthlyNonSavingsTotal = monthlyExpenses - monthlySavingsTotal;
+  const savingsRatio = monthlyExpenses > 0 
+    ? (monthlySavingsTotal / monthlyExpenses) * 100 
+    : 0;
 
   if (loading) {
     return (
@@ -470,14 +475,28 @@ if(userFatalError){
     </div>
 
     {/* כרטיסי סיכום */}
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-center">
-      {/* הוצאות חודשיות */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
-        <p className="text-2xl font-bold text-red-500">₪{monthlyExpenses.toLocaleString()}</p>
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8 text-center">
+  {/* 1. סה"כ הוצאות */}
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
+    <p className="text-2xl font-bold text-red-500">₪{monthlyExpenses.toLocaleString()}</p>
+  </div>
 
-      {/* יתרה / חריגה */}
+  {/* 2. הוצאות רגילות */}
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-sm text-gray-500">הוצאות רגילות</p>
+    <p className="text-2xl font-bold text-gray-800">₪{monthlyNonSavingsTotal.toLocaleString()}</p>
+  </div>
+
+  {/* 3. הוצאות לחיסכון */}
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-sm text-gray-500">חיסכון החודש</p>
+    <p className="text-2xl font-bold text-green-500">₪{monthlySavingsTotal.toLocaleString()}</p>
+    <p className="text-xs text-gray-500 mt-1">
+      ({savingsRatio.toFixed(0)}% מסך ההוצאות)
+    </p>
+  </div>
+  {/* יתרה / חריגה */}
       <div className="bg-white rounded-xl shadow p-4">
         <p className="text-sm text-gray-500">מצב התקציב</p>
 
@@ -491,21 +510,9 @@ if(userFatalError){
           </p>
         )}
       </div>
-      {/* חסכון חודשי */}
-      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center text-center">
-        <p className="text-sm text-gray-500">חיסכון החודש</p>
+</div>
 
-        <p className="text-2xl font-bold text-green-600 mt-1">
-          ₪{monthlySavingsTotal.toLocaleString()}
-        </p>
-
-        {totalBudget > 0 && monthlySavingsTotal / totalBudget < 0.1 && (
-          <p className="text-xs text-yellow-500 mt-1">
-            כדאי לשקול להגדיל את הסכום שמועבר לחיסכון 🙏
-          </p>
-        )}
-      </div>
-    </div>
+    
 
     {/* מד התקציב החודשי */}
     <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center mb-5">
