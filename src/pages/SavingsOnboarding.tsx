@@ -6,7 +6,7 @@ import {
   getDocs,
   addDoc,
   updateDoc,
-  deleteDoc,
+  setDoc  ,
   doc,
   getDoc  
 } from 'firebase/firestore';
@@ -260,7 +260,9 @@ const addGoal = async () => {
       );
       await updateDoc(goalsRef, { goals });
     }
-
+    await setDoc(doc(db, 'income_update', user.uid), {
+      onboardingStep: 'done'
+    }, { merge: true });
     // 4) ניווט לדשבורד
     navigate('/advisor');
   };

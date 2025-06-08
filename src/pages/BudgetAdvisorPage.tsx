@@ -12,13 +12,15 @@ import SidebarWrapper from '../components/SidebarWrapper';
 import FullPageError from '../components/FullPageError';
 import { useUserData } from '../hooks/useUserData';
 import { loadCategoriesFromFirestore, loadExpensesFromFirestore } from '../services/firestoreService';
+import BudgetPrepModal from '../components/BudgetPrepModal';
 
 
 // 2. Extract form-only fields from BudgetInputs
 type FormState = Omit<BudgetInputs, 'debts' | 'savingsGoals'>;
 
 export default function BudgetAdvisorPage({ user }: BudgetAdvisorPageProps) {
-  
+    const [showModal, setShowModal] = useState(true);
+
   const navigate = useNavigate();
 
 const [showAdvisorBudget, setShowAdvisorBudget] = useState(false);
@@ -412,6 +414,7 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
     )
   }
   return (
+    
     <div className={`min-h-screen transition-all duration-500 ${
       darkMode 
         ? 'bg-gradient-to-br from-slate-900 via-blue-900/20 to-slate-900 text-white' 
@@ -424,6 +427,9 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
           backgroundSize: '40px 40px'
         }}></div>
       </div>
+        {showModal && (
+        <BudgetPrepModal onClose={() => setShowModal(false)} />
+      )}
       <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="relative p-6 max-w-7xl mx-auto" dir="rtl">
