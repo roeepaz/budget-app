@@ -91,7 +91,7 @@ const goToAdvisor = async (): Promise<void> => {
     }
     const totalIncome = calculateTotalIncome();
     await setDoc(doc(db, 'income_update', userId), {
-      onboardingStep: 'done',
+      onboardingStep: 'saving_onboard',
       lastIncomeMonth: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`
     }, { merge: true });
     const monthId = getCurrentMonthId();

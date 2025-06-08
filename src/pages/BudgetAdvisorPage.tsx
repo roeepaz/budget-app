@@ -219,29 +219,51 @@ useEffect(() => {
 
     return () => clearTimeout(timeout);
   }, [userId, categories, hasLoaded]);
-
 useEffect(() => {
-  if (!user || loading) return;
+    if (!user || loading) return;
 
-  const checkOnboarding = async () => {
-    const ref = doc(db, 'income_update', user.uid);
-    const snap = await getDoc(ref);
-    const data = snap.data() || {};
+    const checkOnboarding = async () => {
+      // 1) Load the onboarding record
+      const ref = doc(db, 'income_update', user.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data() || {};
 
-    const step = data.onboardingStep || 'landing';
-    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-    
-    if (step === 'landing') {
-      navigate('/landing');
-    } else if (step === 'income') {
-      navigate('/monthlyIncome', { state: { isNewUser: true } });
-    } else if (data.lastIncomeMonth !== currentMonth) {
-      navigate('/monthlyIncome', { state: { isNewUser: false } });
-    }
-  };
+      // 2) Determine current step and current month
+      const step = data.onboardingStep || 'landing';
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(
+        now.getMonth() + 1
+      ).padStart(2, '0')}`;
 
-  checkOnboarding();
-}, [user, loading]);
+      // 3) Branch on step
+      if (step === 'landing') {
+        navigate('/landing');
+        return;
+      }
+      if (step === 'income') {
+        navigate('/monthlyIncome', { state: { isNewUser: true } });
+        return;
+      }
+      if (step === 'saving_onboard') {
+        navigate('/onboarding');
+        return;
+      }
+      if (data.lastIncomeMonth !== currentMonth) {
+        navigate('/monthlyIncome', { state: { isNewUser: false } });
+        return;
+      }
+
+      // 4) All done -> mark as done and fall through
+      await setDoc(
+        doc(db, 'income_update', user.uid),
+        { onboardingStep: 'done' },
+        { merge: true }
+      );
+    };
+
+    checkOnboarding();
+  }, [user, loading, navigate]);  // note: only these deps
+  
 if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">

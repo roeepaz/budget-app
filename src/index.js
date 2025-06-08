@@ -16,6 +16,8 @@ import TermsOfService from './policy/TermsOfService';
 import FeedbackPage from './pages/FeedbackPage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ToastContainer } from 'react-toastify';
+import SavingsOnboarding from './pages/SavingsOnboarding';
+
 const container = document.getElementById('root');
 if (!container) throw new Error('Could not find root element');
 const root = createRoot(container);
@@ -61,6 +63,15 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/feedback" element={<FeedbackPage />} />
+           <Route
+            path="/onboarding"
+            element={
+              <SavingsOnboarding 
+                user={user} 
+              
+              />
+            }
+          />
         </Routes>
       </BrowserRouter>
       <ToastContainer position="top-center" />
