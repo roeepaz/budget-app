@@ -9,6 +9,7 @@ import SidebarWrapper from '../components/SidebarWrapper'; // ⬅ שדרוג ק�
 import { useUserData } from '../hooks/useUserData';
 import { useNavigate } from 'react-router-dom';
 import FullPageError from '../components/FullPageError';
+import BudgetTipsModal from '../components/BudgetTipsModal';
 
 export default function CategoryManager() {
   const location = useLocation();
@@ -33,6 +34,8 @@ const {
 
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+    const [showTips, setShowTips] = useState(true);
+
   const [newCategory, setNewCategory] = useState<Omit<Category, 'id'>>({
     name: '',
     color: '#' + Math.floor(Math.random() * 16777215).toString(16),
@@ -248,7 +251,9 @@ if (loading || !user) {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4" dir="rtl">
-      
+       {showTips && (
+        <BudgetTipsModal onClose={() => setShowTips(false)} isOpen={showTips} />
+      )}
       {/* Sidebar as Drawer – מותאם לנייד */}
       <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
