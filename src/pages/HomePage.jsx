@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -15,7 +15,7 @@ import {
   DollarSign, 
   Menu, 
   X, 
-  Home, 
+  Tag, 
   PieChart as PieIcon, 
   TrendingUp, 
   Calculator,
@@ -24,103 +24,186 @@ import {
   Target,
   ArrowDownCircle,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Plus,
+  Calendar
 } from 'lucide-react';
 
-
-// רכיב מד התקדמות קטן לקטגוריות
-const CategoryProgressBar = ({ percentage, spent, budget, isOverBudget }) => {
-  // בדיקות בטיחות בסיסיות
-  const safePercentage = typeof percentage === 'number' && !isNaN(percentage) ? percentage : 0;
-  const safeSpent = typeof spent === 'number' && !isNaN(spent) && spent >= 0 ? spent : 0;
-  const safeBudget = typeof budget === 'number' && !isNaN(budget) && budget > 0 ? budget : 0;
-  const safeIsOverBudget = Boolean(isOverBudget);
-  
-  // חישוב מחדש של האחוז על בסיס נתונים בטוחים
-  const calculatedPercentage = safeBudget > 0 ? (safeSpent / safeBudget) * 100 : 0;
-  const finalPercentage = Math.max(safePercentage, calculatedPercentage);
-  
-  // הגבלת האחוז לטווח סביר (0-150% למקרה של חריגה)
-  const cappedPercentage = Math.min(Math.max(finalPercentage, 0), 150);
-  const displayPercentage = Math.min(cappedPercentage, 100); // להצגה בבר
-  
-  // קביעת צבע הבר עם לוגיקה משופרת
-  const getBarColor = () => {
-    if (safeIsOverBudget || finalPercentage > 100) return 'bg-red-500';
-    if (finalPercentage >= 95) return 'bg-orange-600';
-    if (finalPercentage >= 80) return 'bg-orange-500';
-    if (finalPercentage >= 60) return 'bg-yellow-500';
-    if (finalPercentage >= 0) return 'bg-green-500';
-    return 'bg-gray-400'; // fallback
+function QuickAddExpenseButton({ onAddExpense, categories,isSidebarOpen }) {
+  const getLocalDateString = () => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset();
+    const local = new Date(now.getTime() - offset * 60 * 1000);
+    return local.toISOString().split('T')[0];
   };
 
-  // קביעת טקסט הסטטוס
-  const getStatusText = () => {
-    if (safeBudget <= 0) return 'ללא תקציב מוגדר';
-    if (safeSpent <= 0) return 'טרם נוצל';
-    if (safeIsOverBudget || finalPercentage > 100) {
-      const overage = safeSpent - safeBudget;
-      return `חריגה: +₪${overage.toLocaleString()}`;
-    }
-    if (finalPercentage >= 95) return 'כמעט מלא';
-    if (finalPercentage >= 80) return 'מתקרב למלא';
-    return `${Math.round(finalPercentage)}% נוצל`;
+  // State for modal open
+  const [isOpen, setIsOpen] = useState(false);
+  // State for quick expense form
+  const [quickExpense, setQuickExpense] = useState({
+    amount: '',
+    description: '',
+    categoryId: '',
+    date: getLocalDateString(),
+  });
+  
+  // Simple drag state
+  const [position, setPosition] = useState({ x: 20, y: 20 });
+  const [dragging, setDragging] = useState(false);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const wrapperRef = useRef(null);
+
+  // Start dragging
+  const handleMouseDown = (e) => {
+    setDragging(true);
+    setOffset({ x: e.clientX - position.x, y: e.clientY - position.y });
+    e.stopPropagation();
   };
 
-  // בדיקה אם להציג את הבר
-  const showBar = safeBudget > 0 && safeSpent >= 0;
-  
-  // בדיקה אם יש נתונים תקינים להצגה
-  const hasValidData = safeBudget > 0 || safeSpent > 0;
+  // Move and stop listeners
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (dragging) {
+        setPosition({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+      }
+    };
+    const handleMouseUp = () => setDragging(false);
 
-  if (!hasValidData) {
-    return (
-      <div className="flex items-center gap-2 min-w-0">
-        <div className="text-xs text-gray-400 italic">אין נתונים להצגה</div>
-      </div>
-    );
-  }
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragging, offset]);
+
+  const handleSubmit = () => {
+    if (!quickExpense.amount || !quickExpense.categoryId) return;
+    const cat = categories.find(c => String(c.id) === quickExpense.categoryId);
+    if (!cat) return;
+
+    onAddExpense({
+      id: Date.now(),
+      amount: parseFloat(quickExpense.amount),
+      description: quickExpense.description,
+      categoryId: cat.id,
+      date: quickExpense.date,
+    });
+
+    setQuickExpense({
+      amount: '',
+      description: '',
+      categoryId: '',
+      date: getLocalDateString(),
+    });
+    setIsOpen(false);
+  };
 
   return (
-    <div className="flex items-center gap-2 min-w-0">
-      {showBar ? (
-        <>
-          {/* הבר עצמו */}
-          <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden min-w-0">
-            <div
-              className={`h-2 rounded-full transition-all duration-500 ${getBarColor()}`}
-              style={{ 
-                width: `${displayPercentage}%`,
-                minWidth: safeSpent > 0 ? '2px' : '0px' // מינימום רוחב כדי שיהיה נראה
-              }}
-            />
-          </div>
-          
-          {/* טקסט סטטוס */}
-          <div className={`text-xs font-medium whitespace-nowrap ${
-            safeIsOverBudget || finalPercentage > 100 
-              ? 'text-red-600' 
-              : finalPercentage >= 80 
-                ? 'text-orange-600' 
-                : 'text-gray-600'
-          }`}>
-            {getStatusText()}
-          </div>
-        </>
-      ) : (
-        /* במקרה שאין תקציב אבל יש הוצאה */
-        <div className="flex items-center gap-2 w-full">
-          <div className="flex-1 bg-gray-100 rounded-full h-2">
-            <div className="bg-blue-400 h-2 rounded-full w-2 transition-all duration-500" />
-          </div>
-          <div className="text-xs text-gray-500 italic whitespace-nowrap">
-            {safeSpent > 0 ? `₪${safeSpent.toLocaleString()} - ${getStatusText()}` : 'ללא פעילות'}
+    <>
+      {/* Draggable floating button */}
+      <div
+        ref={wrapperRef}
+        onMouseDown={handleMouseDown}
+        style={{
+          position: 'fixed',
+          left: position.x,
+          top: position.y,
+          zIndex: 50,
+          cursor: dragging ? 'grabbing' : 'grab'
+        }}
+      >
+        {!isSidebarOpen && (
+        <button
+          onClick={() => setIsOpen(o => !o)}
+          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-full shadow-lg text-white"
+        >
+          {isOpen ? <X size={20}/> : <Plus size={20}/>}
+          <span className="text-sm">הוצאה בקליק</span>
+        </button>
+              )}
+      </div>
+
+      {/* Modal */}
+      {isOpen && (
+        <div className="fixed inset-0 z-59 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm space-y-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <DollarSign className="text-green-500"/> הוספת הוצאה בקליק
+            </h2>
+
+            {/* Amount */}
+            <div>
+              <label className="block text-sm mb-1">סכום (₪)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={quickExpense.amount}
+                onChange={e => setQuickExpense({...quickExpense, amount: e.target.value})}
+                className="w-full border rounded px-3 py-2"
+                placeholder="0.00"
+              />
+            </div>
+
+            {/* Category */}
+            <div>
+              <label className="block text-sm mb-1 flex items-center gap-1">
+                <Tag size={16}/> קטגוריה
+              </label>
+              <select
+                value={quickExpense.categoryId}
+                onChange={e => setQuickExpense({...quickExpense, categoryId: e.target.value})}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="">בחר קטגוריה</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm mb-1">תיאור (אופציונלי)</label>
+              <input
+                type="text"
+                value={quickExpense.description}
+                onChange={e => setQuickExpense({...quickExpense, description: e.target.value})}
+                className="w-full border rounded px-3 py-2"
+                placeholder="מה קנית?"
+              />
+            </div>
+
+            {/* Date */}
+            <div>
+              <label className="block text-sm mb-1 flex items-center gap-1">
+                <Calendar size={16}/> תאריך
+              </label>
+              <input
+                type="date"
+                value={quickExpense.date}
+                onChange={e => setQuickExpense({...quickExpense, date: e.target.value})}
+                className="w-full border rounded px-3 py-2"
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="flex-1 border rounded py-2"
+              >ביטול</button>
+              <button
+                onClick={handleSubmit}
+                className="flex-1 bg-green-600 text-white rounded py-2"
+              >הוסף</button>
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
-};;
+}
 
 export default function HomePage({ user }) {
   const navigate = useNavigate();
@@ -375,6 +458,11 @@ const monthlySavingsTotal = expenses
   })
   .reduce((sum, exp) => sum + exp.amount, 0);
 
+  // מחוץ ל־return, אחרי חישוב monthlySavingsTotal
+  const monthlyNonSavingsTotal = monthlyExpenses - monthlySavingsTotal;
+  const savingsRatio = monthlyExpenses > 0 
+    ? (monthlySavingsTotal / monthlyExpenses) * 100 
+    : 0;
 
   if (loading) {
     return (
@@ -431,7 +519,16 @@ if(userFatalError){
       {/* תוכן עיקרי */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 lg:p-8 pt-20 lg:pt-8">
-
+          <div className="p-4 border-t border-gray-200">
+            <QuickAddExpenseButton
+              onAddExpense={(expense) => {
+                // כאן הפונקציה שלך שמטפלת בהוצאה החדשה
+                addExpenseToDB(expense);
+              }}
+              categories={categories}
+              isSidebarOpen={sidebarOpen}
+            />
+          </div>
           {/* כותרת אישית */}
           <div className="text-center mb-6">
             <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-1">שלום, {user.displayName} 👋</h1>
@@ -470,14 +567,28 @@ if(userFatalError){
     </div>
 
     {/* כרטיסי סיכום */}
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 text-center">
-      {/* הוצאות חודשיות */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
-        <p className="text-2xl font-bold text-red-500">₪{monthlyExpenses.toLocaleString()}</p>
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8 text-center">
+  {/* 1. סה"כ הוצאות */}
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
+    <p className="text-2xl font-bold text-red-500">₪{monthlyExpenses.toLocaleString()}</p>
+  </div>
 
-      {/* יתרה / חריגה */}
+  {/* 2. הוצאות רגילות */}
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-sm text-gray-500">הוצאות רגילות</p>
+    <p className="text-2xl font-bold text-gray-800">₪{monthlyNonSavingsTotal.toLocaleString()}</p>
+  </div>
+
+  {/* 3. הוצאות לחיסכון */}
+  <div className="bg-white rounded-xl shadow p-4">
+    <p className="text-sm text-gray-500">חיסכון החודש</p>
+    <p className="text-2xl font-bold text-green-500">₪{monthlySavingsTotal.toLocaleString()}</p>
+    <p className="text-xs text-gray-500 mt-1">
+      ({savingsRatio.toFixed(0)}% מסך ההוצאות)
+    </p>
+  </div>
+  {/* יתרה / חריגה */}
       <div className="bg-white rounded-xl shadow p-4">
         <p className="text-sm text-gray-500">מצב התקציב</p>
 
@@ -491,21 +602,9 @@ if(userFatalError){
           </p>
         )}
       </div>
-      {/* חסכון חודשי */}
-      <div className="bg-white rounded-xl shadow p-4 flex flex-col items-center justify-center text-center">
-        <p className="text-sm text-gray-500">חיסכון החודש</p>
+</div>
 
-        <p className="text-2xl font-bold text-green-600 mt-1">
-          ₪{monthlySavingsTotal.toLocaleString()}
-        </p>
-
-        {totalBudget > 0 && monthlySavingsTotal / totalBudget < 0.1 && (
-          <p className="text-xs text-yellow-500 mt-1">
-            כדאי לשקול להגדיל את הסכום שמועבר לחיסכון 🙏
-          </p>
-        )}
-      </div>
-    </div>
+    
 
     {/* מד התקציב החודשי */}
     <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center mb-5">

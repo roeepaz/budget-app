@@ -443,6 +443,28 @@ const handleDeleteExpense = async (id: number) => {
     income: monthlyIncomeData[monthId] || 0
   };
 });
+// לפני ה־return, לצד monthlyData:
+const monthlyDataNoSavings = monthNames.map((m, idx) => {
+  const monthId = `${selectedYear}-${String(idx + 1).padStart(2, '0')}`;
+
+  // סינון הוצאות רגילות בלבד (בלי savings)
+  const expensesForMonth = expenses
+    .filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === idx && d.getFullYear() === selectedYear;
+    })
+    .filter(e => {
+      const cat = displayCategoriesWithTheHidden.find(c => String(c.id) === String(e.categoryId));
+      return cat?.tag !== 'savings';
+    })
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  return {
+    month: m,
+    expenses: expensesForMonth,
+    income: monthlyIncomeData[monthId] || 0
+  };
+});
 
 
   // Compute expenses by tag
@@ -565,16 +587,63 @@ const handleDeleteRecurring = async (id: string) => {
     }
     return acc;
   }, {} as Record<CategoryTag, number>);
-
+  
   // 2. הופכים את המפה למערך עם אחוזים
   const byTagWithPct: Array<TagSum & { pct: string }> = Object.entries(tagMap)
-    .map(([tag, sum]) => ({
-      tag: tag as CategoryTag,
-      sum,
-      pct: totalExpenses
-        ? ((sum / totalExpenses) * 100).toFixed(1)
-        : '0'
-    }));
+  .map(([tag, sum]) => ({
+    tag: tag as CategoryTag,
+    sum,
+    pct: totalExpenses
+    ? ((sum / totalExpenses) * 100).toFixed(1)
+    : '0'
+  }));
+  const tagIcons: Record<CategoryTag, string> = {
+    need: '🛒',
+    want: '🎉',
+    debt: '💳',
+    emergency: '🛡️',
+    goal: '🎯',
+    savings: '💰'
+  };
+  const tagLabels: Record<CategoryTag, string> = {
+    need: 'הוצאות בסיס',
+    want: 'רצונות',
+    savings: 'חיסכון',
+    emergency: 'חירום',
+    goal: 'מטרה',
+    debt: 'חוב'
+  };
+  const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
+    name: tagLabels[tag],
+    icon: tagIcons[tag],
+    color: tagColors[tag],
+    value: sum,
+    percentage: pct
+  }));
+// מסנן הוצאות שלא שייכות לקטגוריות חיסכון
+const expensesWithoutSavings = filteredExpenses.filter(exp => {
+  const cat = displayCategoriesWithTheHidden.find(c => String(c.id) === String(exp.categoryId));
+  return cat?.tag !== 'savings';
+});
+
+// סכום כולל ללא חיסכון
+const totalExpensesWithoutSavings = expensesWithoutSavings.reduce((sum, e) => sum + e.amount, 0);
+const expensesByCategoryNoSav = displayCategoriesWithTheHidden.map(cat => {
+  const total = expensesWithoutSavings
+    .filter(e => String(e.categoryId) === String(cat.id))
+    .reduce((sum, e) => sum + e.amount, 0);
+  return { ...cat, value: total, percentage: totalExpensesWithoutSavings ? ((total / totalExpensesWithoutSavings) * 100).toFixed(1) : '0' };
+});
+
+const byTagForChartNoSav = byTagWithPct
+  .filter(t => t.tag !== 'savings')
+  .map(({tag, sum, pct}) => ({
+    name: tagLabels[tag],
+    icon: tagIcons[tag],
+    color: tagColors[tag],
+    value: sum,
+    percentage: pct
+  }));
 
 if (loading || !user) {
     return (
@@ -596,29 +665,6 @@ if (loading || !user) {
       />
       )
     }
-const tagIcons: Record<CategoryTag, string> = {
-  need: '🛒',
-  want: '🎉',
-  debt: '💳',
-  emergency: '🛡️',
-  goal: '🎯',
-  savings: '💰'
-};
-const tagLabels: Record<CategoryTag, string> = {
-  need: 'הוצאות בסיס',
-  want: 'רצונות',
-  savings: 'חיסכון',
-  emergency: 'חירום',
-  goal: 'מטרה',
-  debt: 'חוב'
-};
-const byTagForChart = byTagWithPct.map(({ tag, sum, pct }) => ({
-  name: tagLabels[tag],
-  icon: tagIcons[tag],
-  color: tagColors[tag],
-  value: sum,
-  percentage: pct
-}));
 
 
 return (
@@ -843,8 +889,14 @@ return (
                 </div>
                 
                 <div className="h-64">
+                <p className="text-xs text-gray-500 mb-2">
+                בגרף זה לא נספרו הוצאות מסומנות כ־“חיסכון” (💰),
+                כי אלו חיוביות ואנחנו רוצים להגדיל אותן,
+                דאג שגרף זה תמיד בירידה :)
+              </p>
+
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyData}>
+                    <BarChart data={monthlyDataNoSavings}>
                       <XAxis 
                         dataKey="month" 
                         axisLine={false}

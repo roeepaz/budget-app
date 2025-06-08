@@ -67,7 +67,7 @@ export default function Sidebar({
     <>
       <button
         onClick={() => setSidebarOpen(true)}
-        className="fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+        className="fixed top-4 right-4 z-60 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
       >
         <Menu className="w-6 h-6 text-gray-700" />
       </button>
@@ -128,14 +128,6 @@ export default function Sidebar({
             </button>
           ))}
         </nav>
-
-        <div className="p-4 border-t border-gray-200">
-          <QuickAddExpenseButton
-            onAddExpense={(expense) => addExpenseToDB(expense)}
-            categories={displayCategories}
-            className="w-full"
-          />
-        </div>
 
         <div className="p-4 border-t border-gray-200">
           <button
