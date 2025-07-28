@@ -350,33 +350,63 @@ const generateQuickInsights = () => {
   const avgDailySpend = day > 0 ? totalSpent / day : 0;
   const projectedEndOfMonth = avgDailySpend * daysInMonth;
 
+  // 🟦 חישוב על הוצאות רגילות בלבד
+  const regularCategories = categories.filter(
+    (cat) => !['goal', 'debt', 'savings'].includes(cat.tag)
+  );
+
+  const regularBudget = regularCategories.reduce(
+    (sum, c) => sum + (c.budget || 0), 0
+  );
+
+  const regularSpent = expenses
+    .filter(exp => {
+      const d = new Date(exp.date);
+      const isCurrentMonth = d.getMonth() === month && d.getFullYear() === year;
+      const isRegular = regularCategories.some(c => String(c.id) === String(exp.categoryId));
+      return isCurrentMonth && isRegular;
+    })
+    .reduce((sum, e) => sum + e.amount, 0);
+
+  const percentRegularUsed = regularBudget > 0
+    ? Math.round((regularSpent / regularBudget) * 100)
+    : 0;
+
+  const regularAvgPerDay = day > 0 ? regularSpent / day : 0;
+  const projectedRegular = regularAvgPerDay * daysInMonth;
+
   const insights = [];
 
+  // תובנות כלליות (כמו שהיו)
   if (projectedEndOfMonth > totalBudget) {
     insights.push({
       icon: <TrendingUp className="text-red-600" />,
-      text: `⚠️ בקצב ההוצאות הנוכחי תחרוג ב־₪${Math.round(projectedEndOfMonth - totalBudget)} עד סוף החודש.`
+      text: `⚠️ בקצב ההוצאות הנוכחי תחרוג ב־₪${Math.round(projectedEndOfMonth - totalBudget)} עד סוף החודש.`,
     });
   }
 
   if (percentUsed > 100) {
     insights.push({
       icon: <AlertCircle className="text-red-500" />,
-      text: 'חריגה מהתקציב! חשוב לבדוק את הקטגוריות החריגות.'
+      text: 'חריגה מהתקציב! חשוב לבדוק את הקטגוריות החריגות.',
     });
   }
 
-  if (monthProgress < 50 && percentUsed > 60) {
+  // תובנות על הוצאות רגילות בלבד:
+  if (projectedRegular > regularBudget) {
     insights.push({
-      icon: <TrendingUp className="text-orange-500" />,
-      text: 'קצב ההוצאות גבוה יחסית לשלב זה של החודש.'
+      icon: <TrendingUp className="text-orange-600" />,
+      text: `🚨 קצב ההוצאות שלך בקטגוריות הרגילות גבוה – צפויה חריגה של ₪${Math.round(projectedRegular - regularBudget)}.`,
     });
-  }
-
-  if (monthProgress > 50 && percentUsed < 50) {
+  } else if (monthProgress > 50 && percentRegularUsed < 50) {
     insights.push({
-      icon: <ArrowDownCircle className="text-green-500" />,
-      text: '💰 אתה מתנהל באחריות – ההוצאות שלך נמוכות יחסית.'
+      icon: <ArrowDownCircle className="text-green-600" />,
+      text: '✅ אתה מתנהל באחריות בתקציב השוטף – כל הכבוד!',
+    });
+  } else if (monthProgress < 50 && percentRegularUsed > 60) {
+    insights.push({
+      icon: <AlertCircle className="text-yellow-500" />,
+      text: '⚠️ הוצאות רגילות גבוהות יחסית לשלב זה של החודש.',
     });
   }
 
@@ -384,45 +414,49 @@ const generateQuickInsights = () => {
   if (hasZeroBudget) {
     insights.push({
       icon: <AlertCircle className="text-yellow-500" />,
-      text: 'יש קטגוריות ללא תקציב מוגדר – זה עלול להוביל להפתעות לא צפויות.'
+      text: 'יש קטגוריות ללא תקציב מוגדר – זה עלול להוביל להפתעות לא צפויות.',
     });
   }
 
+  // אם אין תובנות אחרות
   if (insights.length === 0) {
     insights.push({
       icon: <DollarSign className="text-blue-500" />,
-      text: 'התקציב שלך מאוזן נכון לעכשיו. המשך כך! 🎯'
+      text: 'התקציב שלך מאוזן נכון לעכשיו. המשך כך! 🎯',
     });
   }
 
   return insights;
 };
 
+
 const getCategoryBudgetAlerts = () => {
+  if (!categories || !expenses) return { overLimit: [], nearLimit: [] };
+
   const items = [
     ...categories.map(c => ({
       name: c.name,
       spent: expenses
-      .filter(e => String(e.categoryId) === String(c.id))
-      .reduce((sum, e) => sum + e.amount, 0),
+        .filter(e => String(e.categoryId) === String(c.id))
+        .reduce((sum, e) => sum + e.amount, 0),
       budget: c.budget || 0,
     })),
     ...goals.map(g => ({
       name: g.name,
       spent: expenses
-      .filter(e => String(e.categoryId) === `goal-${g.id}`)
-      .reduce((sum, e) => sum + e.amount, 0),
+        .filter(e => String(e.categoryId) === `goal-${g.id}`)
+        .reduce((sum, e) => sum + e.amount, 0),
       budget: g.budget || 0,
     })),
     ...debts.map(d => ({
       name: d.name,
       spent: expenses
-      .filter(e => String(e.categoryId) === `debt-${d.id}`)
-      .reduce((sum, e) => sum + e.amount, 0),
+        .filter(e => String(e.categoryId) === `debt-${d.id}`)
+        .reduce((sum, e) => sum + e.amount, 0),
       budget: d.budget || 0,
     })),
   ];
-  
+
   const overLimit = items.filter(i => i.budget > 0 && i.spent > i.budget);
   const nearLimit = items.filter(
     i => i.budget > 0 && i.spent >= 0.8 * i.budget && i.spent <= i.budget
@@ -430,6 +464,7 @@ const getCategoryBudgetAlerts = () => {
 
   return { overLimit, nearLimit };
 };
+
 const categoriesWithExpenses = displayCategories.map(category => {
   const categoryExpenses = currentMonthExpenses
     .filter(exp => String(exp.categoryId) === String(category.id))
@@ -463,6 +498,27 @@ const monthlySavingsTotal = expenses
   const savingsRatio = monthlyExpenses > 0 
     ? (monthlySavingsTotal / monthlyExpenses) * 100 
     : 0;
+
+const regularCategories = categories.filter(
+  (cat) => !['goal', 'debt', 'savings'].includes(cat.tag)
+);
+
+const regularBudget = regularCategories.reduce(
+  (sum, c) => sum + (c.budget || 0),
+  0
+);
+
+const regularExpensesTotal = currentMonthExpenses
+  .filter(exp => {
+    const category = regularCategories.find(c => String(c.id) === String(exp.categoryId));
+    return !!category;
+  })
+  .reduce((sum, exp) => sum + exp.amount, 0);
+const regularBudgetUsedPercentage = regularBudget > 0
+  ? Math.round((regularExpensesTotal / regularBudget) * 100)
+  : 0;
+
+  const categoryBudgetAlerts = getCategoryBudgetAlerts();
 
   if (loading) {
     return (
@@ -567,30 +623,34 @@ if(userFatalError){
     </div>
 
     {/* כרטיסי סיכום */}
-    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8 text-center">
-  {/* 1. סה"כ הוצאות */}
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
-    <p className="text-2xl font-bold text-red-500">₪{monthlyExpenses.toLocaleString()}</p>
-  </div>
-
-  {/* 2. הוצאות רגילות */}
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-sm text-gray-500">הוצאות רגילות</p>
-    <p className="text-2xl font-bold text-gray-800">₪{monthlyNonSavingsTotal.toLocaleString()}</p>
-  </div>
-
-  {/* 3. הוצאות לחיסכון */}
-  <div className="bg-white rounded-xl shadow p-4">
-    <p className="text-sm text-gray-500">חיסכון החודש</p>
-    <p className="text-2xl font-bold text-green-500">₪{monthlySavingsTotal.toLocaleString()}</p>
-    <p className="text-xs text-gray-500 mt-1">
-      ({savingsRatio.toFixed(0)}% מסך ההוצאות)
-    </p>
-  </div>
-  {/* יתרה / חריגה */}
+    <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-8 text-center">
+      {/* 1. סה"כ הוצאות */}
       <div className="bg-white rounded-xl shadow p-4">
-        <p className="text-sm text-gray-500">מצב התקציב</p>
+        <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
+        <p className="text-2xl font-bold text-gray-800">₪{monthlyExpenses.toLocaleString()}</p>
+      </div>
+
+      {/* 2. הוצאות רגילות */}
+      <div className="bg-white rounded-xl shadow p-4">
+        <p className="text-sm text-gray-500">הוצאות רגילות</p>
+        <p className="text-2xl font-bold text-red-500">₪{monthlyNonSavingsTotal.toLocaleString()}</p>
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-4">
+        <p className="text-sm text-gray-500">מצב התקציב של ההוצאות הרגילות</p>
+        {regularExpensesTotal <= regularBudget ? (
+          <p className="text-2xl font-bold text-green-600">
+            נותרו ₪{(regularBudget - regularExpensesTotal).toLocaleString()}
+          </p>
+        ) : (
+          <p className="text-2xl font-bold text-red-600">
+            חריגה של ₪{(regularExpensesTotal - regularBudget).toLocaleString()}
+          </p>
+        )}
+      </div>
+      {/* יתרה / חריגה */}
+      <div className="bg-white rounded-xl shadow p-4">
+        <p className="text-sm text-gray-500">מצב התקציב הכולל</p>
 
         {totalSpent <= totalBudget ? (
           <p className="text-2xl font-bold text-green-600">
@@ -602,67 +662,115 @@ if(userFatalError){
           </p>
         )}
       </div>
-</div>
+        {/* 3. הוצאות לחיסכון */}
+        <div className="bg-white rounded-xl shadow p-4">
+          <p className="text-sm text-gray-500">חיסכון החודש</p>
+          <p className="text-2xl font-bold text-green-500">₪{monthlySavingsTotal.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            ({savingsRatio.toFixed(0)}% מסך ההוצאות)
+          </p>
+        </div>
+      </div>
 
-    
+            
+      {/* מדי תקציב – כללי ורגיל בלבד */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        {/* מד כללי */}
+        <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">מצב התקציב הכולל</h3>
+          <p className="text-sm text-gray-500 mb-4 text-center">
+            התרשים מציג את אחוז ההוצאות מתוך כלל התקציב שהוגדר – כולל מטרות, חובות וחיסכון.
+          </p>
+          <GaugeChart 
+            id="budget-gauge-overall"
+            nrOfLevels={30}
+            colors={['#10B981', '#F59E0B', '#EF4444']}
+            arcWidth={0.3}
+            percent={budgetUsedPercentage / 100}
+            textColor="#374151"
+            needleColor="#111827"
+            formatTextValue={() => `${budgetUsedPercentage.toFixed(0)}%`}
+            style={{ width: '200px', maxWidth: '100%' }}
+          />
+        </div>
 
-    {/* מד התקציב החודשי */}
-    <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center mb-5">
-      <GaugeChart 
-        id="budget-gauge"
-        nrOfLevels={30}
-        colors={['#10B981', '#F59E0B', '#EF4444']}
-        arcWidth={0.3}
-        percent={budgetUsedPercentage / 100}
-        textColor="#374151"
-        needleColor="#111827"
-        formatTextValue={() => `${budgetUsedPercentage.toFixed(0)}%`}
-        style={{ width: '200px', maxWidth: '100%' }}
-      />
+        {/* מד הוצאות רגילות */}
+        <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center">
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">מצב התקציב של ההוצאות הרגילות</h3>
+          <p className="text-sm text-gray-500 mb-4 text-center">
+            התרשים מציג את אחוז ההוצאות בקטגוריות היומיום בלבד – ללא מטרות, חובות וחיסכון. כך תוכל לדעת אם אתה עומד בתקציב השוטף שלך.
+          </p>
+          <GaugeChart 
+            id="budget-gauge-regular"
+            nrOfLevels={30}
+            colors={['#10B981', '#F59E0B', '#EF4444']}
+            arcWidth={0.3}
+            percent={regularBudgetUsedPercentage / 100}
+            textColor="#374151"
+            needleColor="#111827"
+            formatTextValue={() => `${regularBudgetUsedPercentage.toFixed(0)}%`}
+            style={{ width: '200px', maxWidth: '100%' }}
+          />
+        </div>
+      </div>
 
-      
-    </div>
 
+          {/* תובנות תקציביות */} 
+          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              תובנות החודש
+            </h3>
+            <ul className="text-gray-700 text-sm space-y-2">
+              {generateQuickInsights().map((insight, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span>{insight.icon}</span>
+                  <span>{insight.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <br></br>
 
           {/* תרשימים ונתונים נוספים */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/*תרשים קטגוריות משופר עם טיפול במקרי קצה*/}
-<div className="bg-white rounded-xl shadow-lg p-6">
-  {/* כותרת מתוקנת */}
-  <div className="mb-6">
-    <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-2">
-      <PieIcon className="w-6 h-6 text-blue-600 flex-shrink-0" />
-      <span>הוצאות לפי קטגוריות</span>
-    </h3>
-    
-    {/* מידע נוסף אם נחוץ */}
-    {categoriesWithExpenses?.length > 0 && (
-      <p className="text-sm text-gray-500">
-        {categoriesWithExpenses.length} קטגוריות פעילות השבוע
-      </p>
-    )}
-  </div>
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              {/* כותרת מתוקנת */}
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-2">
+                  <PieIcon className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                  <span>הוצאות לפי קטגוריות</span>
+                </h3>
+                
+                {/* מידע נוסף אם נחוץ */}
+                {categoriesWithExpenses?.length > 0 && (
+                  <p className="text-sm text-gray-500">
+                    {categoriesWithExpenses.length} קטגוריות פעילות השבוע
+                  </p>
+                )}
+              </div>
 
-  {/* תוכן עיקרי */}
-  <div className="space-y-4">
-    {/* מקרה: אין נתונים כלל */}
-    {(!displayCategories || displayCategories.length === 0) ? (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <PieIcon className="w-8 h-8 text-gray-400" />
-        </div>
-        <p className="text-gray-500 text-lg font-medium mb-2">עדיין לא הוספת קטגוריות</p>
-        <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את התרשים</p>
-      </div>
-    ) : (!categoriesWithExpenses || categoriesWithExpenses.length === 0) ? (
-      <div className="text-center py-12">
-        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <PieIcon className="w-8 h-8 text-blue-400" />
-        </div>
-        <p className="text-gray-600 text-lg font-medium mb-2">אין הוצאות השבוע</p>
-        <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את החלוקה לפי קטגוריות</p>
-      </div>
-    ) : (
+              {/* תוכן עיקרי */}
+              <div className="space-y-4">
+                {/* מקרה: אין נתונים כלל */}
+                {(!displayCategories || displayCategories.length === 0) ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <PieIcon className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 text-lg font-medium mb-2">עדיין לא הוספת קטגוריות</p>
+                    <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את התרשים</p>
+                  </div>
+                ) : (!categoriesWithExpenses || categoriesWithExpenses.length === 0) ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <PieIcon className="w-8 h-8 text-blue-400" />
+                    </div>
+                    <p className="text-gray-600 text-lg font-medium mb-2">אין הוצאות השבוע</p>
+                    <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את החלוקה לפי קטגוריות</p>
+                  </div>
+                ) : (
       /* הצגת קטגוריות */
       <>
         <div className="space-y-6">
@@ -744,27 +852,28 @@ if(userFatalError){
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs text-gray-500">
                       <span>0%</span>
-                        <span className="text-lg font-bold text-black-1800">{Math.round(percentOfBudget)}%</span>
+                      <span className="text-lg font-bold text-gray-800">
+                        {Math.round(percentOfBudget)}%
+                      </span>
                       <span>100%</span>
                     </div>
-                    
-                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                    <div
-                      className={`h-3 rounded-full transition-all duration-700 ease-out ${
-                        isOverBudget || percentOfBudget === 100
-                          ? 'bg-red-500'
-                          : percentOfBudget >= 90
-                            ? 'bg-orange-500'
-                            : percentOfBudget >= 70
+
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className={`h-2 rounded-full ${
+                          isOverBudget || percentOfBudget == 100
+                            ? 'bg-red-600'
+                            : percentOfBudget > 80
                               ? 'bg-yellow-500'
                               : 'bg-green-500'
-                      }`}
-                      style={{ 
-                        width: `${Math.min(percentOfBudget, 100)}%`,
-                        minWidth: safeTotal > 0 ? '4px' : '0px'
-                      }}
-                    />
-                  </div>
+                        }`}
+                        style={{
+                          width: `${Math.min(percentOfBudget, 100)}%`,
+                          minWidth: safeTotal > 0 ? '4px' : '0px',
+                        }}
+                      />
+                    </div>
+
                     {isOverBudget && (
                       <div className="text-xs text-red-600 font-medium text-center bg-red-50 rounded py-1">
                         חריגה של {Math.round(percentOfBudget - 100)}% מהתקציב
@@ -835,58 +944,41 @@ if(userFatalError){
             </div>
           </div>
 
-      {/* התראות קטגוריה */}
-      <div className="mt-6 border border-yellow-300 bg-yellow-50 rounded-xl p-5 shadow-sm">
-        <h3 className="text-md font-bold text-yellow-800 mb-3 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
-          התראות קטגוריה
-        </h3>
+     {/* התראות קטגוריה */}
+<div className="mt-6 border border-yellow-300 bg-yellow-50 rounded-xl p-5 shadow-sm">
+  <h3 className="text-md font-bold text-yellow-800 mb-3 flex items-center gap-2">
+    <AlertCircle className="w-5 h-5" />
+    התראות קטגוריה
+  </h3>
 
-        <ul className="space-y-2 text-sm">
-          {getCategoryBudgetAlerts().overLimit.map((item, i) => (
-            <li key={`over-${i}`} className="flex items-center gap-2 text-red-700">
-              <AlertCircle className="w-4 h-4 text-red-500" />
-              <span>
-                <span className="font-semibold">חריגה:</span> "{item.name}" חרגה מהתקציב שלה
-              </span>
-            </li>
-          ))}
+  <ul className="space-y-2 text-sm">
+    {categoryBudgetAlerts.overLimit.map((item, i) => (
+      <li key={`over-${i}`} className="flex items-center gap-2 text-red-700">
+        <AlertCircle className="w-4 h-4 text-red-500" />
+        <span>
+          <span className="font-semibold">חריגה:</span> "{item.name}" חרגה מהתקציב שלה
+        </span>
+      </li>
+    ))}
 
-          {getCategoryBudgetAlerts().nearLimit.map((item, i) => (
-            <li key={`near-${i}`} className="flex items-center gap-2 text-orange-700">
-              <AlertCircle className="w-4 h-4 text-orange-400" />
-              <span>
-                <span className="font-semibold">התראה:</span> "{item.name}" מתקרבת לקצה התקציב
-              </span>
-            </li>
-          ))}
+    {categoryBudgetAlerts.nearLimit.map((item, i) => (
+      <li key={`near-${i}`} className="flex items-center gap-2 text-orange-700">
+        <AlertCircle className="w-4 h-4 text-orange-400" />
+        <span>
+          <span className="font-semibold">התראה:</span> "{item.name}" מתקרבת לקצה התקציב
+        </span>
+      </li>
+    ))}
 
-          {getCategoryBudgetAlerts().overLimit.length === 0 && 
-          getCategoryBudgetAlerts().nearLimit.length === 0 && (
-            <li className="text-green-700 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
-              כל הקטגוריות עומדות בתקציב החודשי 🎯
-            </li>
-          )}
-        </ul>
-      </div>
-
-          {/* תובנות תקציביות */} 
-          <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
-            <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              תובנות החודש
-            </h3>
-            <ul className="text-gray-700 text-sm space-y-2">
-              {generateQuickInsights().map((insight, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <span>{insight.icon}</span>
-                  <span>{insight.text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
+    {categoryBudgetAlerts.overLimit.length === 0 &&
+     categoryBudgetAlerts.nearLimit.length === 0 && (
+      <li className="text-green-700 flex items-center gap-2">
+        <CheckCircle2 className="w-4 h-4 text-green-500" />
+        כל הקטגוריות עומדות בתקציב החודשי 🎯
+      </li>
+    )}
+  </ul>
+</div>
 
           {/* טיפים והתראות */}
           {(totalDebts > 0 || monthlyExpenses > totalExpenses * 0.3) && (
