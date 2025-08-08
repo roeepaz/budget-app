@@ -11,6 +11,9 @@ import FeedbackForm from '../components/FeedbackForm';
 import { MessageSquare } from 'lucide-react';
 import FullPageError from '../components/FullPageError';
 import GaugeChart from 'react-gauge-chart';
+import { format } from 'date-fns';
+import { he } from 'date-fns/locale';
+
 import { 
   DollarSign, 
   Menu, 
@@ -484,20 +487,8 @@ const categoriesWithExpenses = displayCategories.map(category => {
     overBudget
   };
 }).sort((a, b) => b.total - a.total);
-const monthlySavingsTotal = expenses
-  .filter(exp => {
-    const d = new Date(exp.date);
-    const isThisMonth = d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    const category = categories.find(c => String(c.id) === String(exp.categoryId));
-    return isThisMonth && category?.tag === 'savings';
-  })
-  .reduce((sum, exp) => sum + exp.amount, 0);
 
-  // מחוץ ל־return, אחרי חישוב monthlySavingsTotal
-  const monthlyNonSavingsTotal = monthlyExpenses - monthlySavingsTotal;
-  const savingsRatio = monthlyExpenses > 0 
-    ? (monthlySavingsTotal / monthlyExpenses) * 100 
-    : 0;
+
 
 const regularCategories = categories.filter(
   (cat) => !['goal', 'debt', 'savings'].includes(cat.tag)
@@ -517,9 +508,38 @@ const regularExpensesTotal = currentMonthExpenses
 const regularBudgetUsedPercentage = regularBudget > 0
   ? Math.round((regularExpensesTotal / regularBudget) * 100)
   : 0;
+  
+  const isInCurrentMonth = (d) =>
+    d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  
+  // מזהי קטגוריות לפי סוג
+  const regularCategoryIds = categories
+  .filter(c => !['savings', 'goal', 'debt'].includes(c.tag))
+  .map(c => String(c.id));
+  
+  const savingsCategoryIds = categories
+  .filter(c => c.tag === 'savings')
+  .map(c => String(c.id));
+    
+  const monthlyRegularTotal = expenses
+  .filter(exp => isInCurrentMonth(new Date(exp.date)))
+  .filter(exp => regularCategoryIds.includes(String(exp.categoryId)))
+  .reduce((sum, exp) => sum + exp.amount, 0);
+  
+  const monthlySavingsTotal = expenses
+  .filter(exp => isInCurrentMonth(new Date(exp.date)))
+  .filter(exp => savingsCategoryIds.includes(String(exp.categoryId)))
+  .reduce((sum, exp) => sum + exp.amount, 0);
+  
 
+  
+  // מחוץ ל־return, אחרי חישוב monthlySavingsTotal
+  const monthlyNonSavingsTotal = monthlyExpenses - monthlySavingsTotal;
+  const savingsRatio = monthlyExpenses > 0 
+    ? (monthlySavingsTotal / monthlyExpenses) * 100 
+    : 0;
   const categoryBudgetAlerts = getCategoryBudgetAlerts();
-
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
@@ -577,17 +597,19 @@ if(userFatalError){
         <div className="p-4 lg:p-8 pt-20 lg:pt-8">
           <div className="p-4 border-t border-gray-200">
             <QuickAddExpenseButton
-              onAddExpense={(expense) => {
-                // כאן הפונקציה שלך שמטפלת בהוצאה החדשה
-                addExpenseToDB(expense);
-              }}
+              onAddExpense={(expense) => addExpenseToDB(expense)}
               categories={categories}
-              isSidebarOpen={sidebarOpen}
+              goals={goals}
+              debts={debts}
             />
           </div>
           {/* כותרת אישית */}
           <div className="text-center mb-6">
             <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-1">שלום, {user.displayName} 👋</h1>
+            {/* תאריך של היום */}
+            <p className="text-gray-500 text-sm mb-1">
+              {format(new Date(), "EEEE, d בMMMM yyyy", { locale: he })}
+            </p>
             <p className="text-gray-600 text-base">זה מצב התקציב שלך לחודש הנוכחי</p>
             {!sidebarOpen && (
               <button
@@ -633,7 +655,9 @@ if(userFatalError){
       {/* 2. הוצאות רגילות */}
       <div className="bg-white rounded-xl shadow p-4">
         <p className="text-sm text-gray-500">הוצאות רגילות</p>
-        <p className="text-2xl font-bold text-red-500">₪{monthlyNonSavingsTotal.toLocaleString()}</p>
+        <p className="text-2xl font-bold text-red-500">
+          ₪{monthlyRegularTotal.toLocaleString()}
+        </p>
       </div>
 
       <div className="bg-white rounded-xl shadow p-4">
