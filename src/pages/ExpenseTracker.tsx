@@ -223,12 +223,16 @@ useEffect(() => {
       const safeDay = Math.min(r.dayOfMonth, lastDay);
       const date = new Date(year, month, safeDay);
 
+      const localISODate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+        .toISOString()
+        .split("T")[0];
+
       const newExpense: Expense = {
         id: Date.now() + Math.random(), // מזהה זמני
         amount: r.amount,
         description: r.description,
         categoryId: r.categoryId,
-        date: date.toISOString().split('T')[0]
+        date: localISODate
       };
 
       // 🟢 יצירת ההוצאה בפועל
@@ -1148,13 +1152,19 @@ return (
                       </div>
                       
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">תאריך סיום (אופציונלי)</label>
-                        <input
-                          type="date"
-                          className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
-                          value={recurringForm.endDate}
-                          onChange={(e) => setRecurringForm({...recurringForm, endDate: e.target.value})}
-                        />
+                        <label className="block text-xs text-gray-600 mb-1">תאריך סיום</label>
+                          <input
+                            type="date"
+                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white"
+                            value={recurringForm.endDate}
+                            min={new Date().toISOString().split("T")[0]}   // 🔸 Prevents past dates
+                            onChange={(e) =>
+                              setRecurringForm({
+                                ...recurringForm,
+                                endDate: e.target.value,
+                              })
+                            }
+                          />
                       </div>
                     </div>
                     
