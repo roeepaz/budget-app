@@ -413,13 +413,14 @@ const generateQuickInsights = () => {
     });
   }
 
-  const hasZeroBudget = categories.concat(goals, debts).some(c => (c.budget || 0) === 0);
-  if (hasZeroBudget) {
-    insights.push({
-      icon: <AlertCircle className="text-yellow-500" />,
-      text: 'יש קטגוריות ללא תקציב מוגדר – זה עלול להוביל להפתעות לא צפויות.',
-    });
-  }
+ const hasNoBudget = categories.concat(goals, debts).some(c => c.budget == null);
+if (hasNoBudget) {
+  insights.push({
+    icon: <AlertCircle className="text-yellow-500" />,
+    text: 'יש קטגוריות ללא תקציב מוגדר – זה עלול להוביל להפתעות לא צפויות.',
+  });
+}
+
 
   // אם אין תובנות אחרות
   if (insights.length === 0) {
@@ -531,6 +532,9 @@ const regularBudgetUsedPercentage = regularBudget > 0
   .filter(exp => savingsCategoryIds.includes(String(exp.categoryId)))
   .reduce((sum, exp) => sum + exp.amount, 0);
   
+{/* לפני ה־map, אפשר להגדיר פונקציה עזר (או בפנים) */}
+const isSavingsCategory = (cat)=>
+  cat?.tag === 'savings' || cat?.tag === 'goal' 
 
   
   // מחוץ ל־return, אחרי חישוב monthlySavingsTotal
@@ -775,162 +779,228 @@ if(userFatalError){
                 )}
               </div>
 
-              {/* תוכן עיקרי */}
-              <div className="space-y-4">
-                {/* מקרה: אין נתונים כלל */}
-                {(!displayCategories || displayCategories.length === 0) ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <PieIcon className="w-8 h-8 text-gray-400" />
-                    </div>
-                    <p className="text-gray-500 text-lg font-medium mb-2">עדיין לא הוספת קטגוריות</p>
-                    <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את התרשים</p>
-                  </div>
-                ) : (!categoriesWithExpenses || categoriesWithExpenses.length === 0) ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <PieIcon className="w-8 h-8 text-blue-400" />
-                    </div>
-                    <p className="text-gray-600 text-lg font-medium mb-2">אין הוצאות השבוע</p>
-                    <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את החלוקה לפי קטגוריות</p>
-                  </div>
-                ) : (
-      /* הצגת קטגוריות */
-      <>
-        <div className="space-y-6">
-          {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map((category, index) => {
-            // בדיקות בטיחות
-            const safeTotal = Math.max(0, Number(category.total) || 0);
-            const safeBudget = category.budget && Number(category.budget) > 0 ? Number(category.budget) : null;
-            const safeRemaining = Number(category.remaining) || 0;
-            const isOnThePeni = safeRemaining == 0;
-            const percentOfBudget = safeBudget ? Math.min((safeTotal / safeBudget) * 100, 150) : 0;
-            const hasBudget = safeBudget !== null;
-            const isOverBudget = hasBudget && safeRemaining < 0;
-            const isNearlyExhausted =!isOnThePeni && hasBudget && safeRemaining >= 0 && safeRemaining <= 50;
+             {/* תוכן עיקרי */}
+<div className="space-y-4">
+  {/* מקרה: אין נתונים כלל */}
+  {(!displayCategories || displayCategories.length === 0) ? (
+    <div className="text-center py-12">
+      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <PieIcon className="w-8 h-8 text-gray-400" />
+      </div>
+      <p className="text-gray-500 text-lg font-medium mb-2">עדיין לא הוספת קטגוריות</p>
+      <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את התרשים</p>
+    </div>
+  ) : (!categoriesWithExpenses || categoriesWithExpenses.length === 0) ? (
+    <div className="text-center py-12">
+      <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+        <PieIcon className="w-8 h-8 text-blue-400" />
+      </div>
+      <p className="text-gray-600 text-lg font-medium mb-2">אין הוצאות השבוע</p>
+      <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את החלוקה לפי קטגוריות</p>
+    </div>
+  ) : (
+    // ענף שלישי: מחזירים אלמנט יחיד שעוטף גם את הרשימה וגם את הכפתור
+    <div>
+      {/* הצגת קטגוריות */}
+      <div className="space-y-6">
+        {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map((category, index) => {
+          // בדיקות בטיחות
+          const safeTotal = Math.max(0, Number(category.total) || 0);
+          const safeBudget = category.budget && Number(category.budget) > 0 ? Number(category.budget) : null;
+          const hasBudget = safeBudget !== null;
 
-            return (
-              <div 
-                key={category.id || `category-${index}`} 
-                className="border-b border-gray-400 pb-4 last:border-b-0 last:pb-0"
-              >
-                {/* שורת מידע עליונה */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div
-                      className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white"
-                      style={{ backgroundColor: category.color || '#6B7280' }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <h4 className="font-semibold text-gray-800 text-base truncate">
-                        {category.name || 'קטגוריה ללא שם'}
-                      </h4>
-                      <p className="text-sm text-gray-500 mt-1">
-                        ₪{safeTotal.toLocaleString('he-IL')}
-                        {hasBudget && (
-                          <span className="text-gray-400">
-                            {' / '}₪{safeBudget.toLocaleString('he-IL')}
-                          </span>
-                        )}
-                      </p>
-                    </div>
+          // remaining מגיע מהלוגיקה שלך (תקציב - הוצאות); שלילי = חריגה
+          const safeRemaining = Number(category.remaining) || 0;
+          const isOnThePeni = hasBudget && safeRemaining === 0;
+
+          const percentOfBudget = hasBudget
+            ? Math.min(((safeTotal / (safeBudget)) * 100) || 0, 1000)
+            : 0;
+
+          // חיסכון?
+          const savingCat = isSavingsCategory(category);
+
+          // חריגה גולמית (במונחי הוצאות)
+          const isOverBudgetRaw = hasBudget && safeRemaining < 0;
+
+          // בקטגוריות רגילות: חריגה אמיתית; בחיסכון – חריגה חיובית (יעד הושג/עברנו)
+          const isOverBudget = savingCat ? false : isOverBudgetRaw;
+          const isPositiveOverSaving = savingCat && isOverBudgetRaw;
+
+          // "כמעט נגמר" לקטגוריות רגילות; בחיסכון – "כמעט יעד"
+          const isNearlyExhausted = hasBudget && !isOnThePeni && safeRemaining >= 0 && safeRemaining <= 50;
+
+          // צבע לבר התקדמות
+          const progressColorClass = savingCat
+            ? (isPositiveOverSaving || percentOfBudget >= 100
+                ? 'bg-emerald-600'
+                : percentOfBudget > 80
+                  ? 'bg-emerald-500'
+                  : 'bg-emerald-400')
+            : (isOverBudget || percentOfBudget === 100
+                ? 'bg-red-600'
+                : percentOfBudget > 80
+                  ? 'bg-yellow-500'
+                  : 'bg-green-500');
+
+          return (
+            <div
+              key={category.id || `category-${index}`}
+              className="border-b border-gray-400 pb-4 last:border-b-0 last:pb-0"
+            >
+              {/* שורת מידע עליונה */}
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div
+                    className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white"
+                    style={{ backgroundColor: category.color || '#6B7280' }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-semibold text-gray-800 text-base truncate">
+                      {category.name || 'קטגוריה ללא שם'}
+                    </h4>
+                    <p className="text-sm text-gray-500 mt-1">
+                      ₪{safeTotal.toLocaleString('he-IL')}
+                      {hasBudget && (
+                        <span className="text-gray-400">
+                          {' / '}₪{(safeBudget).toLocaleString('he-IL')}
+                        </span>
+                      )}
+                    </p>
                   </div>
-                  
-                  {/* סטטוס */}
-                  <div className="flex-shrink-0 text-left">
-                    {isOverBudget ? (
-                      <div className="text-red-600 font-semibold text-sm">
-                        <span className="block">חריגה</span>
+                </div>
+
+                {/* סטטוס */}
+                <div className="flex-shrink-0 text-left">
+                  {savingCat ? (
+                    isPositiveOverSaving ? (
+                      <div className="text-emerald-600 font-semibold text-sm">
+                        <span className="block">מעולה! חיסכון מעל היעד</span>
                         <span className="block text-xs">
                           +₪{Math.abs(safeRemaining).toLocaleString('he-IL')}
                         </span>
                       </div>
                     ) : isNearlyExhausted ? (
-                      <div className="text-orange-600 font-medium text-sm">
-                        <span className="block">כמעט נגמר</span>
+                      <div className="text-emerald-600 font-medium text-sm">
+                        <span className="block">כמעט משיגים את היעד</span>
                         <span className="block text-xs text-gray-500">
-                          ₪{safeRemaining.toLocaleString('he-IL')} נותרו
+                          ₪{safeRemaining.toLocaleString('he-IL')} עד היעד
                         </span>
                       </div>
                     ) : hasBudget && safeRemaining > 0 ? (
-                      <div className="text-green-600 font-medium text-sm">
-                        <span className="block">בתקציב</span>
+                      <div className="text-emerald-600 font-medium text-sm">
+                        <span className="block">בדרך הנכונה</span>
                         <span className="block text-xs text-gray-500">
-                          ₪{safeRemaining.toLocaleString('he-IL')} נותרו
+                          ₪{safeRemaining.toLocaleString('he-IL')} עד היעד
                         </span>
                       </div>
                     ) : isOnThePeni ? (
-                      <div className="text-gray-500 text-sm">
-                        <span className="block">מדויק</span>
+                      <div className="text-emerald-700 text-sm">
+                        <span className="block">יעד הושג</span>
                       </div>
                     ) : (
                       <div className="text-gray-400 text-sm">
-                        <span className="block">ללא תקציב</span>
+                        <span className="block">ללא יעד חודשי</span>
                       </div>
-                    )}
-                  </div>
+                    )
+                  ) : (
+                    <>
+                      {isOverBudget ? (
+                        <div className="text-red-600 font-semibold text-sm">
+                          <span className="block">חריגה</span>
+                          <span className="block text-xs">
+                            +₪{Math.abs(safeRemaining).toLocaleString('he-IL')}
+                          </span>
+                        </div>
+                      ) : isNearlyExhausted ? (
+                        <div className="text-orange-600 font-medium text-sm">
+                          <span className="block">כמעט נגמר</span>
+                          <span className="block text-xs text-gray-500">
+                            ₪{safeRemaining.toLocaleString('he-IL')} נותרו
+                          </span>
+                        </div>
+                      ) : hasBudget && safeRemaining > 0 ? (
+                        <div className="text-green-600 font-medium text-sm">
+                          <span className="block">בתקציב</span>
+                          <span className="block text-xs text-gray-500">
+                            ₪{safeRemaining.toLocaleString('he-IL')} נותרו
+                          </span>
+                        </div>
+                      ) : isOnThePeni ? (
+                        <div className="text-gray-500 text-sm">
+                          <span className="block">מדויק</span>
+                        </div>
+                      ) : (
+                        <div className="text-gray-400 text-sm">
+                          <span className="block">ללא תקציב</span>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-
-                {/* בר התקדמות */}
-                {hasBudget && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-xs text-gray-500">
-                      <span>0%</span>
-                      <span className="text-lg font-bold text-gray-800">
-                        {Math.round(percentOfBudget)}%
-                      </span>
-                      <span>100%</span>
-                    </div>
-
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          isOverBudget || percentOfBudget == 100
-                            ? 'bg-red-600'
-                            : percentOfBudget > 80
-                              ? 'bg-yellow-500'
-                              : 'bg-green-500'
-                        }`}
-                        style={{
-                          width: `${Math.min(percentOfBudget, 100)}%`,
-                          minWidth: safeTotal > 0 ? '4px' : '0px',
-                        }}
-                      />
-                    </div>
-
-                    {isOverBudget && (
-                      <div className="text-xs text-red-600 font-medium text-center bg-red-50 rounded py-1">
-                        חריגה של {Math.round(percentOfBudget - 100)}% מהתקציב
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
-            );
-          })}
-        </div>
 
-        {/* כפתור הצגת עוד */}
-        {categoriesWithExpenses.length > 5 && (
-          <div className="pt-4 border-t border-gray-100">
-            <button
-              onClick={() => setShowAllCategories(!showAllCategories)}
-              className="w-full z-40 py-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 
+              {/* בר התקדמות */}
+              {hasBudget && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs text-gray-500">
+                    <span>0%</span>
+                    <span className="text-lg font-bold text-gray-800">
+                      {Math.round(percentOfBudget)}%
+                    </span>
+                    <span>100%</span>
+                  </div>
+
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className={`h-2 rounded-full ${progressColorClass}`}
+                      style={{
+                        width: `${Math.min(percentOfBudget, 100)}%`,
+                        minWidth: safeTotal > 0 ? '4px' : '0px',
+                      }}
+                    />
+                  </div>
+
+                  {/* הודעות סיכום – אחת בלבד לפי סוג */}
+                  {!savingCat && isOverBudget && (
+                    <div className="text-xs text-red-600 font-medium text-center bg-red-50 rounded py-1">
+                      חריגה של {Math.round(percentOfBudget - 100)}% מהתקציב
+                    </div>
+                  )}
+
+                  {savingCat && isPositiveOverSaving && (
+                    <div className="text-xs font-medium text-center rounded py-2
+                                    text-emerald-800 bg-emerald-100 border border-emerald-300">
+                      🎉 כל הכבוד! חיסכון {Math.round(percentOfBudget - 100)}% מעל היעד 🎉
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* כפתור הצגת עוד */}
+      {categoriesWithExpenses.length > 5 && (
+        <div className="pt-4 border-t border-gray-100">
+          <button
+            onClick={() => setShowAllCategories(!showAllCategories)}
+            className="w-full z-40 py-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 
                        text-sm font-medium transition-all duration-200 rounded-lg
                        border border-blue-200 hover:border-blue-300"
-            >
-              {showAllCategories 
-                ? '🔼 הצג פחות קטגוריות' 
-                : `🔽 הצג עוד ${categoriesWithExpenses.length - 5} קטגוריות`
-              }
-            </button>
-          </div>
-        )}
-      </>
-    )}
-  </div>
+          >
+            {showAllCategories
+              ? '🔼 הצג פחות קטגוריות'
+              : `🔽 הצג עוד ${categoriesWithExpenses.length - 5} קטגוריות`}
+          </button>
+        </div>
+      )}
+    </div>
+  )}
 </div>
 
+              </div>
             {/* יעדים פעילים */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -966,7 +1036,6 @@ if(userFatalError){
                 <p className="text-gray-500 text-center py-8">עדיין לא הוגדרו יעדים</p>
               )}
             </div>
-          </div>
 
      {/* התראות קטגוריה */}
 <div className="mt-6 border border-yellow-300 bg-yellow-50 rounded-xl p-5 shadow-sm">
@@ -1026,6 +1095,7 @@ if(userFatalError){
             )}
         </div>
       </div>
+    </div>
     </div>
   );
 }
