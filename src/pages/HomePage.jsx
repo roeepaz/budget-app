@@ -13,7 +13,7 @@ import FullPageError from '../components/FullPageError';
 import GaugeChart from 'react-gauge-chart';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
-
+import SmartFinancialTips from '../components/SmartFinancialTips'
 import { 
   DollarSign, 
   Menu, 
@@ -1037,62 +1037,50 @@ if(userFatalError){
               )}
             </div>
 
-     {/* התראות קטגוריה */}
-<div className="mt-6 border border-yellow-300 bg-yellow-50 rounded-xl p-5 shadow-sm">
-  <h3 className="text-md font-bold text-yellow-800 mb-3 flex items-center gap-2">
-    <AlertCircle className="w-5 h-5" />
-    התראות קטגוריה
-  </h3>
-
-  <ul className="space-y-2 text-sm">
-    {categoryBudgetAlerts.overLimit.map((item, i) => (
-      <li key={`over-${i}`} className="flex items-center gap-2 text-red-700">
-        <AlertCircle className="w-4 h-4 text-red-500" />
-        <span>
-          <span className="font-semibold">חריגה:</span> "{item.name}" חרגה מהתקציב שלה
-        </span>
-      </li>
-    ))}
-
-    {categoryBudgetAlerts.nearLimit.map((item, i) => (
-      <li key={`near-${i}`} className="flex items-center gap-2 text-orange-700">
-        <AlertCircle className="w-4 h-4 text-orange-400" />
-        <span>
-          <span className="font-semibold">התראה:</span> "{item.name}" מתקרבת לקצה התקציב
-        </span>
-      </li>
-    ))}
-
-    {categoryBudgetAlerts.overLimit.length === 0 &&
-     categoryBudgetAlerts.nearLimit.length === 0 && (
-      <li className="text-green-700 flex items-center gap-2">
-        <CheckCircle2 className="w-4 h-4 text-green-500" />
-        כל הקטגוריות עומדות בתקציב החודשי 🎯
-      </li>
-    )}
-  </ul>
-</div>
-
-          {/* טיפים והתראות */}
-          {(totalDebts > 0 || monthlyExpenses > totalExpenses * 0.3) && (
-            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4 lg:p-6">
-              <h3 className="text-lg font-bold text-yellow-800 mb-3 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5" />
-                התראות פיננסיות
-              </h3>
-              <div className="space-y-2 text-yellow-700 text-sm lg:text-base">
-                {totalDebts > 0 && (
-                  <p>• יש לך חובות בסך ₪{totalDebts.toLocaleString()} - כדאי לתכנן החזרה</p>
-                )}
-                {monthlyExpenses > totalExpenses * 0.3 && (
-                  <p>• ההוצאות החודשיות גבוהות יחסית - כדאי לבדוק את התקציב</p>
-                )}
+      {(totalDebts > 0 || monthlyExpenses > totalExpenses * 0.3) && (
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-5 shadow-sm">
+          <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-amber-800">
+            <AlertCircle className="h-5 w-5" />
+            התראות פיננסיות
+          </h3>
+          <div className="space-y-2 text-sm text-amber-800">
+            {totalDebts > 0 && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-100 bg-white/60 p-3">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <div>
+                  <div className="font-medium">חובות פעילים</div>
+                  <div className="text-amber-700">
+                    יש לך חובות בסך ₪{totalDebts.toLocaleString()} — תכנן החזר הדרגתי.
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
-          {budgetUsedPercentage > 100 && (
-              <p className="text-sm text-red-600 mt-1">חריגה מהתקציב! 😬</p>
             )}
+            {monthlyExpenses > totalExpenses * 0.3 && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-100 bg-white/60 p-3">
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <div>
+                  <div className="font-medium">קצב הוצאות גבוה</div>
+                  <div className="text-amber-700">
+                    ההוצאות החודשיות גבוהות יחסית — בדוק קטגוריות עם ניצול גבוה (80%+).
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {budgetUsedPercentage > 100 && (
+        <p className="mt-2 text-sm font-medium text-red-600">חריגה מהתקציב! 😬</p>
+      )}
+
+      {/* התראות קטגוריה */}
+      <SmartFinancialTips
+  categories={categories}
+  goals={goals}
+  debts={debts}
+  expenses={expenses}
+/>
         </div>
       </div>
     </div>
