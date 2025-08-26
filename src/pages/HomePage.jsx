@@ -433,42 +433,6 @@ if (hasNoBudget) {
   return insights;
 };
 
-
-const getCategoryBudgetAlerts = () => {
-  if (!categories || !expenses) return { overLimit: [], nearLimit: [] };
-
-  const items = [
-    ...categories.map(c => ({
-      name: c.name,
-      spent: expenses
-        .filter(e => String(e.categoryId) === String(c.id))
-        .reduce((sum, e) => sum + e.amount, 0),
-      budget: c.budget || 0,
-    })),
-    ...goals.map(g => ({
-      name: g.name,
-      spent: expenses
-        .filter(e => String(e.categoryId) === `goal-${g.id}`)
-        .reduce((sum, e) => sum + e.amount, 0),
-      budget: g.budget || 0,
-    })),
-    ...debts.map(d => ({
-      name: d.name,
-      spent: expenses
-        .filter(e => String(e.categoryId) === `debt-${d.id}`)
-        .reduce((sum, e) => sum + e.amount, 0),
-      budget: d.budget || 0,
-    })),
-  ];
-
-  const overLimit = items.filter(i => i.budget > 0 && i.spent > i.budget);
-  const nearLimit = items.filter(
-    i => i.budget > 0 && i.spent >= 0.8 * i.budget && i.spent <= i.budget
-  );
-
-  return { overLimit, nearLimit };
-};
-
 const categoriesWithExpenses = displayCategories.map(category => {
   const categoryExpenses = currentMonthExpenses
     .filter(exp => String(exp.categoryId) === String(category.id))
@@ -542,7 +506,6 @@ const isSavingsCategory = (cat)=>
   const savingsRatio = monthlyExpenses > 0 
     ? (monthlySavingsTotal / monthlyExpenses) * 100 
     : 0;
-  const categoryBudgetAlerts = getCategoryBudgetAlerts();
   
   if (loading) {
     return (
