@@ -66,8 +66,6 @@ const displayCategories: Category[] = useMemo(() => [
       }}
       sidebarOpen={sidebarOpen}
       setSidebarOpen={setSidebarOpen}
-      displayCategories={displayCategories}
-      addExpenseToDB={addExpenseToDB}
     />
   );
 }

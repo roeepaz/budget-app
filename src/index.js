@@ -17,6 +17,7 @@ import FeedbackPage from './pages/FeedbackPage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ToastContainer } from 'react-toastify';
 import SavingsOnboarding from './pages/SavingsOnboarding';
+import MonthlyIncomePage from './pages/MonthlyIncomePage';
 
 const container = document.getElementById('root');
 if (!container) throw new Error('Could not find root element');
@@ -63,6 +64,8 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/terms-of-service" element={<TermsOfService />} />
           <Route path="/feedback" element={<FeedbackPage />} />
+          <Route path= "/monthlyIncomes"  element= {<MonthlyIncomePage />} />
+
            <Route
             path="/onboarding"
             element={

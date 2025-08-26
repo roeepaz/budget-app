@@ -406,7 +406,7 @@ const totalPerCat = displayCats.map(c => {
         <>
           {/* סיכום כולל */}
           <div className="text-gray-600 text-sm mb-4">
-            סך הכל בחסכונות: <span className="font-bold text-green-600">{formatCurrency(totalSavings)}</span>
+            סך הכל בהשקעות: <span className="font-bold text-green-600">{formatCurrency(totalSavings)}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -15,6 +15,7 @@ import {
   LogOut,
   Wallet,
   LucideIcon,
+  Banknote
 } from 'lucide-react';
 
 interface MenuItem {
@@ -27,21 +28,17 @@ interface MenuItem {
 interface SidebarProps {
  user: {
     uid: string;
-    email?: string;
-    displayName?: string;
+    email?: string | null;
+    displayName?: string | null;
   } | null;
     sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  displayCategories: Category[];
-  addExpenseToDB: (expense: any) => void;
 }
 
 export default function Sidebar({
   user,
   sidebarOpen,
   setSidebarOpen,
-  displayCategories,
-  addExpenseToDB
 }: SidebarProps) {
   const navigate = useNavigate();
   const auth = getAuth();
@@ -53,6 +50,7 @@ export default function Sidebar({
     { icon: Calculator, label: 'ניהול תקציב', path: '/budgetPlanner' },
     { icon: DollarSign, label: 'ייעוץ פיננסי', path: '/advisor' },
     { icon: PiggyBank, label: 'ניהול חסכונות', path: '/savings' },
+    { icon: Banknote, label: 'ניהול הכנסות', path: '/monthlyIncomes' },
 
   ];
   const handleLogout = () => {
