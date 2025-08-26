@@ -593,8 +593,6 @@ if(userFatalError){
         user={user}
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        displayCategories={displayCategories}
-        addExpenseToDB={addExpenseToDB}
       />
       {/* תוכן עיקרי */}
       <div className="flex-1 overflow-y-auto">
