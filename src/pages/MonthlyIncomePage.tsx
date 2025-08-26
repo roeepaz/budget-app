@@ -61,12 +61,6 @@ type Row = MonthlyIncome & {
 
 // Mock Firebase data
 const mockData: Row[] = [
-  { id: "2025-08", salary: 15000, freelance: 3500, passive: 1200, other: 800, total: 20500, _dirty: false, _saving: false, _error: null },
-  { id: "2025-07", salary: 15000, freelance: 4200, passive: 1100, other: 300, total: 20600, _dirty: false, _saving: false, _error: null },
-  { id: "2025-06", salary: 15000, freelance: 2800, passive: 1000, other: 1200, total: 20000, _dirty: false, _saving: false, _error: null },
-  { id: "2025-05", salary: 14500, freelance: 3900, passive: 950, other: 650, total: 20000, _dirty: false, _saving: false, _error: null },
-  { id: "2025-04", salary: 14500, freelance: 3200, passive: 900, other: 400, total: 19000, _dirty: false, _saving: false, _error: null },
-  { id: "2025-03", salary: 14000, freelance: 2500, passive: 850, other: 650, total: 18000, _dirty: false, _saving: false, _error: null },
 ];
 
 function toNum(v: any) {
@@ -338,7 +332,16 @@ if (!userId) {
   return <div className="p-6 text-center">Loading or not authenticated…</div>;
 }
 
-
+if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">🚀 טוען נתונים…</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50" dir="rtl">
