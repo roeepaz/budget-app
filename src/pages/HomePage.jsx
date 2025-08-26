@@ -32,7 +32,7 @@ import {
   Calendar
 } from 'lucide-react';
 
-function QuickAddExpenseButton({ onAddExpense, categories,isSidebarOpen }) {
+function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
   const getLocalDateString = () => {
     const now = new Date();
     const offset = now.getTimezoneOffset();
@@ -116,7 +116,7 @@ function QuickAddExpenseButton({ onAddExpense, categories,isSidebarOpen }) {
           cursor: dragging ? 'grabbing' : 'grab'
         }}
       >
-        {!isSidebarOpen && (
+        {!sidebarOpen && (
         <button
           onClick={() => setIsOpen(o => !o)}
           className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-full shadow-lg text-white"
@@ -124,7 +124,7 @@ function QuickAddExpenseButton({ onAddExpense, categories,isSidebarOpen }) {
           {isOpen ? <X size={20}/> : <Plus size={20}/>}
           <span className="text-sm">הוצאה בקליק</span>
         </button>
-              )}
+        )}
       </div>
 
       {/* Modal */}
@@ -214,7 +214,7 @@ export default function HomePage({ user }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-
+    const [isPutIncomes,setIsPutIncomes] = useState(true);
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -259,7 +259,7 @@ useEffect(() => {
     } else if (step === 'income') {
       navigate('/monthlyIncome', { state: { isNewUser: true } });
     } else if (data.lastIncomeMonth !== currentMonth) {
-      navigate('/monthlyIncome', { state: { isNewUser: false } });
+      setIsPutIncomes(false)
     }
   };
 
@@ -564,10 +564,19 @@ if(userFatalError){
             <QuickAddExpenseButton
               onAddExpense={(expense) => addExpenseToDB(expense)}
               categories={categories}
-              goals={goals}
-              debts={debts}
+              sidebarOpen={sidebarOpen}
             />
-          </div>
+            {!sidebarOpen && !isPutIncomes && (
+              <button
+                onClick={() => {navigate('/monthlyIncome', { state: { isNewUser: false } });}
+              }
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-300 to-purple-500 p-4 rounded-full shadow-lg text-white"
+              >
+                {isOpen ? <X size={20}/> : <Plus size={20}/>}
+                <span className="text-sm">ספר על על ההכנסות לחודש זה</span>
+              </button>
+              )}
+              </div>
           {/* כותרת אישית */}
           <div className="text-center mb-6">
             <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-1">שלום, {user.displayName} 👋</h1>
