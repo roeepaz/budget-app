@@ -258,11 +258,12 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                 <label className="block text-sm font-medium text-gray-700 mb-2 text-right">
                   💰 הכנסות נוספות
                 </label>
+
                 <div className="relative mb-2">
                   <input
                     type="text"
-                        inputMode="numeric"
-                      pattern="\d*"
+                    inputMode="numeric"
+                    pattern="\d*"
                     value={incomeData.other}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleIncomeChange('other', e.target.value)}
                     placeholder="0"
@@ -270,6 +271,7 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                   />
                   <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">₪</span>
                 </div>
+
                 <input
                   type="text"
                   value={incomeData.otherDescription}
