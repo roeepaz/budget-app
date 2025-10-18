@@ -272,10 +272,10 @@ if (!User) return <div className="text-center p-8">...טוען משתמש</div>;
                 </div>
                 <input
                   type="text"
-                    inputMode="numeric"
-                  pattern="\d*"
                   value={incomeData.otherDescription}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIncomeData(prev => ({ ...prev, otherDescription: e.target.value }))}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setIncomeData(prev => ({ ...prev, otherDescription: e.target.value }))
+                  }
                   placeholder="תיאור (אופציונלי)"
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl text-right focus:border-blue-500 focus:outline-none transition-colors"
                 />
