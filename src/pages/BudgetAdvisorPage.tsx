@@ -19,7 +19,7 @@ import BudgetPrepModal from '../components/BudgetPrepModal';
 type FormState = Omit<BudgetInputs, 'debts' | 'savingsGoals'>;
 
 export default function BudgetAdvisorPage({ user }: BudgetAdvisorPageProps) {
-    const [showModal, setShowModal] = useState(true);
+    const [showModal, setShowModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -136,6 +136,7 @@ useEffect(() => {
       form: Partial<FormState>;
       debts: Debt[];
       goals: SavingsGoal[];
+      hasSeenBudgetPrepModal?: boolean;
     };
 
     const goals = (data.goals || []).map(g => ({
@@ -161,6 +162,7 @@ useEffect(() => {
 
     setDebts(data.debts || []);
     setGoals(goals);
+    setShowModal(!data.hasSeenBudgetPrepModal);
 
     // ✅ טען קטגוריות מהתת־קולקציה החדשה
     const categoryList = await loadCategoriesFromFirestore(userId);
@@ -428,7 +430,16 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
         }}></div>
       </div>
         {showModal && (
-        <BudgetPrepModal onClose={() => setShowModal(false)} />
+        <BudgetPrepModal onClose={async () => {
+          setShowModal(false);
+          if (userId) {
+            try {
+              await setDoc(doc(db, 'financial_data', userId), { hasSeenBudgetPrepModal: true }, { merge: true });
+            } catch (error) {
+              console.error("Error updating hasSeenBudgetPrepModal:", error);
+            }
+          }
+        }} />
       )}
       <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 

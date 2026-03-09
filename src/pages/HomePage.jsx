@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig'; 
+import { db } from '../firebaseConfig';
 import { useUserData } from '../hooks/useUserData';
 
 import Sidebar from '../components/Sidebar';
@@ -14,13 +14,14 @@ import GaugeChart from 'react-gauge-chart';
 import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import SmartFinancialTips from '../components/SmartFinancialTips'
-import { 
-  DollarSign, 
-  Menu, 
-  X, 
-  Tag, 
-  PieChart as PieIcon, 
-  TrendingUp, 
+import CategoryBudgetAlertsPanel from '../components/CategoryBudgetAlertsPanel'
+import {
+  DollarSign,
+  Menu,
+  X,
+  Tag,
+  PieChart as PieIcon,
+  TrendingUp,
   Calculator,
   LogOut,
   AlertCircle,
@@ -32,7 +33,7 @@ import {
   Calendar
 } from 'lucide-react';
 
-function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
+function QuickAddExpenseButton({ onAddExpense, categories, sidebarOpen }) {
   const getLocalDateString = () => {
     const now = new Date();
     const offset = now.getTimezoneOffset();
@@ -49,7 +50,7 @@ function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
     categoryId: '',
     date: getLocalDateString(),
   });
-  
+
   // Simple drag state
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const [dragging, setDragging] = useState(false);
@@ -117,13 +118,13 @@ function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
         }}
       >
         {!sidebarOpen && (
-        <button
-          onClick={() => setIsOpen(o => !o)}
-          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-full shadow-lg text-white"
-        >
-          {isOpen ? <X size={20}/> : <Plus size={20}/>}
-          <span className="text-sm">הוצאה בקליק</span>
-        </button>
+          <button
+            onClick={() => setIsOpen(o => !o)}
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-full shadow-lg text-white"
+          >
+            {isOpen ? <X size={20} /> : <Plus size={20} />}
+            <span className="text-sm">הוצאה בקליק</span>
+          </button>
         )}
       </div>
 
@@ -132,7 +133,7 @@ function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
         <div className="fixed inset-0 z-59 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-sm space-y-4">
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <DollarSign className="text-green-500"/> הוספת הוצאה בקליק
+              <DollarSign className="text-green-500" /> הוספת הוצאה בקליק
             </h2>
 
             {/* Amount */}
@@ -142,7 +143,7 @@ function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
                 type="number"
                 step="0.01"
                 value={quickExpense.amount}
-                onChange={e => setQuickExpense({...quickExpense, amount: e.target.value})}
+                onChange={e => setQuickExpense({ ...quickExpense, amount: e.target.value })}
                 className="w-full border rounded px-3 py-2"
                 placeholder="0.00"
               />
@@ -151,11 +152,11 @@ function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
             {/* Category */}
             <div>
               <label className="block text-sm mb-1 flex items-center gap-1">
-                <Tag size={16}/> קטגוריה
+                <Tag size={16} /> קטגוריה
               </label>
               <select
                 value={quickExpense.categoryId}
-                onChange={e => setQuickExpense({...quickExpense, categoryId: e.target.value})}
+                onChange={e => setQuickExpense({ ...quickExpense, categoryId: e.target.value })}
                 className="w-full border rounded px-3 py-2"
               >
                 <option value="">בחר קטגוריה</option>
@@ -171,7 +172,7 @@ function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
               <input
                 type="text"
                 value={quickExpense.description}
-                onChange={e => setQuickExpense({...quickExpense, description: e.target.value})}
+                onChange={e => setQuickExpense({ ...quickExpense, description: e.target.value })}
                 className="w-full border rounded px-3 py-2"
                 placeholder="מה קנית?"
               />
@@ -180,12 +181,12 @@ function QuickAddExpenseButton({ onAddExpense, categories,sidebarOpen }) {
             {/* Date */}
             <div>
               <label className="block text-sm mb-1 flex items-center gap-1">
-                <Calendar size={16}/> תאריך
+                <Calendar size={16} /> תאריך
               </label>
               <input
                 type="date"
                 value={quickExpense.date}
-                onChange={e => setQuickExpense({...quickExpense, date: e.target.value})}
+                onChange={e => setQuickExpense({ ...quickExpense, date: e.target.value })}
                 className="w-full border rounded px-3 py-2"
               />
             </div>
@@ -213,8 +214,8 @@ export default function HomePage({ user }) {
   const auth = getAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
-    const [isPutIncomes,setIsPutIncomes] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isPutIncomes, setIsPutIncomes] = useState(true);
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -228,11 +229,11 @@ export default function HomePage({ user }) {
     addExpenseToDB,
     userFatalError
   } = useUserData(user?.uid);
-  
-    const currentMonthExpenses = expenses.filter(exp => {
-      const d = new Date(exp.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
+
+  const currentMonthExpenses = expenses.filter(exp => {
+    const d = new Date(exp.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
   const totalExpensesThisMonth = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
 
@@ -243,28 +244,28 @@ export default function HomePage({ user }) {
   }, [loading, categories, navigate]);
 
 
-useEffect(() => {
-  if (!user || loading) return;
+  useEffect(() => {
+    if (!user || loading) return;
 
-  const checkOnboarding = async () => {
-    const ref = doc(db, 'income_update', user.uid);
-    const snap = await getDoc(ref);
-    const data = snap.data() || {};
+    const checkOnboarding = async () => {
+      const ref = doc(db, 'income_update', user.uid);
+      const snap = await getDoc(ref);
+      const data = snap.data() || {};
 
-    const step = data.onboardingStep || 'landing';
-    const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-    
-    if (step === 'landing') {
-      navigate('/landing');
-    } else if (step === 'income') {
-      navigate('/monthlyIncome', { state: { isNewUser: true } });
-    } else if (data.lastIncomeMonth !== currentMonth) {
-      setIsPutIncomes(false)
-    }
-  };
+      const step = data.onboardingStep || 'landing';
+      const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
 
-  checkOnboarding();
-}, [user, loading]);
+      if (step === 'landing') {
+        navigate('/landing');
+      } else if (step === 'income') {
+        navigate('/monthlyIncome', { state: { isNewUser: true } });
+      } else if (data.lastIncomeMonth !== currentMonth) {
+        setIsPutIncomes(false)
+      }
+    };
+
+    checkOnboarding();
+  }, [user, loading]);
 
 
 
@@ -272,12 +273,12 @@ useEffect(() => {
     signOut(auth)
       .then(() => navigate('/'))
       .catch((error) => {
-      showErrorDialog('בעיה ביציאה', 'לא הצלחנו לבצע את תהליך היציאה. נסה שוב בעוד רגע.', 'error');
+        showErrorDialog('בעיה ביציאה', 'לא הצלחנו לבצע את תהליך היציאה. נסה שוב בעוד רגע.', 'error');
       });
   };
 
   const tags = ['need', 'want', 'debt', 'emergency', 'goal', 'savings'];
-  
+
   const tagColors = {
     need: '#3B82F6',
     want: '#10B981',
@@ -308,7 +309,7 @@ useEffect(() => {
   ];
 
   // חישוב סטטיסטיקות
-const totalExpenses = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const totalExpenses = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const monthlyExpenses = expenses.filter(exp => {
     const expDate = new Date(exp.date);
     const now = new Date();
@@ -319,194 +320,194 @@ const totalExpenses = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount
   const totalGoals = goals.reduce((sum, goal) => sum + goal.targetAmount, 0);
   const goalsProgress = goals.reduce((sum, goal) => sum + (goal.currentAmount || 0), 0);
 
-const totalCategoryBudget = categories.reduce((sum, c) => sum + (c.budget || 0), 0);
-const totalGoalBudget = goals.reduce((sum, g) => sum + (g.budget || 0), 0);
-const totalDebtBudget = debts.reduce((sum, d) => sum + (d.budget || 0), 0);
+  const totalCategoryBudget = categories.reduce((sum, c) => sum + (c.budget || 0), 0);
+  const totalGoalBudget = goals.reduce((sum, g) => sum + (g.budget || 0), 0);
+  const totalDebtBudget = debts.reduce((sum, d) => sum + (d.budget || 0), 0);
 
-const totalBudget = totalCategoryBudget + totalGoalBudget + totalDebtBudget;
-const totalSpent = monthlyExpenses;
-const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
+  const totalBudget = totalCategoryBudget + totalGoalBudget + totalDebtBudget;
+  const totalSpent = monthlyExpenses;
+  const budgetUsedPercentage = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
 
 
-const generateQuickInsights = () => {
-  if (!categories || !expenses) return [];
+  const generateQuickInsights = () => {
+    if (!categories || !expenses) return [];
 
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const day = now.getDate();
-  const monthProgress = Math.floor((day / daysInMonth) * 100);
+    const now = new Date();
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const day = now.getDate();
+    const monthProgress = Math.floor((day / daysInMonth) * 100);
 
-  const totalBudget = [...categories, ...debts, ...goals].reduce(
-    (sum, item) => sum + (item.budget || 0), 0
-  );
+    const totalBudget = [...categories, ...debts, ...goals].reduce(
+      (sum, item) => sum + (item.budget || 0), 0
+    );
 
-  const totalSpent = expenses
-    .filter(exp => {
-      const d = new Date(exp.date);
-      return d.getMonth() === month && d.getFullYear() === year;
-    })
-    .reduce((sum, e) => sum + e.amount, 0);
+    const totalSpent = expenses
+      .filter(exp => {
+        const d = new Date(exp.date);
+        return d.getMonth() === month && d.getFullYear() === year;
+      })
+      .reduce((sum, e) => sum + e.amount, 0);
 
-  const percentUsed = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
-  const avgDailySpend = day > 0 ? totalSpent / day : 0;
-  const projectedEndOfMonth = avgDailySpend * daysInMonth;
+    const percentUsed = totalBudget ? Math.round((totalSpent / totalBudget) * 100) : 0;
+    const avgDailySpend = day > 0 ? totalSpent / day : 0;
+    const projectedEndOfMonth = avgDailySpend * daysInMonth;
 
-  // 🟦 חישוב על הוצאות רגילות בלבד
+    // 🟦 חישוב על הוצאות רגילות בלבד
+    const regularCategories = categories.filter(
+      (cat) => !['goal', 'debt', 'savings'].includes(cat.tag)
+    );
+
+    const regularBudget = regularCategories.reduce(
+      (sum, c) => sum + (c.budget || 0), 0
+    );
+
+    const regularSpent = expenses
+      .filter(exp => {
+        const d = new Date(exp.date);
+        const isCurrentMonth = d.getMonth() === month && d.getFullYear() === year;
+        const isRegular = regularCategories.some(c => String(c.id) === String(exp.categoryId));
+        return isCurrentMonth && isRegular;
+      })
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    const percentRegularUsed = regularBudget > 0
+      ? Math.round((regularSpent / regularBudget) * 100)
+      : 0;
+
+    const regularAvgPerDay = day > 0 ? regularSpent / day : 0;
+    const projectedRegular = regularAvgPerDay * daysInMonth;
+
+    const insights = [];
+
+    // תובנות כלליות (כמו שהיו)
+    if (projectedEndOfMonth > totalBudget) {
+      insights.push({
+        icon: <TrendingUp className="text-red-600" />,
+        text: `⚠️ בקצב ההוצאות הנוכחי תחרוג ב־₪${Math.round(projectedEndOfMonth - totalBudget)} עד סוף החודש.`,
+      });
+    }
+
+    if (percentUsed > 100) {
+      insights.push({
+        icon: <AlertCircle className="text-red-500" />,
+        text: 'חריגה מהתקציב! חשוב לבדוק את הקטגוריות החריגות.',
+      });
+    }
+
+    // תובנות על הוצאות רגילות בלבד:
+    if (projectedRegular > regularBudget) {
+      insights.push({
+        icon: <TrendingUp className="text-orange-600" />,
+        text: `🚨 קצב ההוצאות שלך בקטגוריות הרגילות גבוה – צפויה חריגה של ₪${Math.round(projectedRegular - regularBudget)}.`,
+      });
+    } else if (monthProgress > 50 && percentRegularUsed < 50) {
+      insights.push({
+        icon: <ArrowDownCircle className="text-green-600" />,
+        text: '✅ אתה מתנהל באחריות בתקציב השוטף – כל הכבוד!',
+      });
+    } else if (monthProgress < 50 && percentRegularUsed > 60) {
+      insights.push({
+        icon: <AlertCircle className="text-yellow-500" />,
+        text: '⚠️ הוצאות רגילות גבוהות יחסית לשלב זה של החודש.',
+      });
+    }
+
+    const hasNoBudget = categories.concat(goals, debts).some(c => c.budget == null);
+    if (hasNoBudget) {
+      insights.push({
+        icon: <AlertCircle className="text-yellow-500" />,
+        text: 'יש קטגוריות ללא תקציב מוגדר – זה עלול להוביל להפתעות לא צפויות.',
+      });
+    }
+
+
+    // אם אין תובנות אחרות
+    if (insights.length === 0) {
+      insights.push({
+        icon: <DollarSign className="text-blue-500" />,
+        text: 'התקציב שלך מאוזן נכון לעכשיו. המשך כך! 🎯',
+      });
+    }
+
+    return insights;
+  };
+
+  const categoriesWithExpenses = displayCategories.map(category => {
+    const categoryExpenses = currentMonthExpenses
+      .filter(exp => String(exp.categoryId) === String(category.id))
+      .reduce((sum, exp) => sum + exp.amount, 0);
+
+    const categoryBudget = category.budget ?? 0;
+    const remaining = categoryBudget - categoryExpenses;
+    const overBudget = remaining < 0;
+
+    return {
+      ...category,
+      total: categoryExpenses,
+      percentage: totalExpensesThisMonth
+        ? (categoryExpenses / totalExpensesThisMonth) * 100
+        : 0,
+      remaining,
+      overBudget
+    };
+  }).sort((a, b) => b.total - a.total);
+
+
+
   const regularCategories = categories.filter(
     (cat) => !['goal', 'debt', 'savings'].includes(cat.tag)
   );
 
   const regularBudget = regularCategories.reduce(
-    (sum, c) => sum + (c.budget || 0), 0
+    (sum, c) => sum + (c.budget || 0),
+    0
   );
 
-  const regularSpent = expenses
+  const regularExpensesTotal = currentMonthExpenses
     .filter(exp => {
-      const d = new Date(exp.date);
-      const isCurrentMonth = d.getMonth() === month && d.getFullYear() === year;
-      const isRegular = regularCategories.some(c => String(c.id) === String(exp.categoryId));
-      return isCurrentMonth && isRegular;
+      const category = regularCategories.find(c => String(c.id) === String(exp.categoryId));
+      return !!category;
     })
-    .reduce((sum, e) => sum + e.amount, 0);
-
-  const percentRegularUsed = regularBudget > 0
-    ? Math.round((regularSpent / regularBudget) * 100)
+    .reduce((sum, exp) => sum + exp.amount, 0);
+  const regularBudgetUsedPercentage = regularBudget > 0
+    ? Math.round((regularExpensesTotal / regularBudget) * 100)
     : 0;
 
-  const regularAvgPerDay = day > 0 ? regularSpent / day : 0;
-  const projectedRegular = regularAvgPerDay * daysInMonth;
-
-  const insights = [];
-
-  // תובנות כלליות (כמו שהיו)
-  if (projectedEndOfMonth > totalBudget) {
-    insights.push({
-      icon: <TrendingUp className="text-red-600" />,
-      text: `⚠️ בקצב ההוצאות הנוכחי תחרוג ב־₪${Math.round(projectedEndOfMonth - totalBudget)} עד סוף החודש.`,
-    });
-  }
-
-  if (percentUsed > 100) {
-    insights.push({
-      icon: <AlertCircle className="text-red-500" />,
-      text: 'חריגה מהתקציב! חשוב לבדוק את הקטגוריות החריגות.',
-    });
-  }
-
-  // תובנות על הוצאות רגילות בלבד:
-  if (projectedRegular > regularBudget) {
-    insights.push({
-      icon: <TrendingUp className="text-orange-600" />,
-      text: `🚨 קצב ההוצאות שלך בקטגוריות הרגילות גבוה – צפויה חריגה של ₪${Math.round(projectedRegular - regularBudget)}.`,
-    });
-  } else if (monthProgress > 50 && percentRegularUsed < 50) {
-    insights.push({
-      icon: <ArrowDownCircle className="text-green-600" />,
-      text: '✅ אתה מתנהל באחריות בתקציב השוטף – כל הכבוד!',
-    });
-  } else if (monthProgress < 50 && percentRegularUsed > 60) {
-    insights.push({
-      icon: <AlertCircle className="text-yellow-500" />,
-      text: '⚠️ הוצאות רגילות גבוהות יחסית לשלב זה של החודש.',
-    });
-  }
-
- const hasNoBudget = categories.concat(goals, debts).some(c => c.budget == null);
-if (hasNoBudget) {
-  insights.push({
-    icon: <AlertCircle className="text-yellow-500" />,
-    text: 'יש קטגוריות ללא תקציב מוגדר – זה עלול להוביל להפתעות לא צפויות.',
-  });
-}
-
-
-  // אם אין תובנות אחרות
-  if (insights.length === 0) {
-    insights.push({
-      icon: <DollarSign className="text-blue-500" />,
-      text: 'התקציב שלך מאוזן נכון לעכשיו. המשך כך! 🎯',
-    });
-  }
-
-  return insights;
-};
-
-const categoriesWithExpenses = displayCategories.map(category => {
-  const categoryExpenses = currentMonthExpenses
-    .filter(exp => String(exp.categoryId) === String(category.id))
-    .reduce((sum, exp) => sum + exp.amount, 0);
-
-  const categoryBudget = category.budget ?? 0;
-  const remaining = categoryBudget - categoryExpenses;
-  const overBudget = remaining < 0;
-
-  return {
-    ...category,
-    total: categoryExpenses,
-    percentage: totalExpensesThisMonth
-      ? (categoryExpenses / totalExpensesThisMonth) * 100
-      : 0,
-    remaining,
-    overBudget
-  };
-}).sort((a, b) => b.total - a.total);
-
-
-
-const regularCategories = categories.filter(
-  (cat) => !['goal', 'debt', 'savings'].includes(cat.tag)
-);
-
-const regularBudget = regularCategories.reduce(
-  (sum, c) => sum + (c.budget || 0),
-  0
-);
-
-const regularExpensesTotal = currentMonthExpenses
-  .filter(exp => {
-    const category = regularCategories.find(c => String(c.id) === String(exp.categoryId));
-    return !!category;
-  })
-  .reduce((sum, exp) => sum + exp.amount, 0);
-const regularBudgetUsedPercentage = regularBudget > 0
-  ? Math.round((regularExpensesTotal / regularBudget) * 100)
-  : 0;
-  
   const isInCurrentMonth = (d) =>
     d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  
+
   // מזהי קטגוריות לפי סוג
   const regularCategoryIds = categories
-  .filter(c => !['savings', 'goal', 'debt'].includes(c.tag))
-  .map(c => String(c.id));
-  
-  const savingsCategoryIds = categories
-  .filter(c => c.tag === 'savings')
-  .map(c => String(c.id));
-    
-  const monthlyRegularTotal = expenses
-  .filter(exp => isInCurrentMonth(new Date(exp.date)))
-  .filter(exp => regularCategoryIds.includes(String(exp.categoryId)))
-  .reduce((sum, exp) => sum + exp.amount, 0);
-  
-  const monthlySavingsTotal = expenses
-  .filter(exp => isInCurrentMonth(new Date(exp.date)))
-  .filter(exp => savingsCategoryIds.includes(String(exp.categoryId)))
-  .reduce((sum, exp) => sum + exp.amount, 0);
-  
-{/* לפני ה־map, אפשר להגדיר פונקציה עזר (או בפנים) */}
-const isSavingsCategory = (cat)=>
-  cat?.tag === 'savings' || cat?.tag === 'goal' 
+    .filter(c => !['savings', 'goal', 'debt'].includes(c.tag))
+    .map(c => String(c.id));
 
-  
+  const savingsCategoryIds = categories
+    .filter(c => c.tag === 'savings')
+    .map(c => String(c.id));
+
+  const monthlyRegularTotal = expenses
+    .filter(exp => isInCurrentMonth(new Date(exp.date)))
+    .filter(exp => regularCategoryIds.includes(String(exp.categoryId)))
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
+  const monthlySavingsTotal = expenses
+    .filter(exp => isInCurrentMonth(new Date(exp.date)))
+    .filter(exp => savingsCategoryIds.includes(String(exp.categoryId)))
+    .reduce((sum, exp) => sum + exp.amount, 0);
+
+  {/* לפני ה־map, אפשר להגדיר פונקציה עזר (או בפנים) */ }
+  const isSavingsCategory = (cat) =>
+    cat?.tag === 'savings' || cat?.tag === 'goal'
+
+
   // מחוץ ל־return, אחרי חישוב monthlySavingsTotal
   const monthlyNonSavingsTotal = monthlyExpenses - monthlySavingsTotal;
-  const savingsRatio = monthlyExpenses > 0 
-    ? (monthlySavingsTotal / monthlyExpenses) * 100 
+  const savingsRatio = monthlyExpenses > 0
+    ? (monthlySavingsTotal / monthlyExpenses) * 100
     : 0;
-  
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 flex items-center justify-center from-blue-50 to-purple-50">
@@ -517,20 +518,20 @@ const isSavingsCategory = (cat)=>
       </div>
     );
   }
-if(userFatalError){
-    return(
-    <FullPageError
-      title={userFatalError.title}
-      description={userFatalError.description}
-      severity={userFatalError.severity}
-    />
+  if (userFatalError) {
+    return (
+      <FullPageError
+        title={userFatalError.title}
+        description={userFatalError.description}
+        severity={userFatalError.severity}
+      />
     )
   }
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-green-100 via-green-200 to-emerald-100 from-blue-50 to-purple-50 relative">
       {/* Animated background elements */}
-      <div 
-        className="absolute inset-0 overflow-hidden pointer-events-none -z-10" 
+      <div
+        className="absolute inset-0 overflow-hidden pointer-events-none -z-10"
         aria-hidden="true"
       >
         <div className="absolute top-20 left-20 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" />
@@ -547,7 +548,7 @@ if(userFatalError){
 
       {/* Overlay למובייל */}
       {sidebarOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setSidebarOpen(false)}
         />
@@ -568,15 +569,15 @@ if(userFatalError){
             />
             {!sidebarOpen && !isPutIncomes && (
               <button
-                onClick={() => {navigate('/monthlyIncome', { state: { isNewUser: false } });}
-              }
+                onClick={() => { navigate('/monthlyIncome', { state: { isNewUser: false } }); }
+                }
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-300 to-purple-500 p-4 rounded-full shadow-lg text-white"
               >
-                {isOpen ? <X size={20}/> : <Plus size={20}/>}
+                {isOpen ? <X size={20} /> : <Plus size={20} />}
                 <span className="text-sm">ספר על על ההכנסות לחודש זה</span>
               </button>
-              )}
-              </div>
+            )}
+          </div>
           {/* כותרת אישית */}
           <div className="text-center mb-6">
             <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 mb-1">שלום, {user.displayName} 👋</h1>
@@ -595,125 +596,125 @@ if(userFatalError){
               </button>
             )}
 
-     {/* מודל המשוב */}
-    <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed z-50 inset-0">
-      {/* הצללה אחורית */}
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" />
+            {/* מודל המשוב */}
+            <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="fixed z-50 inset-0">
+              {/* הצללה אחורית */}
+              <div className="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity" />
 
-      {/* תוכן המודל במרכז המסך */}
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden z-10">
-          <div className="p-4 flex justify-between items-center border-b">
-            <h3 className="text-lg font-bold">משוב למערכת</h3>
-            <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-red-500 text-sm">
-              ✖ סגור
-            </button>
+              {/* תוכן המודל במרכז המסך */}
+              <div className="fixed inset-0 flex items-center justify-center p-4">
+                <Dialog.Panel className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden z-10">
+                  <div className="p-4 flex justify-between items-center border-b">
+                    <h3 className="text-lg font-bold">משוב למערכת</h3>
+                    <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-red-500 text-sm">
+                      ✖ סגור
+                    </button>
+                  </div>
+                  <div className="p-6">
+                    <FeedbackForm />
+                  </div>
+                </Dialog.Panel>
+              </div>
+            </Dialog>
+
           </div>
-          <div className="p-6">
-            <FeedbackForm />
+
+          {/* כרטיסי סיכום */}
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-8 text-center">
+            {/* 1. סה"כ הוצאות */}
+            <div className="bg-white rounded-xl shadow p-4">
+              <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
+              <p className="text-2xl font-bold text-gray-800">₪{monthlyExpenses.toLocaleString()}</p>
+            </div>
+
+            {/* 2. הוצאות רגילות */}
+            <div className="bg-white rounded-xl shadow p-4">
+              <p className="text-sm text-gray-500">הוצאות רגילות</p>
+              <p className="text-2xl font-bold text-red-500">
+                ₪{monthlyRegularTotal.toLocaleString()}
+              </p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow p-4">
+              <p className="text-sm text-gray-500">מצב התקציב של ההוצאות הרגילות</p>
+              {regularExpensesTotal <= regularBudget ? (
+                <p className="text-2xl font-bold text-green-600">
+                  נותרו ₪{(regularBudget - regularExpensesTotal).toLocaleString()}
+                </p>
+              ) : (
+                <p className="text-2xl font-bold text-red-600">
+                  חריגה של ₪{(regularExpensesTotal - regularBudget).toLocaleString()}
+                </p>
+              )}
+            </div>
+            {/* יתרה / חריגה */}
+            <div className="bg-white rounded-xl shadow p-4">
+              <p className="text-sm text-gray-500">מצב התקציב הכולל</p>
+
+              {totalSpent <= totalBudget ? (
+                <p className="text-2xl font-bold text-green-600">
+                  נותרו ₪{(totalBudget - totalSpent).toLocaleString()}
+                </p>
+              ) : (
+                <p className="text-2xl font-bold text-red-600">
+                  חריגה של ₪{(totalSpent - totalBudget).toLocaleString()} מהתקציב!
+                </p>
+              )}
+            </div>
+            {/* 3. הוצאות לחיסכון */}
+            <div className="bg-white rounded-xl shadow p-4">
+              <p className="text-sm text-gray-500">חיסכון החודש</p>
+              <p className="text-2xl font-bold text-green-500">₪{monthlySavingsTotal.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                ({savingsRatio.toFixed(0)}% מסך ההוצאות)
+              </p>
+            </div>
           </div>
-        </Dialog.Panel>
-      </div>
-    </Dialog>
-
-    </div>
-
-    {/* כרטיסי סיכום */}
-    <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-8 text-center">
-      {/* 1. סה"כ הוצאות */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
-        <p className="text-2xl font-bold text-gray-800">₪{monthlyExpenses.toLocaleString()}</p>
-      </div>
-
-      {/* 2. הוצאות רגילות */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <p className="text-sm text-gray-500">הוצאות רגילות</p>
-        <p className="text-2xl font-bold text-red-500">
-          ₪{monthlyRegularTotal.toLocaleString()}
-        </p>
-      </div>
-
-      <div className="bg-white rounded-xl shadow p-4">
-        <p className="text-sm text-gray-500">מצב התקציב של ההוצאות הרגילות</p>
-        {regularExpensesTotal <= regularBudget ? (
-          <p className="text-2xl font-bold text-green-600">
-            נותרו ₪{(regularBudget - regularExpensesTotal).toLocaleString()}
-          </p>
-        ) : (
-          <p className="text-2xl font-bold text-red-600">
-            חריגה של ₪{(regularExpensesTotal - regularBudget).toLocaleString()}
-          </p>
-        )}
-      </div>
-      {/* יתרה / חריגה */}
-      <div className="bg-white rounded-xl shadow p-4">
-        <p className="text-sm text-gray-500">מצב התקציב הכולל</p>
-
-        {totalSpent <= totalBudget ? (
-          <p className="text-2xl font-bold text-green-600">
-            נותרו ₪{(totalBudget - totalSpent).toLocaleString()}
-          </p>
-        ) : (
-          <p className="text-2xl font-bold text-red-600">
-            חריגה של ₪{(totalSpent - totalBudget).toLocaleString()} מהתקציב!
-          </p>
-        )}
-      </div>
-        {/* 3. הוצאות לחיסכון */}
-        <div className="bg-white rounded-xl shadow p-4">
-          <p className="text-sm text-gray-500">חיסכון החודש</p>
-          <p className="text-2xl font-bold text-green-500">₪{monthlySavingsTotal.toLocaleString()}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            ({savingsRatio.toFixed(0)}% מסך ההוצאות)
-          </p>
-        </div>
-      </div>
-
-            
-      {/* מדי תקציב – כללי ורגיל בלבד */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-        {/* מד כללי */}
-        <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">מצב התקציב הכולל</h3>
-          <p className="text-sm text-gray-500 mb-4 text-center">
-            התרשים מציג את אחוז ההוצאות מתוך כלל התקציב שהוגדר – כולל מטרות, חובות וחיסכון.
-          </p>
-          <GaugeChart 
-            id="budget-gauge-overall"
-            nrOfLevels={30}
-            colors={['#10B981', '#F59E0B', '#EF4444']}
-            arcWidth={0.3}
-            percent={budgetUsedPercentage / 100}
-            textColor="#374151"
-            needleColor="#111827"
-            formatTextValue={() => `${budgetUsedPercentage.toFixed(0)}%`}
-            style={{ width: '200px', maxWidth: '100%' }}
-          />
-        </div>
-
-        {/* מד הוצאות רגילות */}
-        <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center">
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">מצב התקציב של ההוצאות הרגילות</h3>
-          <p className="text-sm text-gray-500 mb-4 text-center">
-            התרשים מציג את אחוז ההוצאות בקטגוריות היומיום בלבד – ללא מטרות, חובות וחיסכון. כך תוכל לדעת אם אתה עומד בתקציב השוטף שלך.
-          </p>
-          <GaugeChart 
-            id="budget-gauge-regular"
-            nrOfLevels={30}
-            colors={['#10B981', '#F59E0B', '#EF4444']}
-            arcWidth={0.3}
-            percent={regularBudgetUsedPercentage / 100}
-            textColor="#374151"
-            needleColor="#111827"
-            formatTextValue={() => `${regularBudgetUsedPercentage.toFixed(0)}%`}
-            style={{ width: '200px', maxWidth: '100%' }}
-          />
-        </div>
-      </div>
 
 
-          {/* תובנות תקציביות */} 
+          {/* מדי תקציב – כללי ורגיל בלבד */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+            {/* מד כללי */}
+            <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">מצב התקציב הכולל</h3>
+              <p className="text-sm text-gray-500 mb-4 text-center">
+                התרשים מציג את אחוז ההוצאות מתוך כלל התקציב שהוגדר – כולל מטרות, חובות וחיסכון.
+              </p>
+              <GaugeChart
+                id="budget-gauge-overall"
+                nrOfLevels={30}
+                colors={['#10B981', '#F59E0B', '#EF4444']}
+                arcWidth={0.3}
+                percent={budgetUsedPercentage / 100}
+                textColor="#374151"
+                needleColor="#111827"
+                formatTextValue={() => `${budgetUsedPercentage.toFixed(0)}%`}
+                style={{ width: '200px', maxWidth: '100%' }}
+              />
+            </div>
+
+            {/* מד הוצאות רגילות */}
+            <div className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">מצב התקציב של ההוצאות הרגילות</h3>
+              <p className="text-sm text-gray-500 mb-4 text-center">
+                התרשים מציג את אחוז ההוצאות בקטגוריות היומיום בלבד – ללא מטרות, חובות וחיסכון. כך תוכל לדעת אם אתה עומד בתקציב השוטף שלך.
+              </p>
+              <GaugeChart
+                id="budget-gauge-regular"
+                nrOfLevels={30}
+                colors={['#10B981', '#F59E0B', '#EF4444']}
+                arcWidth={0.3}
+                percent={regularBudgetUsedPercentage / 100}
+                textColor="#374151"
+                needleColor="#111827"
+                formatTextValue={() => `${regularBudgetUsedPercentage.toFixed(0)}%`}
+                style={{ width: '200px', maxWidth: '100%' }}
+              />
+            </div>
+          </div>
+
+
+          {/* תובנות תקציביות */}
           <div className="mt-6 bg-gray-50 border border-gray-200 rounded-xl p-4">
             <h3 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
               <TrendingUp className="w-5 h-5" />
@@ -732,7 +733,7 @@ if(userFatalError){
 
           {/* תרשימים ונתונים נוספים */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/*תרשים קטגוריות משופר עם טיפול במקרי קצה*/}
+            {/*תרשים קטגוריות משופר עם טיפול במקרי קצה*/}
             <div className="bg-white rounded-xl shadow-lg p-6">
               {/* כותרת מתוקנת */}
               <div className="mb-6">
@@ -740,7 +741,7 @@ if(userFatalError){
                   <PieIcon className="w-6 h-6 text-blue-600 flex-shrink-0" />
                   <span>הוצאות לפי קטגוריות</span>
                 </h3>
-                
+
                 {/* מידע נוסף אם נחוץ */}
                 {categoriesWithExpenses?.length > 0 && (
                   <p className="text-sm text-gray-500">
@@ -749,228 +750,228 @@ if(userFatalError){
                 )}
               </div>
 
-             {/* תוכן עיקרי */}
-<div className="space-y-4">
-  {/* מקרה: אין נתונים כלל */}
-  {(!displayCategories || displayCategories.length === 0) ? (
-    <div className="text-center py-12">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <PieIcon className="w-8 h-8 text-gray-400" />
-      </div>
-      <p className="text-gray-500 text-lg font-medium mb-2">עדיין לא הוספת קטגוריות</p>
-      <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את התרשים</p>
-    </div>
-  ) : (!categoriesWithExpenses || categoriesWithExpenses.length === 0) ? (
-    <div className="text-center py-12">
-      <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-        <PieIcon className="w-8 h-8 text-blue-400" />
-      </div>
-      <p className="text-gray-600 text-lg font-medium mb-2">אין הוצאות השבוע</p>
-      <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את החלוקה לפי קטגוריות</p>
-    </div>
-  ) : (
-    // ענף שלישי: מחזירים אלמנט יחיד שעוטף גם את הרשימה וגם את הכפתור
-    <div>
-      {/* הצגת קטגוריות */}
-      <div className="space-y-6">
-        {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map((category, index) => {
-          // בדיקות בטיחות
-          const safeTotal = Math.max(0, Number(category.total) || 0);
-          const safeBudget = category.budget && Number(category.budget) > 0 ? Number(category.budget) : null;
-          const hasBudget = safeBudget !== null;
-
-          // remaining מגיע מהלוגיקה שלך (תקציב - הוצאות); שלילי = חריגה
-          const safeRemaining = Number(category.remaining) || 0;
-          const isOnThePeni = hasBudget && safeRemaining === 0;
-
-          const percentOfBudget = hasBudget
-            ? Math.min(((safeTotal / (safeBudget)) * 100) || 0, 1000)
-            : 0;
-
-          // חיסכון?
-          const savingCat = isSavingsCategory(category);
-
-          // חריגה גולמית (במונחי הוצאות)
-          const isOverBudgetRaw = hasBudget && safeRemaining < 0;
-
-          // בקטגוריות רגילות: חריגה אמיתית; בחיסכון – חריגה חיובית (יעד הושג/עברנו)
-          const isOverBudget = savingCat ? false : isOverBudgetRaw;
-          const isPositiveOverSaving = savingCat && isOverBudgetRaw;
-
-          // "כמעט נגמר" לקטגוריות רגילות; בחיסכון – "כמעט יעד"
-          const isNearlyExhausted = hasBudget && !isOnThePeni && safeRemaining >= 0 && safeRemaining <= 50;
-
-          // צבע לבר התקדמות
-          const progressColorClass = savingCat
-            ? (isPositiveOverSaving || percentOfBudget >= 100
-                ? 'bg-emerald-600'
-                : percentOfBudget > 80
-                  ? 'bg-emerald-500'
-                  : 'bg-emerald-400')
-            : (isOverBudget || percentOfBudget === 100
-                ? 'bg-red-600'
-                : percentOfBudget > 80
-                  ? 'bg-yellow-500'
-                  : 'bg-green-500');
-
-          return (
-            <div
-              key={category.id || `category-${index}`}
-              className="border-b border-gray-400 pb-4 last:border-b-0 last:pb-0"
-            >
-              {/* שורת מידע עליונה */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div
-                    className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white"
-                    style={{ backgroundColor: category.color || '#6B7280' }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <h4 className="font-semibold text-gray-800 text-base truncate">
-                      {category.name || 'קטגוריה ללא שם'}
-                    </h4>
-                    <p className="text-sm text-gray-500 mt-1">
-                      ₪{safeTotal.toLocaleString('he-IL')}
-                      {hasBudget && (
-                        <span className="text-gray-400">
-                          {' / '}₪{(safeBudget).toLocaleString('he-IL')}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {/* סטטוס */}
-                <div className="flex-shrink-0 text-left">
-                  {savingCat ? (
-                    isPositiveOverSaving ? (
-                      <div className="text-emerald-600 font-semibold text-sm">
-                        <span className="block">מעולה! חיסכון מעל היעד</span>
-                        <span className="block text-xs">
-                          +₪{Math.abs(safeRemaining).toLocaleString('he-IL')}
-                        </span>
-                      </div>
-                    ) : isNearlyExhausted ? (
-                      <div className="text-emerald-600 font-medium text-sm">
-                        <span className="block">כמעט משיגים את היעד</span>
-                        <span className="block text-xs text-gray-500">
-                          ₪{safeRemaining.toLocaleString('he-IL')} עד היעד
-                        </span>
-                      </div>
-                    ) : hasBudget && safeRemaining > 0 ? (
-                      <div className="text-emerald-600 font-medium text-sm">
-                        <span className="block">בדרך הנכונה</span>
-                        <span className="block text-xs text-gray-500">
-                          ₪{safeRemaining.toLocaleString('he-IL')} עד היעד
-                        </span>
-                      </div>
-                    ) : isOnThePeni ? (
-                      <div className="text-emerald-700 text-sm">
-                        <span className="block">יעד הושג</span>
-                      </div>
-                    ) : (
-                      <div className="text-gray-400 text-sm">
-                        <span className="block">ללא יעד חודשי</span>
-                      </div>
-                    )
-                  ) : (
-                    <>
-                      {isOverBudget ? (
-                        <div className="text-red-600 font-semibold text-sm">
-                          <span className="block">חריגה</span>
-                          <span className="block text-xs">
-                            +₪{Math.abs(safeRemaining).toLocaleString('he-IL')}
-                          </span>
-                        </div>
-                      ) : isNearlyExhausted ? (
-                        <div className="text-orange-600 font-medium text-sm">
-                          <span className="block">כמעט נגמר</span>
-                          <span className="block text-xs text-gray-500">
-                            ₪{safeRemaining.toLocaleString('he-IL')} נותרו
-                          </span>
-                        </div>
-                      ) : hasBudget && safeRemaining > 0 ? (
-                        <div className="text-green-600 font-medium text-sm">
-                          <span className="block">בתקציב</span>
-                          <span className="block text-xs text-gray-500">
-                            ₪{safeRemaining.toLocaleString('he-IL')} נותרו
-                          </span>
-                        </div>
-                      ) : isOnThePeni ? (
-                        <div className="text-gray-500 text-sm">
-                          <span className="block">מדויק</span>
-                        </div>
-                      ) : (
-                        <div className="text-gray-400 text-sm">
-                          <span className="block">ללא תקציב</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* בר התקדמות */}
-              {hasBudget && (
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs text-gray-500">
-                    <span>0%</span>
-                    <span className="text-lg font-bold text-gray-800">
-                      {Math.round(percentOfBudget)}%
-                    </span>
-                    <span>100%</span>
-                  </div>
-
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${progressColorClass}`}
-                      style={{
-                        width: `${Math.min(percentOfBudget, 100)}%`,
-                        minWidth: safeTotal > 0 ? '4px' : '0px',
-                      }}
-                    />
-                  </div>
-
-                  {/* הודעות סיכום – אחת בלבד לפי סוג */}
-                  {!savingCat && isOverBudget && (
-                    <div className="text-xs text-red-600 font-medium text-center bg-red-50 rounded py-1">
-                      חריגה של {Math.round(percentOfBudget - 100)}% מהתקציב
+              {/* תוכן עיקרי */}
+              <div className="space-y-4">
+                {/* מקרה: אין נתונים כלל */}
+                {(!displayCategories || displayCategories.length === 0) ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <PieIcon className="w-8 h-8 text-gray-400" />
                     </div>
-                  )}
+                    <p className="text-gray-500 text-lg font-medium mb-2">עדיין לא הוספת קטגוריות</p>
+                    <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את התרשים</p>
+                  </div>
+                ) : (!categoriesWithExpenses || categoriesWithExpenses.length === 0) ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <PieIcon className="w-8 h-8 text-blue-400" />
+                    </div>
+                    <p className="text-gray-600 text-lg font-medium mb-2">אין הוצאות השבוע</p>
+                    <p className="text-gray-400 text-sm">הוסף הוצאה ראשונה כדי לראות את החלוקה לפי קטגוריות</p>
+                  </div>
+                ) : (
+                  // ענף שלישי: מחזירים אלמנט יחיד שעוטף גם את הרשימה וגם את הכפתור
+                  <div>
+                    {/* הצגת קטגוריות */}
+                    <div className="space-y-6">
+                      {(showAllCategories ? categoriesWithExpenses : categoriesWithExpenses.slice(0, 5)).map((category, index) => {
+                        // בדיקות בטיחות
+                        const safeTotal = Math.max(0, Number(category.total) || 0);
+                        const safeBudget = category.budget && Number(category.budget) > 0 ? Number(category.budget) : null;
+                        const hasBudget = safeBudget !== null;
 
-                  {savingCat && isPositiveOverSaving && (
-                    <div className="text-xs font-medium text-center rounded py-2
+                        // remaining מגיע מהלוגיקה שלך (תקציב - הוצאות); שלילי = חריגה
+                        const safeRemaining = Number(category.remaining) || 0;
+                        const isOnThePeni = hasBudget && safeRemaining === 0;
+
+                        const percentOfBudget = hasBudget
+                          ? Math.min(((safeTotal / (safeBudget)) * 100) || 0, 1000)
+                          : 0;
+
+                        // חיסכון?
+                        const savingCat = isSavingsCategory(category);
+
+                        // חריגה גולמית (במונחי הוצאות)
+                        const isOverBudgetRaw = hasBudget && safeRemaining < 0;
+
+                        // בקטגוריות רגילות: חריגה אמיתית; בחיסכון – חריגה חיובית (יעד הושג/עברנו)
+                        const isOverBudget = savingCat ? false : isOverBudgetRaw;
+                        const isPositiveOverSaving = savingCat && isOverBudgetRaw;
+
+                        // "כמעט נגמר" לקטגוריות רגילות; בחיסכון – "כמעט יעד"
+                        const isNearlyExhausted = hasBudget && !isOnThePeni && safeRemaining >= 0 && safeRemaining <= 50;
+
+                        // צבע לבר התקדמות
+                        const progressColorClass = savingCat
+                          ? (isPositiveOverSaving || percentOfBudget >= 100
+                            ? 'bg-emerald-600'
+                            : percentOfBudget > 80
+                              ? 'bg-emerald-500'
+                              : 'bg-emerald-400')
+                          : (isOverBudget || percentOfBudget === 100
+                            ? 'bg-red-600'
+                            : percentOfBudget > 80
+                              ? 'bg-yellow-500'
+                              : 'bg-green-500');
+
+                        return (
+                          <div
+                            key={category.id || `category-${index}`}
+                            className="border-b border-gray-400 pb-4 last:border-b-0 last:pb-0"
+                          >
+                            {/* שורת מידע עליונה */}
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div
+                                  className="w-4 h-4 rounded-full flex-shrink-0 ring-2 ring-white"
+                                  style={{ backgroundColor: category.color || '#6B7280' }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-semibold text-gray-800 text-base truncate">
+                                    {category.name || 'קטגוריה ללא שם'}
+                                  </h4>
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    ₪{safeTotal.toLocaleString('he-IL')}
+                                    {hasBudget && (
+                                      <span className="text-gray-400">
+                                        {' / '}₪{(safeBudget).toLocaleString('he-IL')}
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* סטטוס */}
+                              <div className="flex-shrink-0 text-left">
+                                {savingCat ? (
+                                  isPositiveOverSaving ? (
+                                    <div className="text-emerald-600 font-semibold text-sm">
+                                      <span className="block">מעולה! חיסכון מעל היעד</span>
+                                      <span className="block text-xs">
+                                        +₪{Math.abs(safeRemaining).toLocaleString('he-IL')}
+                                      </span>
+                                    </div>
+                                  ) : isNearlyExhausted ? (
+                                    <div className="text-emerald-600 font-medium text-sm">
+                                      <span className="block">כמעט משיגים את היעד</span>
+                                      <span className="block text-xs text-gray-500">
+                                        ₪{safeRemaining.toLocaleString('he-IL')} עד היעד
+                                      </span>
+                                    </div>
+                                  ) : hasBudget && safeRemaining > 0 ? (
+                                    <div className="text-emerald-600 font-medium text-sm">
+                                      <span className="block">בדרך הנכונה</span>
+                                      <span className="block text-xs text-gray-500">
+                                        ₪{safeRemaining.toLocaleString('he-IL')} עד היעד
+                                      </span>
+                                    </div>
+                                  ) : isOnThePeni ? (
+                                    <div className="text-emerald-700 text-sm">
+                                      <span className="block">יעד הושג</span>
+                                    </div>
+                                  ) : (
+                                    <div className="text-gray-400 text-sm">
+                                      <span className="block">ללא יעד חודשי</span>
+                                    </div>
+                                  )
+                                ) : (
+                                  <>
+                                    {isOverBudget ? (
+                                      <div className="text-red-600 font-semibold text-sm">
+                                        <span className="block">חריגה</span>
+                                        <span className="block text-xs">
+                                          +₪{Math.abs(safeRemaining).toLocaleString('he-IL')}
+                                        </span>
+                                      </div>
+                                    ) : isNearlyExhausted ? (
+                                      <div className="text-orange-600 font-medium text-sm">
+                                        <span className="block">כמעט נגמר</span>
+                                        <span className="block text-xs text-gray-500">
+                                          ₪{safeRemaining.toLocaleString('he-IL')} נותרו
+                                        </span>
+                                      </div>
+                                    ) : hasBudget && safeRemaining > 0 ? (
+                                      <div className="text-green-600 font-medium text-sm">
+                                        <span className="block">בתקציב</span>
+                                        <span className="block text-xs text-gray-500">
+                                          ₪{safeRemaining.toLocaleString('he-IL')} נותרו
+                                        </span>
+                                      </div>
+                                    ) : isOnThePeni ? (
+                                      <div className="text-gray-500 text-sm">
+                                        <span className="block">מדויק</span>
+                                      </div>
+                                    ) : (
+                                      <div className="text-gray-400 text-sm">
+                                        <span className="block">ללא תקציב</span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* בר התקדמות */}
+                            {hasBudget && (
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center text-xs text-gray-500">
+                                  <span>0%</span>
+                                  <span className="text-lg font-bold text-gray-800">
+                                    {Math.round(percentOfBudget)}%
+                                  </span>
+                                  <span>100%</span>
+                                </div>
+
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className={`h-2 rounded-full ${progressColorClass}`}
+                                    style={{
+                                      width: `${Math.min(percentOfBudget, 100)}%`,
+                                      minWidth: safeTotal > 0 ? '4px' : '0px',
+                                    }}
+                                  />
+                                </div>
+
+                                {/* הודעות סיכום – אחת בלבד לפי סוג */}
+                                {!savingCat && isOverBudget && (
+                                  <div className="text-xs text-red-600 font-medium text-center bg-red-50 rounded py-1">
+                                    חריגה של {Math.round(percentOfBudget - 100)}% מהתקציב
+                                  </div>
+                                )}
+
+                                {savingCat && isPositiveOverSaving && (
+                                  <div className="text-xs font-medium text-center rounded py-2
                                     text-emerald-800 bg-emerald-100 border border-emerald-300">
-                      🎉 כל הכבוד! חיסכון {Math.round(percentOfBudget - 100)}% מעל היעד 🎉
+                                    🎉 כל הכבוד! חיסכון {Math.round(percentOfBudget - 100)}% מעל היעד 🎉
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
 
-      {/* כפתור הצגת עוד */}
-      {categoriesWithExpenses.length > 5 && (
-        <div className="pt-4 border-t border-gray-100">
-          <button
-            onClick={() => setShowAllCategories(!showAllCategories)}
-            className="w-full z-40 py-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 
+                    {/* כפתור הצגת עוד */}
+                    {categoriesWithExpenses.length > 5 && (
+                      <div className="pt-4 border-t border-gray-100">
+                        <button
+                          onClick={() => setShowAllCategories(!showAllCategories)}
+                          className="w-full z-40 py-3 text-blue-600 hover:text-blue-800 hover:bg-blue-50 
                        text-sm font-medium transition-all duration-200 rounded-lg
                        border border-blue-200 hover:border-blue-300"
-          >
-            {showAllCategories
-              ? '🔼 הצג פחות קטגוריות'
-              : `🔽 הצג עוד ${categoriesWithExpenses.length - 5} קטגוריות`}
-          </button>
-        </div>
-      )}
-    </div>
-  )}
-</div>
-
+                        >
+                          {showAllCategories
+                            ? '🔼 הצג פחות קטגוריות'
+                            : `🔽 הצג עוד ${categoriesWithExpenses.length - 5} קטגוריות`}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
+
+            </div>
             {/* יעדים פעילים */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -982,7 +983,7 @@ if(userFatalError){
                   {goals.slice(0, 3).map((goal) => {
                     const progress = goal.currentAmount || 0;
                     const percentage = (progress / goal.targetAmount) * 100;
-                    
+
                     return (
                       <div key={goal.id} className="p-4 bg-gray-50 rounded-lg">
                         <div className="flex justify-between items-start mb-2">
@@ -992,7 +993,7 @@ if(userFatalError){
                           </span>
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
+                          <div
                             className="bg-purple-600 h-2 rounded-full transition-all duration-300"
                             style={{ width: `${Math.min(percentage, 100)}%` }}
                           />
@@ -1007,53 +1008,30 @@ if(userFatalError){
               )}
             </div>
 
-      {(totalDebts > 0 || monthlyExpenses > totalExpenses * 0.3) && (
-        <div className="mt-6 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-5 shadow-sm">
-          <h3 className="mb-3 flex items-center gap-2 text-lg font-bold text-amber-800">
-            <AlertCircle className="h-5 w-5" />
-            התראות פיננסיות
-          </h3>
-          <div className="space-y-2 text-sm text-amber-800">
-            {totalDebts > 0 && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-100 bg-white/60 p-3">
-                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-                <div>
-                  <div className="font-medium">חובות פעילים</div>
-                  <div className="text-amber-700">
-                    יש לך חובות בסך ₪{totalDebts.toLocaleString()} — תכנן החזר הדרגתי.
-                  </div>
-                </div>
-              </div>
+            {budgetUsedPercentage > 100 && (
+              <p className="mt-2 text-sm font-medium text-red-600 text-center mb-6">חריגה מהתקציב! 😬</p>
             )}
-            {monthlyExpenses > totalExpenses * 0.3 && (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-100 bg-white/60 p-3">
-                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-                <div>
-                  <div className="font-medium">קצב הוצאות גבוה</div>
-                  <div className="text-amber-700">
-                    ההוצאות החודשיות גבוהות יחסית — בדוק קטגוריות עם ניצול גבוה (80%+).
-                  </div>
-                </div>
-              </div>
-            )}
+
+            {/* התראות חכמות מורחבות */}
+            <div className="mb-8">
+              <CategoryBudgetAlertsPanel
+                categories={categories}
+                goals={goals}
+                debts={debts}
+                expenses={expenses}
+              />
+            </div>
+
+            {/* התראות קטגוריה */}
+            <SmartFinancialTips
+              categories={categories}
+              goals={goals}
+              debts={debts}
+              expenses={expenses}
+            />
           </div>
         </div>
-      )}
-
-      {budgetUsedPercentage > 100 && (
-        <p className="mt-2 text-sm font-medium text-red-600">חריגה מהתקציב! 😬</p>
-      )}
-
-      {/* התראות קטגוריה */}
-      <SmartFinancialTips
-  categories={categories}
-  goals={goals}
-  debts={debts}
-  expenses={expenses}
-/>
-        </div>
       </div>
-    </div>
     </div>
   );
 }

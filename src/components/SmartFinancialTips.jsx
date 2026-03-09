@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  Lightbulb, 
-  TrendingUp, 
-  Target, 
-  PiggyBank, 
+import {
+  Lightbulb,
+  TrendingUp,
+  Target,
+  PiggyBank,
   AlertTriangle,
   CheckCircle2,
   ArrowUp,
@@ -36,18 +36,18 @@ const SmartFinancialTips = ({ categories, goals, debts, expenses }) => {
   // טיפים חכמים מבוססי נתונים
   const smartTips = useMemo(() => {
     const tips = [];
-    
+
     // חישובי בסיס
     const regularCategories = categories.filter(c => !['savings', 'goal', 'debt'].includes(c.tag));
     const savingsCategories = categories.filter(c => c.tag === 'savings');
-    
+
     const regularBudget = regularCategories.reduce((sum, c) => sum + (c.budget || 0), 0);
     const savingsBudget = savingsCategories.reduce((sum, c) => sum + (c.budget || 0), 0);
-    
+
     const regularSpent = currentMonthExpenses
       .filter(exp => regularCategories.some(c => String(c.id) === String(exp.categoryId)))
       .reduce((sum, exp) => sum + exp.amount, 0);
-    
+
     const savingsSpent = currentMonthExpenses
       .filter(exp => savingsCategories.some(c => String(c.id) === String(exp.categoryId)))
       .reduce((sum, exp) => sum + exp.amount, 0);
@@ -55,146 +55,138 @@ const SmartFinancialTips = ({ categories, goals, debts, expenses }) => {
     const avgDailySpend = dayOfMonth > 0 ? totalMonthlyExpenses / dayOfMonth : 0;
     const projectedMonthEnd = avgDailySpend * daysInMonth;
 
-    // טיפ 1: ניהול קצב הוצאות
-    if (monthProgress < 50 && (regularSpent / regularBudget) > 0.6) {
+    // טיפ 1: Smart Debt Management (ניהול חוב חכם)
+    const highInterestDebts = debts.filter(d => (d.annualRate || 0) > 0.05);
+    const lowInterestDebts = debts.filter(d => (d.annualRate || 0) < 0.03);
+
+    if (highInterestDebts.length > 0) {
       tips.push({
-        id: 'pace_control',
-        type: 'warning',
-        icon: <TrendingUp className="w-5 h-5" />,
-        title: 'שלט בקצב ההוצאות',
-        description: 'אתה מוציא יותר מדי מהר השבוע - נסה להאט',
+        id: 'high_interest_debt',
+        type: 'important',
+        icon: <AlertTriangle className="w-5 h-5" />,
+        title: 'חיסול חובות בריבית גבוהה - עדיפות עליונה',
+        description: 'זיהינו הלוואות עם ריבית של מעל 5%.',
         details: [
-          `ב-${Math.round(monthProgress)}% מהחודש כבר הוצאת ${Math.round((regularSpent / regularBudget) * 100)}% מהתקציב הרגיל`,
-          'המלצה: נסה "יום ללא הוצאות" פעמיים השבוע',
-          'טיפ: תכנן רכישות מראש במקום לקנות באופן ספונטני'
+          'הריבית דריבית עובדת נגדך כשמדובר בחוב. הלוואות יקרות פוגעות ביכולת שלך לצבור הון לטווח הארוך.',
+          'המלצה: שקול לעצור זמנית השקעות חדשות (למעט פנסיה/קרן השתלמות) והפנה את התזרים הפנוי לחיסול מהיר של החוב.',
+          'טיפ: בדוק אפשרות למחזור ההלוואה לריבית נמוכה יותר בתמורה לשעבוד נכס (כגון קרן השתלמות או קופת גמל).'
         ],
         actionable: true,
         priority: 'high'
       });
-    }
-
-    // טיפ 2: חיסכון אוטומטי
-    if (savingsSpent < savingsBudget * 0.5 && monthProgress > 60) {
+    } else if (lowInterestDebts.length > 0 && savingsBudget > 0) {
       tips.push({
-        id: 'auto_savings',
-        type: 'opportunity',
-        icon: <PiggyBank className="w-5 h-5" />,
-        title: 'הגדר חיסכון אוטומטי',
-        description: 'אתה מפגר ביעדי החיסכון - הפוך את זה לאוטומטי',
-        details: [
-          `חיסכת רק ₪${savingsSpent.toLocaleString()} מתוך יעד של ₪${savingsBudget.toLocaleString()}`,
-          'המלצה: הגדר העברה אוטומטית לחיסכון ב-1 לחודש',
-          'טיפ: חיסכון של 10% מהכנסה זה כלל אצבע טוב'
-        ],
-        actionable: true,
-        priority: 'medium'
-      });
-    }
-
-    // טיפ 3: אופטימיזציה של קטגוריות
-    const expensiveCategories = regularCategories
-      .map(cat => ({
-        ...cat,
-        spent: currentMonthExpenses
-          .filter(exp => String(exp.categoryId) === String(cat.id))
-          .reduce((sum, exp) => sum + exp.amount, 0)
-      }))
-      .filter(cat => cat.spent > 0)
-      .sort((a, b) => b.spent - a.spent)
-      .slice(0, 2);
-
-    if (expensiveCategories.length > 0) {
-      const topCategory = expensiveCategories[0];
-      tips.push({
-        id: 'category_optimization',
+        id: 'low_interest_leverage',
         type: 'insight',
-        icon: <Target className="w-5 h-5" />,
-        title: `שים עין על "${topCategory.name}"`,
-        description: 'זו הקטגוריה הכי יקרה שלך החודש',
+        icon: <TrendingUp className="w-5 h-5" />,
+        title: 'מינוף פיננסי חכם',
+        description: 'החובות שלך נושאים ריבית נמוכה משמעותית מתשואת השוק.',
         details: [
-          `הוצאת ₪${topCategory.spent.toLocaleString()} על ${topCategory.name} (${Math.round((topCategory.spent / totalMonthlyExpenses) * 100)}% מכלל ההוצאות)`,
-          'המלצה: בדוק אם יש הוצאות מיותרות בקטגוריה זו',
-          'טיפ: נסה "כלל 24 השעות" - המתן יום לפני רכישות גדולות'
+          'מבחינה מתמטית, פדיון מוקדם של הלוואה בריבית אפסית או נמוכה מאוד (מתחת ל-3%) הוא לרוב פחות משתלם מלהשקיע את הכסף.',
+          'המלצה: במקום להאיץ את תשלום החוב, שקול להשקיע את העודפים בשוק ההון (למשל רכישת קרן סל העוקבת אחר מדד דוגמת S&P 500).',
+          'התשואה ההיסטורית בשוק המניות גבוהה יותר מעלות החוב שלך, מה שמייצר עבורך פער ארביטראז\' פיננסי אוטומטי.'
         ],
         actionable: true,
         priority: 'medium'
       });
     }
 
-    // טיפ 4: חירום כספי
+    // טיפ 2: קרן חירום מול השקעות
     const emergencyFund = goals.find(g => g.name.includes('חירום') || g.name.includes('משכנתא'));
-    const monthlyIncome = totalBudget * 1.2; // הערכה גסה
+    const monthlyIncome = totalBudget * 1.2; // בינתיים הערכה גסה
     const recommendedEmergency = monthlyIncome * 3;
+    const hasFullEmergencyFund = emergencyFund && (emergencyFund.currentAmount || 0) >= recommendedEmergency;
 
-    if (!emergencyFund || (emergencyFund.currentAmount || 0) < recommendedEmergency * 0.5) {
+    if (!emergencyFund || (emergencyFund.currentAmount || 0) < recommendedEmergency) {
       tips.push({
-        id: 'emergency_fund',
+        id: 'emergency_fund_priority',
         type: 'important',
         icon: <Shield className="w-5 h-5" />,
-        title: 'בנה קרן חירום',
-        description: 'אין לך מספיק כסף בצד למקרי חירום',
+        title: 'בניית רשת ביטחון פיננסית',
+        description: 'הבסיס לחוסן כלכלי הוא קרן חירום נזילה שדורשת חיזוק.',
         details: [
-          `מומלץ לך לחסוך ₪${recommendedEmergency.toLocaleString()} (3 משכורות) לחירום`,
-          emergencyFund ? `יש לך כרגע ₪${(emergencyFund.currentAmount || 0).toLocaleString()}` : 'עדיין לא הגדרת יעד חירום',
-          'המלצה: חסוך ₪200-500 בחודש עד להשלמת הקרן',
-          'טיפ: שים את כסף החירום בחשבון נפרד שקשה לגשת אליו'
+          `לפני שחושבים על השקעות, מומלץ להעמיד בצד כ-3 עד 6 חודשי מחיות (כסף שיכול לשמש אותך בעת חירום).`,
+          emergencyFund ? `המצב הנוכחי של הקרן שלך: ₪${(emergencyFund.currentAmount || 0).toLocaleString()} מתוך היעד.` : 'לא זיהינו קרן חירום ייעודית מוגדרת במערכת.',
+          'המלצה: פתח פיקדון נזיל שמטרתו לספוג זעזועים (אובדן הכנסה פתאומי או הוצאה לא מתוכננת).',
+          'הקמת קרן חזקה תמנע ממך את הצורך לקחת הלוואות יקרות או לפדות פיקדונות השקעה בהפסד מוקדם מהצפוי.'
+        ],
+        actionable: true,
+        priority: 'high'
+      });
+    } else {
+      tips.push({
+        id: 'investing_opportunity',
+        type: 'success',
+        icon: <Lightbulb className="w-5 h-5" />,
+        title: 'מתחילים לבנות הון (ריבית דריבית)',
+        description: 'קרן החירום שלך איתנה ויש לך עודף תקציבי. תן לכסף לעבוד בשבילך.',
+        details: [
+          'השארת עודפי מזומנים גדולים בעו"ש לא מייצרת ערך ושוחקת אותם לאורך שנים בגלל האינפלציה.',
+          'המלצה: פתח תיק השקעות או קופת גמל להשקעה והתחל להשקיע באופן קבוע ואוטומטי במדדים מפוזרים גלובלית.',
+          'כוחו האמיתי של החיסכון נובע מפלא הריבית הדריבית. ככל שתתחיל מוקדם יותר לחשוף קצת הון לסיכון השוק, כך ההון יצמח דרמטית.'
         ],
         actionable: true,
         priority: 'high'
       });
     }
 
-    // טיפ 5: יעדים לטווח ארוך
-    const activeGoals = goals.filter(g => (g.currentAmount || 0) < g.targetAmount);
-    if (activeGoals.length > 3) {
+    // טיפ 3: אופטימיזציית מס
+    if (savingsBudget > 1000) {
       tips.push({
-        id: 'focus_goals',
-        type: 'strategy',
+        id: 'tax_optimization',
+        type: 'opportunity',
         icon: <Target className="w-5 h-5" />,
-        title: 'התמקד ב-2-3 יעדים עיקריים',
-        description: 'יותר מדי יעדים בו-זמנית יכולים לפזר את המאמצים',
+        title: 'מקסום יתרונות מס ומכשירים פנסיונים',
+        description: 'אנחנו רואים שיש לך יכולת חיסכון חודשית מרשימה. זו העת לבצע תכנון מס מקיף.',
         details: [
-          `יש לך ${activeGoals.length} יעדים פעילים`,
-          'המלצה: בחר 2-3 יעדים החשובים ביותר והתמקד בהם',
-          'טיפ: סיים יעד אחד לפני שאתה מתחיל יעד חדש'
+          'תכנון פיננסי חכם כולל ניצול מלא של כל הטבות המס שחוקי המדינה מאפשרים (למשל: סעיף 47 לפקודת מס הכנסה, קופת גמל להשקעה ותיקון 190).',
+          'המלצה: בדוק פתיחת קרן השתלמות למעמד עצמאי גם אם אתה שכיר שמקבל קרן בעבודה (תחת תקנות מסוימות ניתן להפריש ולזכות). הפטור ממס רווחי הון הוא יתרון אדיר.',
+          'טיפ: בחיסכון לטווח בינוני או שילוב פנסיוני, עלות דמי הניהול ומגן המס יהיו לפעמים חשובים יותר מסכום החסכון עצמו.'
+        ],
+        actionable: true,
+        priority: 'medium'
+      });
+    }
+
+    // טיפ 4: יחס שירות חוב (Debt Service Ratio)
+    const totalMonthlyDebtPayments = debts.reduce((sum, d) => sum + (d.minPayment || 0), 0);
+    const debtServiceRatio = monthlyIncome > 0 ? totalMonthlyDebtPayments / monthlyIncome : 0;
+
+    if (debtServiceRatio > 0.3) {
+      tips.push({
+        id: 'debt_service_ratio',
+        type: 'warning',
+        icon: <AlertTriangle className="w-5 h-5" />,
+        title: 'סכנת מינוף יתר - יחס החזר חוב גבוה מהמומלץ',
+        description: `יחס כיסוי החוב שלך (PTI) עומד על כ-${Math.round(debtServiceRatio * 100)}% מההכנסה הכוללת.`,
+        details: [
+          'פרמטר זה מעיד על הנטל שההלוואות גובות ממך כל חודש. בנקים בישראל מתריעים כאשר יחס זה עובר את ה-30%-35%. חריגה מכך מגבילה את התזרים הפנוי.',
+          'משמעות הדבר היא קושי להתמודד עם בלת"מים פיננסיים, ופרופיל סיכון גבוה לבנק שעשוי לייקר לך הלוואות עתידיות.',
+          'המלצה: בצע בדק בית מיידי. האם ניתן לפרוס את החוב לזמן ארוך יותר? או מנגד למנף נכסים וחסכונות כדי לפרוע במכה הלוואות יקרות שחונקות את התזרים?'
+        ],
+        actionable: true,
+        priority: 'high'
+      });
+    }
+
+    // טיפ 5: עלות אלטרנטיבית
+    const discretionaryCategories = regularCategories.filter(c => c.tag === 'want');
+    const discretionaryBudget = discretionaryCategories.reduce((sum, c) => sum + (c.budget || 0), 0);
+
+    if (discretionaryBudget > monthlyIncome * 0.2) {
+      tips.push({
+        id: 'opportunity_cost',
+        type: 'strategy',
+        icon: <Zap className="w-5 h-5" />,
+        title: 'עלות אלטרנטיבית וכוחו של הון',
+        description: 'נתח גדול (מעל 20%) מהתקציב מופנה ישירות לצריכה שוטפת ומותרות.',
+        details: [
+          'זה בריא להוציא על החיים עצמם ולשמור על איכות חיים גבוהה, אך שיטת העושר מצביעה על "עלות אלטרנטיבית".',
+          `במקום להוציא את ה-₪${Math.round(discretionaryBudget).toLocaleString()} האלה היום, הקטנה של 15% בלבד לצורך השקעה במדד מניות יכולה לייצר עשרות ומאות אלפי שקלים נוספים בעתיד.`,
+          'המלצה: כלל האצבע המוזהב - קודם שלם לעצמך. הסט סכום כסף לעבר תיק מניב בתחילת החודש באופן אוטומטי, ואת יתרת התקציב למותרות פזר בצורה חופשית. זה ישחרר אותך פסיכולוגית ממעקב מיקרוסקופי על הוצאות.'
         ],
         actionable: true,
         priority: 'low'
-      });
-    }
-
-    // טיפ 6: הוצאות משתנות
-    const lastThreeMonths = [];
-    for (let i = 0; i < 3; i++) {
-      const monthDate = new Date(currentYear, currentMonth - i, 1);
-      const monthExpenses = expenses
-        .filter(exp => {
-          const d = new Date(exp.date);
-          return d.getMonth() === monthDate.getMonth() && d.getFullYear() === monthDate.getFullYear();
-        })
-        .reduce((sum, exp) => sum + exp.amount, 0);
-      lastThreeMonths.push(monthExpenses);
-    }
-
-    const avgThreeMonths = lastThreeMonths.reduce((sum, month) => sum + month, 0) / lastThreeMonths.length;
-    const currentVsAvg = ((totalMonthlyExpenses - avgThreeMonths) / avgThreeMonths) * 100;
-
-    if (Math.abs(currentVsAvg) > 20) {
-      tips.push({
-        id: 'expense_volatility',
-        type: currentVsAvg > 0 ? 'warning' : 'success',
-        icon: currentVsAvg > 0 ? <ArrowUp className="w-5 h-5" /> : <ArrowDown className="w-5 h-5" />,
-        title: currentVsAvg > 0 ? 'הוצאות גבוהות מהרגיל' : 'הוצאות נמוכות מהרגיל',
-        description: `החודש אתה ${currentVsAvg > 0 ? 'מוציא' : 'חוסך'} ${Math.abs(Math.round(currentVsAvg))}% ${currentVsAvg > 0 ? 'יותר' : 'פחות'} מהממוצע`,
-        details: [
-          `ממוצע 3 חודשים: ₪${avgThreeMonths.toLocaleString()}`,
-          `החודש: ₪${totalMonthlyExpenses.toLocaleString()}`,
-          currentVsAvg > 0 
-            ? 'בדוק אם היו הוצאות חד-פעמיות או שינוי בהרגלים'
-            : 'נהדר! אם זה מתוכנן - המשך כך'
-        ],
-        actionable: currentVsAvg > 0,
-        priority: Math.abs(currentVsAvg) > 30 ? 'high' : 'medium'
       });
     }
 
@@ -295,7 +287,7 @@ const SmartFinancialTips = ({ categories, goals, debts, expenses }) => {
         {smartTips.slice(0, 4).map((tip) => {
           const colors = getTypeColors(tip.type);
           const isExpanded = selectedTip === tip.id;
-          
+
           return (
             <div
               key={tip.id}
@@ -316,7 +308,7 @@ const SmartFinancialTips = ({ categories, goals, debts, expenses }) => {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2 flex-shrink-0">
                   {tip.priority === 'high' && (
                     <Zap className="w-4 h-4 text-red-500" />
@@ -337,7 +329,7 @@ const SmartFinancialTips = ({ categories, goals, debts, expenses }) => {
                       </div>
                     ))}
                   </div>
-                  
+
                   {tip.actionable && (
                     <div className="mt-4 pt-3 border-t border-current border-opacity-20">
                       <div className={`text-xs ${colors.text} flex items-center gap-1`}>
