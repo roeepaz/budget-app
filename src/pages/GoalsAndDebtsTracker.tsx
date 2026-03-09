@@ -103,11 +103,7 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
           setDebts(loadedDebts);
         }
       } catch (error) {
-        <FullPageError
-              title={'שגיאה בשמירת  נתונים'}
-              description={ 'נסה שוב מאוחר יותר'}
-              severity={'error'}
-            />
+        console.error('שגיאה בטעינת נתונים', error);
       } finally {
         setHasLoaded(true);
         setLoading(false);
@@ -137,21 +133,21 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
 
   // Calculate progress percentage
   const getGoalProgress = (goal: SavingsGoal) => {
-    return Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
+    return Math.min(((goal.currentAmount || 0) / goal.targetAmount) * 100, 100);
   };
 
   const getDebtProgress = (debt: Debt & { currentPrincipal?: number }) => {
-    const remaining = debt.currentPrincipal || debt.principal;
+    const remaining = debt.currentPrincipal ?? debt.principal;
     return Math.max(((debt.principal - remaining) / debt.principal) * 100, 0);
   };
 
   // Check if goal/debt is completed
   const isGoalCompleted = (goal: SavingsGoal) => {
-    return goal.currentAmount >= goal.targetAmount;
+    return (goal.currentAmount || 0) >= goal.targetAmount;
   };
 
   const isDebtCompleted = (debt: Debt & { currentPrincipal?: number }) => {
-    return (debt.currentPrincipal || debt.principal) <= 0;
+    return (debt.currentPrincipal ?? debt.principal) <= 0;
   };
 
   // Add new goal
@@ -184,7 +180,7 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
           currentAmount: newGoal.currentAmount,
           targetDate: new Date(newGoal.targetDate),
           priority: newGoal.priority,
-          completed: false,
+          // Removed completed: false since it's not in the type
         },
       ]);
     }
@@ -198,21 +194,33 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
 
     if (editingDebtId) {
       // Update existing debt
+      const debtData = {
+        name: newDebt.name,
+        principal: newDebt.principal,
+        annualRate: newDebt.annualRate,
+        termMonths: newDebt.termMonths,
+        minPayment: newDebt.minPayment
+      };
       setDebts(debts.map(d =>
         d.id === editingDebtId
-          ? { ...d, ...newDebt }
+          ? { ...d, ...debtData }
           : d
       ));
       setEditingDebtId(null);
     } else {
       // Add new debt
+      const debtData = {
+        name: newDebt.name || '',
+        principal: newDebt.principal || 0,
+        annualRate: newDebt.annualRate || 0,
+        termMonths: newDebt.termMonths || 1,
+        minPayment: newDebt.minPayment || 0
+      };
       setDebts([
         ...debts,
         {
           id: Date.now().toString(),
-          ...newDebt,
-          currentPrincipal: newDebt.principal,
-          completed: false,
+          ...debtData,
         },
       ]);
     }
@@ -226,7 +234,7 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
     setNewGoal({
       name: goal.name,
       targetAmount: goal.targetAmount,
-      currentAmount: goal.currentAmount,
+      currentAmount: goal.currentAmount || 0,
       targetDate: goal.targetDate.toISOString().split('T')[0],
       priority: goal.priority,
     });
@@ -251,13 +259,13 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
         
       setGoals(goals.map(g =>
         g.id === progressTarget.id
-          ? { ...g, currentAmount: Math.min(g.currentAmount + progressAmount, g.targetAmount) }
+          ? { ...g, currentAmount: Math.min((g.currentAmount || 0) + progressAmount, g.targetAmount) }
           : g
       ));
     } else {
       setDebts(debts.map(d =>
         d.id === progressTarget.id
-          ? { ...d, currentPrincipal: Math.max((d.currentPrincipal || d.principal) - progressAmount, 0) }
+          ? { ...d, currentPrincipal: Math.max(((d as any).currentPrincipal || d.principal) - progressAmount, 0) }
           : d
       ));
     }
@@ -522,7 +530,7 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-2">
                         <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                          {formatCurrency(goal.currentAmount)} מתוך {formatCurrency(goal.targetAmount)}
+                          {formatCurrency(goal.currentAmount || 0)} מתוך {formatCurrency(goal.targetAmount)}
                         </span>
                         <span className={`font-medium ${isCompleted ? 'text-green-500' : darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                           {progress.toFixed(1)}%
@@ -684,8 +692,6 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
                 <div className="flex items-end">
                   <button
                     onClick={addDebt}
-                    disabled={!newDebt.name || newDebt.principal <= 0 || newDebt.min}
-                                        onClick={addDebt}
                     disabled={!newDebt.name || newDebt.principal <= 0 || newDebt.minPayment <= 0}
                     className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
                       darkMode 
@@ -761,7 +767,7 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-2">
                         <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                          {formatCurrency((debt.currentPrincipal ?? debt.principal))} מתוך {formatCurrency(debt.principal)}
+                          {formatCurrency(((debt as any).currentPrincipal ?? debt.principal))} מתוך {formatCurrency(debt.principal)}
                         </span>
                         <span className={`font-medium ${isCompleted ? 'text-green-500' : darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                           {progress.toFixed(1)}%
@@ -853,6 +859,6 @@ export default function GoalsAndDebtsTracker({ user, darkMode = false }: GoalsAn
   </div>
 )}
       </div> {/* סגירת הפנימית של max-w-6xl */}
-    </div>   {/* סגירת min-h-screen */}
+    </div>
   );
 }

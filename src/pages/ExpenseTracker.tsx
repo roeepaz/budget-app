@@ -16,7 +16,6 @@ export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
     { id: 1, name: 'קרן ביטחון', color: '#FF6384', icon: '🛡️', tag: 'emergency', currentAmount: 0 },
     { id: 2, name: 'חיסכון כללי', color: '#36A2EB', icon: '💰', tag: 'savings', currentAmount: 0 },
   ];
-const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
 const [showRecurringForm, setShowRecurringForm] = useState(false);
 const [recurringForm, setRecurringForm] = useState({
   amount: '',
@@ -35,15 +34,8 @@ const yearOptions = Array.from({ length: currentYear - 2020 + 1 }, (_, i) => 202
 
 const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
 
-const [loadError, setLoadError] = useState<boolean>(false);
-const [monthlyIncomeData, setMonthlyIncomeData] = useState<Record<string, number>>({});
 const [sidebarOpen, setSidebarOpen] = useState(false);
 
-const [fatalError, setFatalError] = useState<null | {
-  title?: string;
-  description?: string;
-  severity?: 'error' | 'warning' | 'info';
-}>(null)
 // Form state
 const [newExpense, setNewExpense] = useState({
   amount: '',         // Use empty string for form input
@@ -79,15 +71,21 @@ const {
   expenses,
   debts,
   goals,
+  recurringExpenses,
+  monthlyIncomeData,
   loading,
+  hasLoaded,
   setCategories,
   setExpenses,
   setDebts,
   setGoals,
+  setRecurringExpenses,
+  setMonthlyIncomeData,
   setLoading,
   setHasLoaded,
   addExpenseToDB,
-  addCategoryToDB
+  addCategoryToDB,
+  userFatalError: fatalError
 } = useUserData(userId);
 
   // Helper function to clean data for Firebase (removes undefined values)
@@ -105,97 +103,6 @@ const {
     }
     return obj;
   };
-
- useEffect(() => {
-  if (!userId) return;
-
-  (async () => {
-    try {
-      // 1. טעינת הכנסות חודשיות
-      const colRef = collection(db, 'financial_data', userId, 'monthly_income');
-      const snapshot = await getDocs(colRef);
-      const incomeMap: Record<string, number> = {};
-
-      snapshot.forEach(docSnap => {
-        const month = docSnap.id; // דוגמה: "2025-05"
-        const total = docSnap.data().total;
-        if (typeof total === 'number') {
-          incomeMap[month] = total;
-        }
-      });
-      setMonthlyIncomeData(incomeMap);
-
-      // 2. טעינת קטגוריות מה־subcollection
-      const categoriesSnap = await getDocs(collection(db, 'users', userId, 'categories'));
-      const categories = categoriesSnap.docs.map(docSnap => {
-        const data = docSnap.data();
-        return {
-          id: docSnap.id,
-          name: data.name,
-          color: data.color,
-          icon: data.icon,
-          tag: data.tag,
-          budget: data.budget ?? 0,
-          hidden: data.hidden ?? false,
-          currentAmount: ['savings', 'emergency'].includes(data.tag)
-            ? data.currentAmount ?? 0
-            : data.currentAmount
-        };
-      });
-      setCategories(categories);
-
-      // 3. טעינת הוצאות מה־subcollection
-      const expensesSnap = await getDocs(collection(db, 'users', userId, 'expenses'));
-      const expenses = expensesSnap.docs.map(docSnap => {
-  const data = docSnap.data();
- return {
-  id: docSnap.id,
-  amount: data.amount ?? 0,
-  description: data.description ?? '',
-  categoryId: data.categoryId ?? '',
-  date: data.date ?? new Date().toISOString().split('T')[0]
-} as Expense;
-});
-setExpenses(expenses);
-
-
-     // 4. טעינת הוצאות חוזרות מתוך users/{uid}/recurringExpenses
-const recurringRef = collection(db, 'users', userId, 'recurringExpenses');
-const recurringSnap = await getDocs(recurringRef);
-const recurringList: RecurringExpense[] = recurringSnap.docs.map(doc => ({
-  id: doc.id,
-  ...(doc.data() as Omit<RecurringExpense, 'id'>)
-}));
-setRecurringExpenses(recurringList);
-
-
-      // 5. טעינת חובות ומטרות מתוך financial_data/{uid}
-      const finSnap = await getDoc(doc(db, 'financial_data', userId));
-      if (finSnap.exists()) {
-        const data = finSnap.data();
-        setDebts(data.debts || []);
-        setGoals(
-          (data.goals || []).map((g: any) => ({
-            ...g,
-            targetDate: g.targetDate?.toDate ? g.targetDate.toDate() : new Date(g.targetDate)
-          }))
-        );
-      }
-
-      setHasLoaded(true);
-    } catch (error) {
-      setFatalError({
-        title: 'שגיאה בטעינת נתונים',
-        description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
-        severity: 'error'
-      });
-      setLoadError(true);
-      setHasLoaded(false);
-    } finally {
-      setLoading(false);
-    }
-  })();
-}, [userId]);
 
  
 useEffect(() => {
@@ -346,7 +253,7 @@ const filteredExpenses = expenses.filter(exp => {
   };
 
   // Delete expense handler
-const handleDeleteExpense = async (id: number) => {
+const handleDeleteExpense = async (id: string | number) => {
   if (!userId) return;
 
   const expense = expenses.find(e => e.id === id);
@@ -399,11 +306,7 @@ const handleDeleteExpense = async (id: number) => {
     }
 
   } catch (error) {
-    <FullPageError
-          title={'שגיאה במחיקת הוצאה'}
-          description={ 'נסה שוב מאוחר יותר'}
-          severity={'error'}
-        />     
+    console.error('שגיאה במחיקת הוצאה', error);     
   }
 };
 

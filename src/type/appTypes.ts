@@ -44,7 +44,7 @@ export interface SavingsGoal {
   name: string;
   targetAmount: number;
   currentAmount?: number;  
-  targetDate: Timestamp;
+  targetDate: Date;
   priority: number;      
   tag?:CategoryTag;
   icon?:string;      

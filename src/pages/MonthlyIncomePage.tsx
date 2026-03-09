@@ -40,6 +40,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebaseConfig';
 import { useAuthState } from 'react-firebase-hooks/auth';
+import { useUserData } from '../hooks/useUserData';
 
 import Sidebar from "../components/Sidebar";
 
@@ -162,6 +163,7 @@ export default function MonthlyIncomePage() {
   const [viewMode, setViewMode] = useState<"chart" | "both">("both");
 const [user] = useAuthState(auth as any);
 const userId = user?.uid;
+const { setMonthlyIncomeData } = useUserData(userId);
 
 useEffect(() => {
   if (!userId) return;
@@ -301,6 +303,9 @@ useEffect(() => {
       { merge: true }
     );
 
+    const calculatedTotal = (row.salary || 0) + (row.freelance || 0) + (row.passive || 0) + (row.other || 0);
+    setMonthlyIncomeData(prev => ({ ...prev, [id]: calculatedTotal }));
+
     setRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, _dirty: false, _saving: false } : r))
     );
@@ -323,6 +328,13 @@ useEffect(() => {
   if (!userId) return;
   try {
     await deleteDoc(doc(db, 'financial_data', userId, 'monthly_income', id));
+    
+    setMonthlyIncomeData(prev => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+
     setRows((prev) => prev.filter((r) => r.id !== id));
   } catch (e: any) {
     setErr(e?.message || 'Failed deleting month');

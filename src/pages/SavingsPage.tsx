@@ -24,6 +24,7 @@ import { doc, getDoc, setDoc,collection, getDocs } from 'firebase/firestore';
 import {SavingsGoal, Expense} from '../type/appTypes'
 import SidebarWrapper from '../components/SidebarWrapper';
 import FullPageError from '../components/FullPageError';
+import { useUserData } from '../hooks/useUserData';
 
 const DARK_MODE_KEY = 'budget-app-dark-mode';
 
@@ -53,97 +54,37 @@ const formatCurrency = (amount: number) => {
 export default function SavingsPage({ user }: { user: { uid: string } }) {
   const userId = user.uid;
 
-  // --- states for התקציב הרגיל ---
-  const [loading, setLoading] = useState(true);
-const [loadError, setLoadError] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-const [fatalError, setFatalError] = useState<null | {
-  title?: string;
-  description?: string;
-  severity?: 'error' | 'warning' | 'info';
-}>(null);
-
-  const [isDarkMode, setIsDarkMode] = useState(false);
-
   // --- states for סיכום חסכונות ---
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [categories, setCategories] = useState<SummaryCat[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [goals, setGoals] = useState<SavingsGoal[]>([]);
+  const {
+    categories: rawCategories,
+    setCategories,
+    expenses,
+    goals,
+    setGoals,
+    loading,
+    userFatalError: fatalError
+  } = useUserData(userId);
+
+  const categories: SummaryCat[] = rawCategories.map(c => ({
+    id: String(c.id),
+    name: c.name,
+    color: c.color,
+    icon: c.icon,
+    tag: c.tag as CategoryTag,
+    currentAmount: c.currentAmount,
+  }));
+
+  const summaryLoading = loading;
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [activeTab, setActiveTab] = useState('savings');
 
   // להוספת מודאל הורדה:
-  const [showWithdrawModal, setShowWithdrawModal] =
-    useState(false);
-  const [withdrawTarget, setWithdrawTarget] =
-    useState<{ id: string; type: CategoryTag } | null>(null);
-  const [withdrawAmount, setWithdrawAmount] =
-    useState<number>(0);
-  const [withdrawDesc, setWithdrawDesc] =
-    useState<string>('');
-
-  useEffect(() => {
-  (async () => {
-    try {
-      // 1. Load categories (users/{userId}/categories)
-      const catRef = collection(db, 'users', userId, 'categories');
-      const catSnap = await getDocs(catRef);
-      const loadedCategories = catSnap.docs.map(docSnap => {
-      const c = docSnap.data();
-      return {
-        id: String(docSnap.id),
-        name: c.name ?? 'ללא שם',
-        color: c.color ?? '#cccccc',
-        icon: c.icon ?? 'HelpCircle',
-        tag: c.tag ?? 'need',
-        hidden: c.hidden ?? false,
-        budget: c.budget ?? 0,
-        currentAmount: ['savings', 'emergency'].includes(c.tag) ? (c.currentAmount ?? 0) : undefined
-      };
-    });
-
-      setCategories(loadedCategories);
-
-      // 2. Load expenses (users/{userId}/expenses)
-      const expRef = collection(db, 'users', userId, 'expenses');
-      const expSnap = await getDocs(expRef);
-      const loadedExpenses: Expense[] = expSnap.docs.map(docSnap => {
-      const d = docSnap.data();
-      return {
-        id: docSnap.id,
-        amount: Number(d.amount) || 0,
-        description: String(d.description ?? ''),
-        categoryId: String(d.categoryId ?? ''),
-        date: String(d.date ?? new Date().toISOString().split('T')[0]),
-      };
-    });
-
-      setExpenses(loadedExpenses);
-
-      // 3. Load goals (financial_data/{userId})
-      const fSnap = await getDoc(doc(db, 'financial_data', userId));
-      if (fSnap.exists()) {
-        const d = fSnap.data() as any;
-        setGoals(
-          (d.goals || []).map((g: any) => ({
-            ...g,
-            targetDate: g.targetDate?.toDate ? g.targetDate.toDate() : new Date(g.targetDate)
-          }))
-        );
-      }
-    } catch (error) {
-      setFatalError({
-        title: 'שגיאה בטעינת נתונים',
-        description: 'לא הצלחנו לטעון מידע מהשרת. בדוק את החיבור ונסה שוב.',
-        severity: 'error'
-      });
-      setLoadError(true);
-    } finally {
-      setSummaryLoading(false);
-      setLoading(false);
-    }
-  })();
-}, [userId]);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawTarget, setWithdrawTarget] = useState<{ id: string; type: CategoryTag } | null>(null);
+  const [withdrawAmount, setWithdrawAmount] = useState<number>(0);
+  const [withdrawDesc, setWithdrawDesc] = useState<string>('');
 
 
   useEffect(() => {
@@ -171,15 +112,14 @@ const handleWithdraw = async () => {
         { merge: true }
       );
     } else {
-      const updatedCategories = categories.map(c =>
+      setCategories(prev => prev.map(c =>
         String(c.id) === id
           ? { ...c, currentAmount: (c.currentAmount ?? 0) - withdrawAmount }
           : c
-      );
-      setCategories(updatedCategories);
+      ));
 
       // שמור רק את הקטגוריה הזו בתור מסמך בתת-קולקציה
-      const cat = updatedCategories.find(c => String(c.id) === id);
+      const cat = rawCategories.find(c => String(c.id) === id);
       if (cat) {
         const catRef = doc(db, 'users', userId, 'categories', String(cat.id));
         await setDoc(catRef, cat);

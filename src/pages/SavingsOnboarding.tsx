@@ -139,10 +139,10 @@ useEffect(() => {
         // אם הגדרת targetDate בתור מחרוזת, המירו ל‐Timestamp
         targetDate:
           typeof g.targetDate === 'string'
-            ? Timestamp.fromDate(new Date(g.targetDate))
+            ? new Date(g.targetDate)
             : g.targetDate instanceof Timestamp
-            ? g.targetDate
-            : Timestamp.now(),
+            ? g.targetDate.toDate()
+            : new Date(),
         // חובה לספק priority לפי ההגדרה ב‐SavingsGoal
         priority: Number(g.priority) || 0,
         // השדות האופציונליים (tag, icon, budget) נשארים undefined
@@ -196,8 +196,8 @@ const addGoal = async () => {
     currentAmount: newGoal.currentAmount,
     // ממירים מחרוזת ל־Timestamp; אם לא הוזן תאריך – משתמשים ב־now()
     targetDate: newGoal.targetDate
-      ? Timestamp.fromDate(new Date(newGoal.targetDate))
-      : Timestamp.now(),
+      ? new Date(newGoal.targetDate)
+      : new Date(),
     // חובה: ערך ברירת מחדל
     priority: 0,
     // שדות אופציונליים ישארו undefined
