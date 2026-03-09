@@ -140,7 +140,7 @@ useEffect(() => {
 
     const goals = (data.goals || []).map(g => ({
       ...g,
-      targetDate: g.targetDate as Timestamp
+      targetDate: g.targetDate instanceof Timestamp ? g.targetDate.toDate() : new Date((g as any).targetDate)
     }));
 
     // טען הכנסה לפי חודש
@@ -300,7 +300,7 @@ const startEditGoal = (g: SavingsGoal) => {
     name:         g.name,
     targetAmount: g.targetAmount,
     currentAmount: g.currentAmount ?? 0,
-    targetDate:   g.targetDate.toDate().toISOString().split('T')[0], // ✅
+    targetDate:   (new Date(g.targetDate)).toISOString().split('T')[0], // ✅
     priority:     g.priority,
   });
 };
@@ -320,7 +320,7 @@ const startEditGoal = (g: SavingsGoal) => {
           name: newGoal.name,
           targetAmount: newGoal.targetAmount,
           currentAmount: newGoal.currentAmount,
-          targetDate: isValidDate ? Timestamp.fromDate(rawDate) : g.targetDate,
+          targetDate: isValidDate ? rawDate : g.targetDate,
           priority: newGoal.priority,
         };
 
@@ -339,7 +339,7 @@ const startEditGoal = (g: SavingsGoal) => {
         name: newGoal.name,
         targetAmount: newGoal.targetAmount,
         currentAmount: newGoal.currentAmount,
-        targetDate: Timestamp.fromDate(new Date(newGoal.targetDate + 'T00:00:00')),
+        targetDate: new Date(newGoal.targetDate + 'T00:00:00'),
         priority: newGoal.priority,
       },
     ]);
