@@ -448,19 +448,11 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
         <div className="flex justify-between items-center mb-8 relative">
           <div className={`group relative ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
             <h1 className="text-4xl font-black tracking-tight flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                {!sidebarOpen && (
-                  <button
-                    onClick={() => setSidebarOpen(true)}
-                    className="fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-                  >
-                    <Menu className="w-6 h-6 text-gray-700" />
-                  </button>
-                )}
-                <div className="relative text-3xl bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
-                  🧠
-                </div>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                  <div className="relative text-3xl bg-gradient-to-r from-blue-500 to-indigo-600 bg-clip-text text-transparent">
+                    🧠
+                  </div>
               </div>
               <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 bg-clip-text text-transparent">
                 יועץ תקציבי חכם

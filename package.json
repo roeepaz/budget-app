@@ -36,6 +36,7 @@
     "@types/react-router-dom": "^5.3.3",
     "autoprefixer": "^10.4.21",
     "buffer": "^6.0.3",
+    "cpy-cli": "^7.0.0",
     "crypto-browserify": "^3.12.1",
     "events": "^3.3.0",
     "os-browserify": "^0.3.0",
