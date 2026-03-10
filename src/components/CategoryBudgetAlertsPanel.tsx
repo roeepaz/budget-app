@@ -622,18 +622,20 @@ export default function CategoryBudgetAlertsPanel({
   const empty = alerts.length === 0;
 
   return (
-    <div
-      style={{
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))',
-        backdropFilter: 'blur(16px)',
-        borderRadius: '24px',
-        border: '1px solid rgba(226,232,240,0.6)',
-        padding: '24px',
-        marginTop: '24px',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
-      }}
-      dir="rtl"
-    >
+  <div
+    style={{
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,250,252,0.9))',
+      backdropFilter: 'blur(16px)',
+      borderRadius: '24px',
+      border: '1px solid rgba(226,232,240,0.6)',
+      padding: '24px',
+      marginTop: '24px',
+      boxShadow: '0 4px 24px rgba(0,0,0,0.04)',
+      position: 'relative',
+      zIndex: 0
+    }}
+    dir="rtl"
+  >
       {/* Header */}
       <div
         style={{

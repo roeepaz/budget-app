@@ -388,14 +388,6 @@ const totalPerCat = displayCats.map(c => {
      <header className={`py-4 px-6 ${isDarkMode ? 'bg-indigo-900' : 'bg-indigo-600'} text-white shadow-lg`}>
   <div className="flex justify-between items-center">
     <div className="flex items-center gap-3">
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow"
-        >
-          <Menu className="w-5 h-5 text-gray-700" />
-        </button>
-      )}
       <div className={`p-2 rounded-full ${isDarkMode ? 'bg-indigo-800' : 'bg-indigo-500'}`}>
         <PiggyBank size={24} />
       </div>

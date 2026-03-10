@@ -63,12 +63,14 @@ export default function Sidebar({
 
   return (
     <>
-      <button
-        onClick={() => setSidebarOpen(true)}
-        className="fixed top-4 right-4 z-60 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-      >
-        <Menu className="w-6 h-6 text-gray-700" />
-      </button>
+      {!sidebarOpen && (
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+        >
+          <Menu className="w-6 h-6 text-gray-700" />
+        </button>
+      )}
         
       {sidebarOpen && (
         <div

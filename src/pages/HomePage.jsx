@@ -1013,14 +1013,12 @@ export default function HomePage({ user }) {
             )}
 
             {/* התראות חכמות מורחבות */}
-            <div className="mb-8">
-              <CategoryBudgetAlertsPanel
-                categories={categories}
-                goals={goals}
-                debts={debts}
-                expenses={expenses}
-              />
-            </div>
+            <CategoryBudgetAlertsPanel
+              categories={categories}
+              goals={goals}
+              debts={debts}
+              expenses={expenses}
+            />
 
             {/* התראות קטגוריה */}
             <SmartFinancialTips
