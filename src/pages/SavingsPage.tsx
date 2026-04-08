@@ -385,7 +385,7 @@ const totalPerCat = displayCats.map(c => {
     <div className={`min-h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`} dir="rtl">
       <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       
-     <header className={`py-4 px-6 ${isDarkMode ? 'bg-indigo-900' : 'bg-indigo-600'} text-white shadow-lg`}>
+     <header className={`px-6 ${isDarkMode ? 'bg-indigo-900' : 'bg-indigo-600'} text-white shadow-lg`} style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))', paddingBottom: '1rem' }}>
   <div className="flex justify-between items-center">
     <div className="flex items-center gap-3">
       <div className={`p-2 rounded-full ${isDarkMode ? 'bg-indigo-800' : 'bg-indigo-500'}`}>

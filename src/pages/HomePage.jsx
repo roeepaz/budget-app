@@ -51,8 +51,8 @@ function QuickAddExpenseButton({ onAddExpense, categories, sidebarOpen }) {
     date: getLocalDateString(),
   });
 
-  // Simple drag state
-  const [position, setPosition] = useState({ x: 20, y: 20 });
+  // Simple drag state - start below Dynamic Island area
+  const [position, setPosition] = useState({ x: 16, y: 90 });
   const [dragging, setDragging] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const wrapperRef = useRef(null);
@@ -452,7 +452,7 @@ export default function HomePage({ user }) {
       remaining,
       overBudget
     };
-  }).sort((a, b) => b.total - a.total);
+  }).filter(c => c.budget != null && Number(c.budget) > 0).sort((a, b) => b.total - a.total);
 
 
 
@@ -541,7 +541,9 @@ export default function HomePage({ user }) {
       {/* כפתור תפריט במובייל */}
       <button
         onClick={() => setSidebarOpen(true)}
-        className="lg:hidden fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+        className="lg:hidden fixed right-4 z-50 p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+        style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+        aria-label="פתח תפריט"
       >
         <Menu className="w-6 h-6 text-gray-700" />
       </button>
@@ -560,7 +562,10 @@ export default function HomePage({ user }) {
       />
       {/* תוכן עיקרי */}
       <div className="flex-1 overflow-y-auto">
-        <div className="p-4 lg:p-8 pt-20 lg:pt-8">
+        <div
+          className="p-4 lg:p-8 lg:pt-8"
+          style={{ paddingTop: 'calc(5rem + env(safe-area-inset-top))' }}
+        >
           <div className="p-4 border-t border-gray-200">
             <QuickAddExpenseButton
               onAddExpense={(expense) => addExpenseToDB(expense)}
@@ -589,7 +594,8 @@ export default function HomePage({ user }) {
             {!sidebarOpen && (
               <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 z-30 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2"
+                className="fixed right-6 z-30 bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90 text-white px-5 py-3 rounded-full shadow-lg flex items-center gap-2"
+                style={{ bottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
               >
                 <MessageSquare className="w-5 h-5" />
                 משוב
@@ -620,7 +626,7 @@ export default function HomePage({ user }) {
           </div>
 
           {/* כרטיסי סיכום */}
-          <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-8 text-center">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8 text-center">
             {/* 1. סה"כ הוצאות */}
             <div className="bg-white rounded-xl shadow p-4">
               <p className="text-sm text-gray-500">סה"כ הוצאות החודש</p>
