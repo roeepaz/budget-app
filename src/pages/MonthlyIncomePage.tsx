@@ -367,7 +367,10 @@ if (loading) {
       {/* תוכן ראשי */}
       <main className="flex-1 min-w-0 overflow-y-auto">
         {/* עטיפה פנימית לרוחב מקסימלי עם ריווח; זה מה שיחזיק את התוכן ממורכז */}
-        <div className="mx-auto max-w-7xl p-4 lg:p-8">
+        <div
+          className="mx-auto max-w-7xl p-4 lg:p-8"
+          style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top))' }}
+        >
         {/* Header */}
         <div className="mb-8">
           <div className="mb-6 flex items-center justify-between">

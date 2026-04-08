@@ -586,7 +586,10 @@ return (
 
 
       {/* Header */}
-    <header className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-40 px-4 sm:px-6 py-4">
+    <header
+      className="bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0 z-40 px-4 sm:px-6"
+      style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))', paddingBottom: '1rem' }}
+    >
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 sm:gap-0">
         {typeof currentIncome !== 'number' && (
           <p className="text-sm text-red-500 mt-1">אין נתוני הכנסה לחודש זה</p>

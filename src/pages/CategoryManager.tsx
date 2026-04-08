@@ -256,7 +256,10 @@ if (loading || !user) {
       <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* Header */}
-      <header className="relative bg-white py-4 px-6 flex items-center justify-between">
+      <header
+        className="relative bg-white px-6 flex items-center justify-between shadow-sm"
+        style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top))', paddingBottom: '1rem' }}
+      >
         {/* לוגו וטקסט */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
@@ -269,9 +272,12 @@ if (loading || !user) {
         </div>
       </header>
      
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* כפתור צף לבניית תקציב - להוסיף לפני סגירת ה-div הראשי */}
-      <div className="fixed top-20 left-40 z-40 scale-90 sm:scale-100">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* כפתור צף לבניית תקציב */}
+      <div
+        className="fixed left-4 z-40 scale-90 sm:scale-100"
+        style={{ top: 'calc(5rem + env(safe-area-inset-top))' }}
+      >
         <button
           onClick={() => navigate('/advisor')}
           className="group relative bg-gradient-to-r from-green-700 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-2 px-4 rounded-full shadow-xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl flex items-center space-x-2 animate-pulse hover:animate-none text-sm"

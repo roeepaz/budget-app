@@ -66,7 +66,9 @@ export default function Sidebar({
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 right-4 z-50 p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+          className="fixed right-4 z-50 p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all menu-btn-safe"
+          style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+          aria-label="פתח תפריט"
         >
           <Menu className="w-6 h-6 text-gray-700" />
         </button>
@@ -86,18 +88,21 @@ export default function Sidebar({
   flex flex-col h-screen
 `}>
 
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-l from-blue-600 to-purple-600 text-white">
+        <div
+          className="border-b border-white/20 bg-gradient-to-l from-blue-600 to-purple-600 text-white sidebar-header-safe"
+          style={{ padding: 'calc(1.5rem + env(safe-area-inset-top)) 1.5rem 1.5rem' }}
+        >
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold">Kesefy 💰</h2>
-                {user && (
-                  <p className="text-blue-100 text-sm mt-1">שלום, {user.displayName} 👋</p>
-                )}
-
+              {user && (
+                <p className="text-blue-100 text-sm mt-1">שלום, {user.displayName} 👋</p>
+              )}
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition"
+              className="p-2 hover:bg-white hover:bg-opacity-20 rounded-xl transition"
+              aria-label="סגור תפריט"
             >
               <X className="w-5 h-5" />
             </button>
@@ -129,10 +134,13 @@ export default function Sidebar({
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
+        <div
+          className="border-t border-gray-200 sidebar-footer-safe"
+          style={{ padding: '1rem 1rem calc(1rem + env(safe-area-inset-bottom))' }}
+        >
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="w-full flex items-center justify-center gap-2 p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors"
           >
             <LogOut className="w-5 h-5" />
             התנתק

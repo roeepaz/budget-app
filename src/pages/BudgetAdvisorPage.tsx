@@ -443,7 +443,11 @@ const totalGoals = result?.allocations?.goalAllocations?.reduce(
       )}
       <SidebarWrapper sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      <div className="relative p-6 max-w-7xl mx-auto" dir="rtl">
+      <div
+        className="relative p-6 max-w-7xl mx-auto"
+        dir="rtl"
+        style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top))' }}
+      >
         {/* Header */}
         <div className="flex justify-between items-center mb-8 relative">
           <div className={`group relative ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>

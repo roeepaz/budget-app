@@ -368,7 +368,10 @@ const menuItems = [
     />
 
     {/* תוכן ראשי */}
-    <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+    <main
+      className="flex-1 p-4 lg:p-8 overflow-y-auto"
+      style={{ paddingTop: 'calc(4rem + env(safe-area-inset-top))' }}
+    >
 
       {/* כותרת הדף */}
       <div className="flex justify-between items-center mb-6">
