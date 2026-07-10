@@ -1,0 +1,54 @@
+name: MAX Credit Card Sync
+
+on:
+  schedule:
+    # Runs daily at 03:00 UTC (05:00/06:00 Israel time depending on DST).
+    - cron: '0 3 * * *'
+  workflow_dispatch: {} # allows manual triggering from the Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Restore session cache
+        uses: actions/cache@v4
+        with:
+          path: .auth
+          # Keyed on nothing dynamic on purpose: we always want the latest
+          # saved session, and the sync script overwrites it after each run.
+          key: max-session-state
+
+      - name: Run sync
+        env:
+          MAX_USERNAME: ${{ secrets.MAX_USERNAME }}
+          MAX_PASSWORD: ${{ secrets.MAX_PASSWORD }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          USER_ID: ${{ secrets.USER_ID }}
+          HEADLESS: 'true'
+        run: npm run build && npm start
+
+      - name: Save session cache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .auth
+          key: max-session-state
