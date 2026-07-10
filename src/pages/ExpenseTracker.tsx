@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Menu,Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home, Calendar, Target, CreditCard, TrendingUp, Filter, Search } from 'lucide-react';
+import { Menu,Plus, Trash2, ArrowRight, BarChart3, PieChart as PieChartIcon, Home, Calendar, Target, CreditCard, TrendingUp, Filter, Search, Inbox, Sparkles } from 'lucide-react';
 import { db } from '../firebaseConfig';
 import { doc, getDoc, setDoc, collection,getDocs, deleteDoc, updateDoc} from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';
@@ -9,6 +9,7 @@ import SidebarWrapper from '../components/SidebarWrapper';
 import FullPageError from '../components/FullPageError';
 import { setDocWithIdList } from '../services/firestoreService';
 import { useUserData } from '../hooks/useUserData';
+import TransactionInbox from '../components/TransactionInbox';
 
 export default function ExpenseTracker({ user }: ExpenseTrackerProps) {
   // Default categories
@@ -65,6 +66,7 @@ const tagColors: Record<CategoryTag, string> = {
 ;
 
 const userId = user?.uid;
+const [isInboxOpen, setIsInboxOpen] = useState(false);
 
 const {
   categories,
@@ -85,6 +87,9 @@ const {
   setHasLoaded,
   addExpenseToDB,
   addCategoryToDB,
+  pendingTransactions,
+  approveSyncedTransaction,
+  ignoreSyncedTransaction,
   userFatalError: fatalError
 } = useUserData(userId);
 
@@ -1112,6 +1117,27 @@ return (
 
             {/* Expenses List */}
             <div className="lg:col-span-2 space-y-6">
+              {pendingTransactions && pendingTransactions.length > 0 && (
+                <div 
+                  onClick={() => setIsInboxOpen(true)}
+                  className="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-5 shadow-lg text-white hover:brightness-105 transition-all flex items-center justify-between gap-4 border border-blue-400/20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-white/10 rounded-xl">
+                      <Inbox className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-right">
+                      <h4 className="font-bold text-base text-white">עסקאות כרטיס אשראי ממתינות</h4>
+                      <p className="text-sm text-blue-100">יש לך {pendingTransactions.length} עסקאות חדשות מ-MAX שטרם סווגו לתקציב.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl text-xs font-bold transition-colors">
+                    <span>סווג עכשיו</span>
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-white/20 shadow-lg">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-xl font-bold text-gray-900">
@@ -1221,8 +1247,16 @@ return (
           </div>
         )}
       </main>
+      <TransactionInbox
+        isOpen={isInboxOpen}
+        onClose={() => setIsInboxOpen(false)}
+        pendingTransactions={pendingTransactions}
+        categories={categories}
+        expenses={expenses}
+        onApprove={approveSyncedTransaction}
+        onIgnore={ignoreSyncedTransaction}
+      />
     </div>
     </div>
   );
-
 }

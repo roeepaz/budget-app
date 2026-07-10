@@ -8,6 +8,8 @@ import {
   addDoc,
   getDocs,
   deleteDoc,
+  query,
+  where
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Category, Debt, SavingsGoal, Expense, RecurringExpense } from '../type/appTypes';
@@ -39,6 +41,10 @@ export interface UserDataContextType {
   deleteExpenseFromDB: (expenseId: string) => Promise<void>;
   addCategoryToDB: (category: Omit<Category, 'id'>) => Promise<void>;
   updateCategoryField: (categoryId: string, updatedFields: Partial<Category>) => Promise<void>;
+  pendingTransactions: any[];
+  setPendingTransactions: Dispatch<SetStateAction<any[]>>;
+  approveSyncedTransaction: (transactionId: string, categoryId: string | number) => Promise<void>;
+  ignoreSyncedTransaction: (transactionId: string) => Promise<void>;
   userFatalError: UserFatalError | null;
 }
 
@@ -51,6 +57,7 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
   const [monthlyIncomeData, setMonthlyIncomeData] = useState<Record<string, number>>({});
+  const [pendingTransactions, setPendingTransactions] = useState<any[]>([]);
   
   const [loading, setLoading] = useState<boolean>(true);
   const [hasLoaded, setHasLoaded] = useState<boolean>(false);
@@ -128,6 +135,16 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
           ...(docSnap.data() as Omit<RecurringExpense, 'id'>)
         }));
         setRecurringExpenses(recurringList);
+
+        // 6. Sync Transactions (Pending classification)
+        const maxTransactionsRef = collection(db, 'financial_data', userId, 'max_transactions');
+        const maxTransactionsQuery = query(maxTransactionsRef, where('classificationStatus', '==', 'pending'));
+        const maxTransactionsSnap = await getDocs(maxTransactionsQuery);
+        const pendingList: any[] = [];
+        maxTransactionsSnap.forEach(docSnap => {
+          pendingList.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        setPendingTransactions(pendingList);
 
       } catch (error: any) {
         const firebaseCode = error?.code || 'unknown';
@@ -240,6 +257,54 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
     }
   };
 
+  const approveSyncedTransaction = async (transactionId: string, categoryId: string | number): Promise<void> => {
+    if (!userId) return;
+    try {
+      const tx = pendingTransactions.find(t => t.id === transactionId);
+      if (!tx) return;
+
+      // 1. Add as expense
+      await addExpenseToDB({
+        id: Date.now().toString(),
+        amount: tx.amount,
+        description: tx.merchantName,
+        categoryId: categoryId,
+        date: tx.date,
+      });
+
+      // 2. Update status in firestore to 'approved'
+      const txDocRef = doc(db, 'financial_data', userId, 'max_transactions', transactionId);
+      await updateDoc(txDocRef, { classificationStatus: 'approved' });
+
+      // 3. Remove from state
+      setPendingTransactions(prev => prev.filter(t => t.id !== transactionId));
+    } catch (error: any) {
+      setUserFatalError({
+        title: 'שגיאה באישור העסקה',
+        description: 'לא הצלחנו לאשר את העסקה ולשמור אותה כהוצאה.',
+        severity: 'error',
+      });
+    }
+  };
+
+  const ignoreSyncedTransaction = async (transactionId: string): Promise<void> => {
+    if (!userId) return;
+    try {
+      // 1. Update status in firestore to 'ignored'
+      const txDocRef = doc(db, 'financial_data', userId, 'max_transactions', transactionId);
+      await updateDoc(txDocRef, { classificationStatus: 'ignored' });
+
+      // 2. Remove from state
+      setPendingTransactions(prev => prev.filter(t => t.id !== transactionId));
+    } catch (error: any) {
+      setUserFatalError({
+        title: 'שגיאה בעדכון העסקה',
+        description: 'לא הצלחנו לעדכן את העסקה לסטטוס התעלמות.',
+        severity: 'error',
+      });
+    }
+  };
+
   return (
     <UserDataContext.Provider value={{
       categories,
@@ -262,6 +327,10 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
       deleteExpenseFromDB,
       addCategoryToDB,
       updateCategoryField,
+      pendingTransactions,
+      setPendingTransactions,
+      approveSyncedTransaction,
+      ignoreSyncedTransaction,
       userFatalError
     }}>
       {children}

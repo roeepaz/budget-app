@@ -4,7 +4,7 @@
   "scripts": {
     "start": "parcel index.html",
     "build": "parcel build index.html --public-url ./",
-    "postbuild": "cp public/_redirects dist/_redirects",
+    "postbuild": "cpy public/_redirects dist",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

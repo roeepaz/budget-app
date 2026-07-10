@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { he } from 'date-fns/locale';
 import SmartFinancialTips from '../components/SmartFinancialTips'
 import CategoryBudgetAlertsPanel from '../components/CategoryBudgetAlertsPanel'
+import TransactionInbox from '../components/TransactionInbox';
 import {
   DollarSign,
   Menu,
@@ -22,6 +23,8 @@ import {
   Tag,
   PieChart as PieIcon,
   TrendingUp,
+  Sparkles,
+  Inbox,
   Calculator,
   LogOut,
   AlertCircle,
@@ -216,6 +219,7 @@ export default function HomePage({ user }) {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [isPutIncomes, setIsPutIncomes] = useState(true);
+  const [isInboxOpen, setIsInboxOpen] = useState(false);
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
@@ -227,6 +231,9 @@ export default function HomePage({ user }) {
     goals,
     loading,
     addExpenseToDB,
+    pendingTransactions,
+    approveSyncedTransaction,
+    ignoreSyncedTransaction,
     userFatalError
   } = useUserData(user?.uid);
 
@@ -591,6 +598,29 @@ export default function HomePage({ user }) {
               {format(new Date(), "EEEE, d בMMMM yyyy", { locale: he })}
             </p>
             <p className="text-gray-600 text-base">זה מצב התקציב שלך לחודש הנוכחי</p>
+
+            {pendingTransactions && pendingTransactions.length > 0 && (
+              <div className="max-w-xl mx-auto mt-6 mb-4 animate-pulse">
+                <div 
+                  onClick={() => setIsInboxOpen(true)}
+                  className="cursor-pointer bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-4 shadow-lg text-white hover:brightness-110 transition-all flex items-center justify-between gap-4 border border-blue-400/20 text-right"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-white/10 rounded-xl">
+                      <Inbox className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm lg:text-base text-white">ממתינות עסקאות חדשות לסיווג!</h4>
+                      <p className="text-xs text-blue-100">יש לך {pendingTransactions.length} עסקאות אשראי שממתינות לשיוך לקטגוריה.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors">
+                    <span>סווג עכשיו</span>
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+            )}
             {!sidebarOpen && (
               <button
                 onClick={() => setIsOpen(true)}
@@ -1036,6 +1066,15 @@ export default function HomePage({ user }) {
           </div>
         </div>
       </div>
+      <TransactionInbox
+        isOpen={isInboxOpen}
+        onClose={() => setIsInboxOpen(false)}
+        pendingTransactions={pendingTransactions}
+        categories={categories}
+        expenses={expenses}
+        onApprove={approveSyncedTransaction}
+        onIgnore={ignoreSyncedTransaction}
+      />
     </div>
   );
 }
