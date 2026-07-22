@@ -13,24 +13,27 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: 'npm'
+          cache-dependency-path: max-sync/package-lock.json
 
       - name: Install dependencies
+        working-directory: max-sync
         run: npm ci
 
       - name: Install Playwright browsers
+        working-directory: max-sync
         run: npx playwright install --with-deps chromium
 
       - name: Restore session cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
-          path: .auth
+          path: max-sync/.auth
           # Keyed with a dynamic runner ID component to allow saving updated
           # sessions on every run (since GitHub cache keys are immutable).
           # We restore the latest session by matching the prefix.
@@ -39,6 +42,7 @@ jobs:
             max-session-state-
 
       - name: Run sync
+        working-directory: max-sync
         env:
           MAX_USERNAME: ${{ secrets.MAX_USERNAME }}
           MAX_PASSWORD: ${{ secrets.MAX_PASSWORD }}
@@ -51,7 +55,7 @@ jobs:
 
       - name: Save session cache
         if: always()
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v4
         with:
-          path: .auth
+          path: max-sync/.auth
           key: max-session-state-${{ github.run_id }}-${{ github.run_attempt }}
