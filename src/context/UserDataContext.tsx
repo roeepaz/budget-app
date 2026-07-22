@@ -97,7 +97,7 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
         const expenseList: Expense[] = [];
         expensesSnap.forEach(docSnap => {
           const data = docSnap.data() as Omit<Expense, 'id'>;
-          expenseList.push({ id: docSnap.id, ...data });
+          expenseList.push({ ...data, id: docSnap.id });
         });
         setExpenses(expenseList);
 
@@ -176,9 +176,9 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
     const finRef = doc(db, 'financial_data', userId);
 
     try {
-      const newExpense = { ...expense };
-      const addedDoc = await addDoc(expensesRef, newExpense);
-      setExpenses(prev => [...prev, { ...newExpense, id: addedDoc.id }]);
+      const { id: _localId, ...expenseData } = expense;
+      const addedDoc = await addDoc(expensesRef, expenseData);
+      setExpenses(prev => [...prev, { ...expenseData, id: addedDoc.id }]);
 
       if (typeof expense.categoryId === 'string' && expense.categoryId.startsWith('debt-')) {
         const id = expense.categoryId.replace('debt-', '');

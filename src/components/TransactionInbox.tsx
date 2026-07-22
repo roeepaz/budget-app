@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { 
@@ -50,10 +50,12 @@ export default function TransactionInbox({
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | number>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sort transactions by date ascending (oldest first)
-  const sortedTransactions = [...pendingTransactions].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  // Sort transactions by date ascending (oldest first) - Memoized to prevent re-triggering effects on every render
+  const sortedTransactions = useMemo(() => {
+    return [...pendingTransactions].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+  }, [pendingTransactions]);
 
   const currentTx = sortedTransactions[currentIndex];
 
@@ -142,7 +144,7 @@ export default function TransactionInbox({
         setSelectedCategoryId('');
       }
     }
-  }, [currentIndex, currentTx, sortedTransactions]);
+  }, [currentIndex, currentTx]);
 
   useEffect(() => {
     if (isOpen) {
