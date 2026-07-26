@@ -9,13 +9,40 @@ async function fetchGetWithinPage<T>(page: Page, url: string): Promise<T | null>
   return page.evaluate(async (innerUrl) => {
     try {
       const response = await fetch(innerUrl, { credentials: 'include' });
-      if (response.status === 204) return null;
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return await response.json();
+      const status = response.status;
+      const text = await response.text();
+      if (status === 204) return null;
+      if (!response.ok) {
+        // include response body and headers for debugging
+        const headers = Array.from(response.headers.entries());
+        throw new Error(JSON.stringify({ status, headers, body: text }));
+      }
+      return JSON.parse(text) as T;
     } catch (e) {
       throw new Error(`fetchGetWithinPage failed for URL: ${innerUrl}. Error: ${e instanceof Error ? e.message : String(e)}`);
     }
   }, url);
+}
+
+// Wrapper with simple retry/backoff for transient 403/network errors
+async function fetchWithRetries<T>(page: Page, url: string, retries = 3): Promise<T | null> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await fetchGetWithinPage<T>(page, url);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const isTransient = msg.includes('"status":403') || msg.includes('status: 403') || msg.toLowerCase().includes('network');
+      if (attempt === retries || !isTransient) {
+        // rethrow the original error when out of retries or error is not deemed transient
+        throw err;
+      }
+      const waitMs = 500 * attempt;
+      console.warn(`[scraper] fetch failed (attempt ${attempt}) for ${url}. Retrying after ${waitMs}ms:`, msg);
+      await new Promise((r) => setTimeout(r, waitMs));
+      continue;
+    }
+  }
+  return null;
 }
 
 // Generate the URL for getTransactionsAndGraphs internal API
@@ -34,7 +61,7 @@ function getMonthsToScrape(): string[] {
   const dates: string[] = [];
   const now = new Date();
   
-  // Scrape: next month (+1), current month (0), and previous month (-1)
+  // Keep future month scraping as before, but if future-month causes issues the retry/diagnostics will reveal it.
   const offsets = [1, 0, -1];
   for (const offset of offsets) {
     const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
@@ -47,13 +74,41 @@ function getMonthsToScrape(): string[] {
 
 export async function fetchTransactions(page: Page): Promise<RawTransaction[]> {
   console.log('[scraper] Navigating to transactions page to establish session context...');
-  await page.goto(TRANSACTIONS_URL, { waitUntil: 'domcontentloaded' });
+  // wait until networkidle so client-side bootstrapping has a better chance of completing
+  await page.goto(TRANSACTIONS_URL, { waitUntil: 'networkidle' });
+
+  // optional: wait for a selector that indicates the app finished initialization
+  await page.waitForSelector('.transactions-list, .transaction-row, #app-root', { timeout: 10000 }).catch(() => {
+    console.warn('[scraper] transactions selector not found after navigation; continuing anyway.');
+  });
+
+  // log cookies for debugging session/auth
+  try {
+    const cookies = await page.context().cookies();
+    console.log('[scraper] cookies:', cookies);
+  } catch (e) {
+    console.warn('[scraper] could not read cookies for debugging', e);
+  }
+
+  // listen for responses for the transactions endpoint so we can capture server replies from the browser context
+  page.on('response', async (response) => {
+    try {
+      if (response.url().includes('/getTransactionsAndGraphs') || response.url().includes('/api/registered/transactionDetails')) {
+        const status = response.status();
+        // attempt to read text; catch if body is binary or unavailable
+        const body = await response.text().catch(() => '<binary or no body>');
+        console.log(`[scraper] network response for ${response.url()} status=${status} body=${body}`);
+      }
+    } catch (e) {
+      // swallow logging errors
+    }
+  });
 
   // Load category mappings
   console.log('[scraper] Loading category mappings from MAX...');
   const categoriesMap = new Map<number, string>();
   try {
-    const catRes = await fetchGetWithinPage<{ result?: Array<{ id: number; name: string }> }>(
+    const catRes = await fetchWithRetries<{ result?: Array<{ id: number; name: string }> }>(
       page,
       `${BASE_API_ACTIONS_URL}/api/contents/getCategories`
     );
@@ -75,7 +130,7 @@ export async function fetchTransactions(page: Page): Promise<RawTransaction[]> {
   for (const monthStr of months) {
     const url = getTransactionsUrl(monthStr);
     try {
-      const res = await fetchGetWithinPage<{ result?: { transactions?: any[] } }>(page, url);
+      const res = await fetchWithRetries<{ result?: { transactions?: any[] } }>(page, url);
       const transactions = res?.result?.transactions;
 
       if (!transactions || !Array.isArray(transactions)) {
