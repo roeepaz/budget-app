@@ -46,17 +46,26 @@ export async function openSession(): Promise<{
 async function isLoggedIn(page: Page): Promise<boolean> {
   try {
     await page.goto('https://www.max.co.il/homepage/personal', {
-      waitUntil: 'domcontentloaded',
-      timeout: 20000,
+      waitUntil: 'networkidle',
+      timeout: 30000,
     });
 
+    // Give the Angular SPA a moment to finish client-side routing.
+    // With 'domcontentloaded' the URL is still /homepage/personal before
+    // Angular boots and potentially reroutes to / or /login on stale sessions.
+    await page.waitForTimeout(2000);
+
+    const url = page.url();
+    console.log(`[auth] Session check — URL after navigation: ${url}`);
+
     // If MAX bounced us back to the login page, the session is stale.
-    if (page.url().includes('/login')) {
+    if (url.includes('/login')) {
       return false;
     }
 
-    // If we stayed on the personal page, our session is valid.
-    return page.url().includes('/homepage/personal') || page.url().includes('/personalarea');
+    // If we're still on the personal page or personal area, we're good.
+    // If we ended up on / or /wrongurl, the session is invalid.
+    return url.includes('/homepage/personal') || url.includes('/personalarea');
   } catch {
     return false;
   }

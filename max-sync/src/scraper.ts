@@ -2,38 +2,69 @@ import type { Page } from 'playwright';
 import type { RawTransaction } from './types.js';
 
 const TRANSACTIONS_URL = 'https://www.max.co.il/personalarea/transactions';
-const BASE_API_ACTIONS_URL = 'https://onlinelcapi.max.co.il';
 
-// Helper to fetch from within page context to automatically inherit cookies and authentication headers
-async function fetchGetWithinPage<T>(page: Page, url: string): Promise<T | null> {
-  return page.evaluate(async (innerUrl) => {
+// The SPA proxies API calls through the same origin (www.max.co.il).
+// Calling onlinelcapi.max.co.il directly from the page context triggers CORS / 403
+// on "registered" endpoints.  Using www.max.co.il/api avoids that entirely.
+const BASE_API_URL = 'https://www.max.co.il';
+
+/**
+ * Fetch JSON from within the page context.  By using the same origin as the
+ * SPA we inherit cookies and avoid the cross-origin 403 that onlinelcapi
+ * returns for /api/registered/ endpoints.
+ */
+async function fetchGetWithinPage<T>(
+  page: Page,
+  url: string,
+  retries = 3,
+  delayMs = 500,
+): Promise<T | null> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const response = await fetch(innerUrl, { credentials: 'include' });
-      if (response.status === 204) return null;
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      return await response.json();
-    } catch (e) {
-      throw new Error(`fetchGetWithinPage failed for URL: ${innerUrl}. Error: ${e instanceof Error ? e.message : String(e)}`);
+      return await page.evaluate(async (innerUrl) => {
+        const response = await fetch(innerUrl, { credentials: 'include' });
+        if (response.status === 204) return null;
+        if (!response.ok) {
+          const body = await response.text().catch(() => '');
+          throw new Error(JSON.stringify({
+            status: response.status,
+            body: body.substring(0, 500),
+          }));
+        }
+        return await response.json();
+      }, url);
+    } catch (err) {
+      if (attempt < retries) {
+        console.warn(
+          `[scraper] fetch failed (attempt ${attempt}) for ${url.substring(0, 120)}. ` +
+          `Retrying after ${delayMs}ms: ${err instanceof Error ? err.message : String(err)}`
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
+        delayMs *= 2;
+      } else {
+        throw err;
+      }
     }
-  }, url);
+  }
+  return null;
 }
 
-// Generate the URL for getTransactionsAndGraphs internal API
+// Generate the URL for getTransactionsAndGraphs — using the same-origin proxy
 function getTransactionsUrl(dateStr: string): string {
-  const url = new URL(`${BASE_API_ACTIONS_URL}/api/registered/transactionDetails/getTransactionsAndGraphs`);
+  const url = new URL(`${BASE_API_URL}/api/registered/transactionDetails/getTransactionsAndGraphs`);
   url.searchParams.set(
     'filterData',
-    `{"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${dateStr}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}`
+    `{"userIndex":-1,"cardIndex":-1,"monthView":true,"date":"${dateStr}","dates":{"startDate":"0","endDate":"0"},"bankAccount":{"bankAccountIndex":-1,"cards":null}}`,
   );
   url.searchParams.set('firstCallCardIndex', '-1');
   return url.toString();
 }
 
-// Get the date strings for the current month and last month (YYYY-MM-01)
+// Get the date strings for the months to scrape (YYYY-MM-01)
 function getMonthsToScrape(): string[] {
   const dates: string[] = [];
   const now = new Date();
-  
+
   // Scrape: next month (+1), current month (0), and previous month (-1)
   const offsets = [1, 0, -1];
   for (const offset of offsets) {
@@ -46,16 +77,38 @@ function getMonthsToScrape(): string[] {
 }
 
 export async function fetchTransactions(page: Page): Promise<RawTransaction[]> {
-  console.log('[scraper] Navigating to transactions page to establish session context...');
-  await page.goto(TRANSACTIONS_URL, { waitUntil: 'domcontentloaded' });
+  // Navigate to the personal-area homepage first (we know this works from auth)
+  // then navigate to transactions via the SPA router.
+  console.log('[scraper] Navigating to personal area...');
+  await page.goto('https://www.max.co.il/homepage/personal', {
+    waitUntil: 'networkidle',
+    timeout: 30000,
+  });
 
-  // Load category mappings
+  const personalUrl = page.url();
+  console.log(`[scraper] Personal area URL: ${personalUrl}`);
+
+  if (personalUrl.includes('/login')) {
+    throw new Error(
+      'Session expired — redirected to login. Delete .auth/storageState.json and re-run.',
+    );
+  }
+
+  // If we are already on personal area or homepage, we can fetch transactions directly
+  // from the same origin (www.max.co.il) without triggering SPA routing to /wrongurl.
+  if (personalUrl.includes('/wrongurl')) {
+    throw new Error(
+      `Navigation failed — ended up at ${personalUrl}. The session may be invalid.`,
+    );
+  }
+
+  // Load category mappings (this endpoint works on both origins)
   console.log('[scraper] Loading category mappings from MAX...');
   const categoriesMap = new Map<number, string>();
   try {
     const catRes = await fetchGetWithinPage<{ result?: Array<{ id: number; name: string }> }>(
       page,
-      `${BASE_API_ACTIONS_URL}/api/contents/getCategories`
+      `${BASE_API_URL}/api/contents/getCategories`,
     );
     if (catRes?.result && Array.isArray(catRes.result)) {
       catRes.result.forEach((item) => {
@@ -90,7 +143,7 @@ export async function fetchTransactions(page: Page): Promise<RawTransaction[]> {
         if (!tx.planName) continue;
 
         const isPending = tx.paymentDate === null;
-        
+
         // Normalize purchaseDate to YYYY-MM-DD
         let date = tx.purchaseDate;
         if (date && date.includes('T')) {
@@ -107,7 +160,7 @@ export async function fetchTransactions(page: Page): Promise<RawTransaction[]> {
         }
 
         const siteTransactionId = tx.dealData?.arn || undefined;
-        
+
         rawTransactions.push({
           siteTransactionId,
           merchantName: tx.merchantName || '',
