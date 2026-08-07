@@ -21,18 +21,21 @@ async function fetchGetWithinPage<T>(
 ): Promise<T | null> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      return await page.evaluate(async (innerUrl) => {
-        const response = await fetch(innerUrl, { credentials: 'include' });
-        if (response.status === 204) return null;
-        if (!response.ok) {
-          const body = await response.text().catch(() => '');
-          throw new Error(JSON.stringify({
-            status: response.status,
+      const response = await page.request.get(url);
+      if (response.status() === 204) return null;
+      if (!response.ok()) {
+        const body = await response.text().catch(() => '');
+        const headers = await response.headersArray();
+        throw new Error(
+          `fetchGetWithinPage failed for URL: ${url}. Error: ` +
+          JSON.stringify({
+            status: response.status(),
+            headers,
             body: body.substring(0, 500),
-          }));
-        }
-        return await response.json();
-      }, url);
+          })
+        );
+      }
+      return await response.json();
     } catch (err) {
       if (attempt < retries) {
         console.warn(
