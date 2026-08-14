@@ -109,12 +109,12 @@ export async function fetchTransactions(page: Page): Promise<RawTransaction[]> {
   console.log('[scraper] Loading category mappings from MAX...');
   const categoriesMap = new Map<number, string>();
   try {
-    const catRes = await fetchWithRetries<{ result?: Array<{ id: number; name: string }> }>(
+    const catRes = await fetchGetWithinPage<{ result?: Array<{ id: number; name: string }> }>(
       page,
       `${BASE_API_URL}/api/contents/getCategories`,
     );
     if (catRes?.result && Array.isArray(catRes.result)) {
-      catRes.result.forEach((item) => {
+      catRes.result.forEach((item: { id: number; name: string }) => {
         categoriesMap.set(item.id, item.name);
       });
       console.log(`[scraper] Loaded ${categoriesMap.size} category names.`);
@@ -131,7 +131,7 @@ export async function fetchTransactions(page: Page): Promise<RawTransaction[]> {
   for (const monthStr of months) {
     const url = getTransactionsUrl(monthStr);
     try {
-      const res = await fetchWithRetries<{ result?: { transactions?: any[] } }>(page, url);
+      const res = await fetchGetWithinPage<{ result?: { transactions?: any[] } }>(page, url);
       const transactions = res?.result?.transactions;
 
       if (!transactions || !Array.isArray(transactions)) {
