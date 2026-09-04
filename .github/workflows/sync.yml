@@ -2,8 +2,9 @@ name: MAX Credit Card Sync
 
 on:
   schedule:
-    # Runs daily at 03:00 UTC (05:00/06:00 Israel time depending on DST).
-    - cron: '0 3 * * *'
+    # Runs daily at 02:05 UTC (05:05 AM Israel Summer Time / 04:05 AM Israel Winter Time).
+    # Uses an off-peak minute (:05 instead of :00) to prevent GitHub Actions' multi-hour queue delays.
+    - cron: '5 2 * * *'
   workflow_dispatch: {} # allows manual triggering from the Actions tab
 
 jobs:
