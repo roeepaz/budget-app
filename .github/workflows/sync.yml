@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: card-sync
-        run: npm ci
+        run: npm install
 
       - name: Run sync
         working-directory: card-sync
