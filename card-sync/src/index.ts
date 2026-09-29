@@ -21,6 +21,7 @@ async function syncProvider(provider: CompanyTypes, credentials: any, collection
     combineInstallments: false,
     showBrowser: !config.headless,
     verbose: true,
+    args: ['--no-sandbox'],
   };
 
   const scraper = createScraper(options);
