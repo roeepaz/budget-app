@@ -40,4 +40,5 @@ jobs:
           FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
           USER_ID: ${{ secrets.USER_ID }}
           HEADLESS: 'true'
+          DEBUG: 'israeli-bank-scrapers:*'
         run: npm run build && npm start

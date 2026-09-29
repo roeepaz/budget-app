@@ -31,7 +31,7 @@ async function syncProvider(provider: CompanyTypes, credentials: any, collection
   const scrapeResult = await scraper.scrape(credentials);
 
   if (!scrapeResult.success) {
-    throw new Error(`[sync] Failed to scrape ${provider}: ${scrapeResult.errorType}`);
+    throw new Error(`[sync] Failed to scrape ${provider}: ${scrapeResult.errorType} - ${scrapeResult.errorMessage || 'No error message'}`);
   }
 
   const rawTransactions: RawTransaction[] = [];
