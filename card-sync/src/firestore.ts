@@ -16,8 +16,8 @@ function getDb() {
   return getFirestore();
 }
 
-function transactionsCollection() {
-  return getDb().collection('financial_data').doc(config.userId).collection('max_transactions');
+function transactionsCollection(collectionName: string) {
+  return getDb().collection('financial_data').doc(config.userId).collection(collectionName);
 }
 
 /**
@@ -27,11 +27,12 @@ function transactionsCollection() {
  * call, so we chunk.
  */
 export async function filterNewTransactions(
-  transactions: NormalizedTransaction[]
+  transactions: NormalizedTransaction[],
+  collectionName: string
 ): Promise<NormalizedTransaction[]> {
   if (transactions.length === 0) return [];
 
-  const collection = transactionsCollection();
+  const collection = transactionsCollection(collectionName);
   const existingIds = new Set<string>();
 
   const chunkSize = 30;
@@ -52,11 +53,11 @@ export async function filterNewTransactions(
  * Writes new transactions to Firestore in a batched write (Firestore caps
  * batches at 500 operations).
  */
-export async function saveTransactions(transactions: NormalizedTransaction[]): Promise<void> {
+export async function saveTransactions(transactions: NormalizedTransaction[], collectionName: string): Promise<void> {
   if (transactions.length === 0) return;
 
   const db = getDb();
-  const collection = transactionsCollection();
+  const collection = transactionsCollection(collectionName);
 
   const chunkSize = 500;
   for (let i = 0; i < transactions.length; i += chunkSize) {

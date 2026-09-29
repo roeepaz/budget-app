@@ -1,4 +1,4 @@
-name: MAX Credit Card Sync
+name: Credit Card Sync
 
 on:
   schedule:
@@ -21,42 +21,23 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: max-sync/package-lock.json
+          cache-dependency-path: card-sync/package-lock.json
 
       - name: Install dependencies
-        working-directory: max-sync
+        working-directory: card-sync
         run: npm ci
 
-      - name: Install Playwright browsers
-        working-directory: max-sync
-        run: npx playwright install --with-deps chromium
-
-      - name: Restore session cache
-        uses: actions/cache/restore@v4
-        with:
-          path: max-sync/.auth
-          # Keyed with a dynamic runner ID component to allow saving updated
-          # sessions on every run (since GitHub cache keys are immutable).
-          # We restore the latest session by matching the prefix.
-          key: max-session-state-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            max-session-state-
-
       - name: Run sync
-        working-directory: max-sync
+        working-directory: card-sync
         env:
           MAX_USERNAME: ${{ secrets.MAX_USERNAME }}
           MAX_PASSWORD: ${{ secrets.MAX_PASSWORD }}
+          ISRACARD_ID: ${{ secrets.ISRACARD_ID }}
+          ISRACARD_CARD_SUFFIX: ${{ secrets.ISRACARD_CARD_SUFFIX }}
+          ISRACARD_PASSWORD: ${{ secrets.ISRACARD_PASSWORD }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
           FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
           USER_ID: ${{ secrets.USER_ID }}
           HEADLESS: 'true'
         run: npm run build && npm start
-
-      - name: Save session cache
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: max-sync/.auth
-          key: max-session-state-${{ github.run_id }}-${{ github.run_attempt }}

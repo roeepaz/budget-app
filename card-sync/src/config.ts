@@ -10,8 +10,13 @@ function required(name: string): string {
 
 export const config = {
   max: {
-    username: required('MAX_USERNAME'),
-    password: required('MAX_PASSWORD'),
+    username: process.env.MAX_USERNAME || '',
+    password: process.env.MAX_PASSWORD || '',
+  },
+  isracard: {
+    id: process.env.ISRACARD_ID || '',
+    card6Digits: process.env.ISRACARD_CARD_SUFFIX || '',
+    password: process.env.ISRACARD_PASSWORD || '',
   },
   firebase: {
     projectId: required('FIREBASE_PROJECT_ID'),

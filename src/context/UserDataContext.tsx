@@ -138,12 +138,24 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
 
         // 6. Sync Transactions (Pending classification)
         const maxTransactionsRef = collection(db, 'financial_data', userId, 'max_transactions');
-        const maxTransactionsQuery = query(maxTransactionsRef, where('classificationStatus', '==', 'pending'));
-        const maxTransactionsSnap = await getDocs(maxTransactionsQuery);
+        const isracardTransactionsRef = collection(db, 'financial_data', userId, 'isracard_transactions');
+        
+        const [maxTransactionsSnap, isracardTransactionsSnap] = await Promise.all([
+          getDocs(query(maxTransactionsRef, where('classificationStatus', '==', 'pending'))),
+          getDocs(query(isracardTransactionsRef, where('classificationStatus', '==', 'pending')))
+        ]);
+
         const pendingList: any[] = [];
         maxTransactionsSnap.forEach(docSnap => {
-          pendingList.push({ id: docSnap.id, ...docSnap.data() });
+          pendingList.push({ id: docSnap.id, collectionId: 'max_transactions', ...docSnap.data() });
         });
+        isracardTransactionsSnap.forEach(docSnap => {
+          pendingList.push({ id: docSnap.id, collectionId: 'isracard_transactions', ...docSnap.data() });
+        });
+        
+        // Sort by date descending (newest first)
+        pendingList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
         setPendingTransactions(pendingList);
 
       } catch (error: any) {
@@ -272,8 +284,9 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
         date: tx.date,
       });
 
+      const collectionName = tx.collectionId || 'max_transactions';
       // 2. Update status in firestore to 'approved'
-      const txDocRef = doc(db, 'financial_data', userId, 'max_transactions', transactionId);
+      const txDocRef = doc(db, 'financial_data', userId, collectionName, transactionId);
       await updateDoc(txDocRef, { classificationStatus: 'approved' });
 
       // 3. Remove from state
@@ -290,8 +303,12 @@ export const UserDataProvider = ({ userId, children }: { userId: string | null |
   const ignoreSyncedTransaction = async (transactionId: string): Promise<void> => {
     if (!userId) return;
     try {
+      const tx = pendingTransactions.find(t => t.id === transactionId);
+      if (!tx) return;
+      const collectionName = tx.collectionId || 'max_transactions';
+
       // 1. Update status in firestore to 'ignored'
-      const txDocRef = doc(db, 'financial_data', userId, 'max_transactions', transactionId);
+      const txDocRef = doc(db, 'financial_data', userId, collectionName, transactionId);
       await updateDoc(txDocRef, { classificationStatus: 'ignored' });
 
       // 2. Remove from state
