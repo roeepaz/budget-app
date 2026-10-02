@@ -90,6 +90,13 @@ async function main() {
         card6Digits: config.isracard.card6Digits,
         password: config.isracard.password
       }, 'isracard_transactions');
+
+      // Amex uses the same Isracard login portal, but we need to run its dedicated scraper
+      await syncProvider(CompanyTypes.amex, {
+        id: config.isracard.id,
+        card6Digits: config.isracard.card6Digits,
+        password: config.isracard.password
+      }, 'isracard_transactions');
     } else {
       console.log('[sync] Skipping isracard sync (missing credentials)');
     }
